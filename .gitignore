@@ -1,5 +1,6 @@
 # Variáveis de ambiente
 .env
+alembic/
 
 # Cache Python
 __pycache__/
@@ -9,3 +10,5 @@ __pycache__/
 
 # Testes
 .pytest_cache/
+gamelog.db
+*.db

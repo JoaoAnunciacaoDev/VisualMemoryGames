@@ -3,13 +3,10 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import engine, Base
-from app.models import user, game, user_game, tierlist
+from app.models import user, game, user_game, tierlist  # noqa: F401
 from app.routers import auth, users, games, user_games, tierlists
 
 load_dotenv()
-
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GameLog API")
 

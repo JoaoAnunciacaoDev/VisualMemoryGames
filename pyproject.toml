@@ -1,0 +1,24 @@
+[project]
+name = "gamelog"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "João Anunciação",email = "js5283283@gmail.com"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard] (>=0.138.0,<0.139.0)",
+    "sqlalchemy (>=2.0.51,<3.0.0)",
+    "email-validator (>=2.3.0,<3.0.0)",
+    "bcrypt (>=5.0.0,<6.0.0)",
+    "requests (>=2.34.2,<3.0.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)",
+    "pyjwt (>=2.13.0,<3.0.0)",
+]
+
+[tool.poetry]
+package-mode = false
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

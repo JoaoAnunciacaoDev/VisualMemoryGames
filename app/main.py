@@ -1,4 +1,3 @@
-import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,4 +25,4 @@ app.include_router(tierlists.router)
 
 @app.get("/")
 def read_root():
-    return {"message": "GameLog API rodando liso e protegida!"}
+    return {"message": "GameLog API rodando liso, liso!"}

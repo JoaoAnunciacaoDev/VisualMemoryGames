@@ -1,6 +1,5 @@
 # Variáveis de ambiente
 .env
-alembic/
 
 # Cache Python
 __pycache__/

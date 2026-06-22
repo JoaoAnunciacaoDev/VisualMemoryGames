@@ -1,8 +1,9 @@
 [tools]
 node = "20"
 
-[tasks.dev]
+[tasks."api.dev"]
 run = "fastapi dev app/main.py"
 
-[tasks.dev]
-run = "mise x -- npm run dev"
+[tasks."api.front"]
+dir = "gamelog-frontend"
+run = "npm run dev"

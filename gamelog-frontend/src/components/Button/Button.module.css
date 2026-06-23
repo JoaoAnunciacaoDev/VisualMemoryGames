@@ -1,0 +1,39 @@
+.button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.button:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Variantes */
+.primary {
+  background-color: #007BFF;
+  color: white;
+}
+
+.danger {
+  background-color: #ff4d4d;
+  color: white;
+}
+
+.ghost {
+  background: none;
+  color: blue;
+  text-decoration: underline;
+  padding: 0;
+}

@@ -1,0 +1,27 @@
+.container {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.error {
+  color: red;
+  text-align: center;
+}
+
+.toggleButton {
+  margin-top: 15px;
+  background: none;
+  border: none;
+  color: blue;
+  cursor: pointer;
+  text-decoration: underline;
+  width: 100%;
+}

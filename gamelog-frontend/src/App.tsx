@@ -1,18 +1,19 @@
-// src/App.tsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-
-const Home = () => <h1>Bem-vindo ao GameLog 🎮</h1>;
+import Layout from './components/Layout/Layout';
+import Home from './pages/Home/Home';
+import Login from './pages/Login/Login';
+import Dashboard from './pages/Dashboard/Dashboard';
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </Layout>
     </BrowserRouter>
   );
 }

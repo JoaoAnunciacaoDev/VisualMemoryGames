@@ -50,7 +50,6 @@ class UserGameResponse(UserGameBase):
     id: str
     user_id: str
     game_id: str
-    external_id: int
     
     model_config = ConfigDict(from_attributes=True)
 

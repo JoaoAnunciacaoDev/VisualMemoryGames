@@ -11,6 +11,9 @@ export default function Header() {
         GameLog
       </span>
       <nav className={styles.nav}>
+        <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+          Buscar Jogos
+        </Button>
         <Button variant="ghost" onClick={() => navigate('/library')}>
           Biblioteca
         </Button>

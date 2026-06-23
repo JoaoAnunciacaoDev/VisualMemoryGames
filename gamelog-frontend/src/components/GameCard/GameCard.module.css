@@ -68,5 +68,10 @@
 
 .added {
   background-color: #28a745;
-  cursor: default;
+  cursor: pointer;
+}
+
+.remove {
+  background-color: #dc3545;
+  cursor: pointer;
 }

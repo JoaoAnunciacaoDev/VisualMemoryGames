@@ -53,9 +53,20 @@ def add_game_to_library(
 @router.get("/user/{user_id}", response_model=List[UserGameResponse])
 def get_user_library(user_id: str, db: Session = Depends(get_db)):
     """Retorna todos os jogos da biblioteca de um usuário específico."""
-    
-    library = db.query(UserGame).filter(UserGame.user_id == user_id).all()
-    return library
+
+    library = (
+        db.query(UserGame, Game.external_id)
+        .join(Game, Game.id == UserGame.game_id)
+        .filter(UserGame.user_id == user_id)
+        .all()
+    )
+
+    result = []
+    for user_game, external_id in library:
+        user_game.external_id = external_id
+        result.append(user_game)
+
+    return result
 
 
 @router.put("/{user_game_id}", response_model=UserGameResponse)

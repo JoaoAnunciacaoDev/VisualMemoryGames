@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import styles from './GameCard.module.css';
 
 interface Props {
@@ -6,10 +7,19 @@ interface Props {
   releaseYear: number | null;
   isAdded: boolean;
   onAdd: () => void;
+  onRemove: () => void;
   onClick: () => void;
 }
 
-export default function GameCard({ title, coverUrl, releaseYear, isAdded, onAdd, onClick }: Props) {
+export default function GameCard({ title, coverUrl, releaseYear, isAdded, onAdd, onRemove, onClick }: Props) {
+  const [isHoveringButton, setIsHoveringButton] = useState(false);
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isAdded) onRemove();
+    else onAdd();
+  };
+
   return (
     <div className={styles.card} onClick={onClick}>
       <div className={styles.imageWrapper}>
@@ -25,11 +35,12 @@ export default function GameCard({ title, coverUrl, releaseYear, isAdded, onAdd,
         <h3 className={styles.title}>{title}</h3>
         {releaseYear && <p className={styles.meta}>{releaseYear}</p>}
         <button
-          className={`${styles.addButton} ${isAdded ? styles.added : ''}`}
-          onClick={(e) => { e.stopPropagation(); onAdd(); }}
-          disabled={isAdded}
+          className={`${styles.addButton} ${isAdded ? (isHoveringButton ? styles.remove : styles.added) : ''}`}
+          onClick={handleButtonClick}
+          onMouseEnter={() => setIsHoveringButton(true)}
+          onMouseLeave={() => setIsHoveringButton(false)}
         >
-          {isAdded ? '✓ Adicionado' : 'Adicionar à Biblioteca'}
+          {isAdded ? (isHoveringButton ? '✕ Remover da Biblioteca' : '✓ Adicionado') : 'Adicionar à Biblioteca'}
         </button>
       </div>
     </div>

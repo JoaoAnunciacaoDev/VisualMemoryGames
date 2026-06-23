@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -38,7 +40,10 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
     new_game = Game(
         external_id=game.external_id,
         title=game.title,
-        cover_url=game.cover_url
+        cover_url=game.cover_url,
+        release_year=game.release_year,
+        platforms=json.dumps(game.platforms),
+        genres=json.dumps(game.genres),
     )
 
     db.add(new_game)

@@ -26,23 +26,93 @@ export default function Dashboard() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [searchResults, setSearchResults] = useState<GameResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [addedGames, setAddedGames] = useState<Set<number>>(new Set());
+  const [addedGames, setAddedGames] = useState<Map<number, string>>(new Map());
   const [selectedGame, setSelectedGame] = useState<GameResult | null>(null);
   const { toast, showToast, hideToast } = useToast();
 
+  const loadUserLibrary = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const meResponse = await api.get('/users/me', { headers });
+      const userId = meResponse.data.id;
+
+      const libraryResponse = await api.get(`/user-games/user/${userId}`, { headers });
+
+      const externalIdToUserGameId = new Map<number, string>(
+        libraryResponse.data.map((ug: any) => [ug.external_id, ug.id])
+      );
+
+      setAddedGames(externalIdToUserGameId);
+    } catch {
+      navigate('/login');
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) navigate('/login');
-    else setLoadingAuth(false);
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    loadUserLibrary().finally(() => setLoadingAuth(false));
   }, [navigate]);
 
   const handleAddGame = async (game: GameResult) => {
     try {
-      await api.post('/library/', { external_id: game.external_id });
-      setAddedGames(prev => new Set(prev).add(game.external_id));
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const gameResponse = await api.post('/games/', {
+        external_id: game.external_id,
+        title: game.title,
+        cover_url: game.cover_url,
+        release_year: game.release_year,
+        platforms: game.platforms,
+        genres: game.genres,
+      }, { headers });
+
+      await api.post('/user-games/', { game_id: gameResponse.data.id }, { headers });
+      await loadUserLibrary();
       showToast('Jogo adicionado à biblioteca!', 'success');
+
+    } catch (err: any) {
+      if (err.response?.status === 400) {
+        try {
+          const token = localStorage.getItem('token');
+          const headers = { Authorization: `Bearer ${token}` };
+          const gamesResponse = await api.get('/games/', { headers });
+          const existing = gamesResponse.data.find((g: any) => g.external_id === game.external_id);
+
+          if (existing) {
+            await api.post('/user-games/', { game_id: existing.id }, { headers });
+            await loadUserLibrary();
+            showToast('Jogo adicionado à biblioteca!', 'success');
+          }
+        } catch {
+          showToast('Erro ao adicionar jogo.', 'error');
+        }
+      } else {
+        showToast('Erro ao adicionar jogo.', 'error');
+      }
+    }
+  };
+
+  const handleRemoveGame = async (externalId: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      const userGameId = addedGames.get(externalId);
+
+      await api.delete(`/user-games/${userGameId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      await loadUserLibrary();
+      showToast('Jogo removido da biblioteca.', 'info');
     } catch {
-      showToast('Erro ao adicionar jogo.', 'error');
+      showToast('Erro ao remover jogo.', 'error');
     }
   };
 
@@ -82,6 +152,7 @@ export default function Dashboard() {
             releaseYear={game.release_year}
             isAdded={addedGames.has(game.external_id)}
             onAdd={() => handleAddGame(game)}
+            onRemove={() => handleRemoveGame(game.external_id)}
             onClick={() => setSelectedGame(game)}
           />
         ))}

@@ -1,5 +1,6 @@
+import json
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class GameBase(BaseModel):
@@ -19,6 +20,12 @@ class GameResponse(GameBase):
     id: str
     
     model_config = ConfigDict(from_attributes=True)
+    @field_validator('platforms', 'genres', mode='before')
+    @classmethod
+    def parse_json_list(cls, v):
+        if isinstance(v, str):
+            return json.loads(v)
+        return v or []  
 
 
 class UserGameBase(BaseModel):
@@ -43,5 +50,6 @@ class UserGameResponse(UserGameBase):
     id: str
     user_id: str
     game_id: str
+    external_id: int
     
     model_config = ConfigDict(from_attributes=True)

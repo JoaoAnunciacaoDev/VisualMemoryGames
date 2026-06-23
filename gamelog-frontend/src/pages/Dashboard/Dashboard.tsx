@@ -150,7 +150,6 @@ export default function Dashboard() {
     <div className={styles.page}>
       <header className={styles.header}>
         <h2>Adicione jogos a sua Biblioteca</h2>
-        <button className={styles.logoutButton} onClick={handleLogout}>Sair</button>
       </header>
       <hr className={styles.divider} />
       <SearchBar onSearch={handleSearch} isSearching={isSearching} />

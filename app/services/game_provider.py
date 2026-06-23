@@ -24,10 +24,14 @@ def search_games_on_rawg(query: str) -> List[Dict]:
         
         results = []
         for item in data.get("results", []):
+            released = item.get("released")
             results.append({
                 "external_id": item["id"],
                 "title": item["name"],
-                "cover_url": item.get("background_image")
+                "cover_url": item.get("background_image"),
+                "release_year": int(released[:4]) if released else None,
+                "platforms": [p["platform"]["name"] for p in item.get("platforms", [])],
+                "genres": [g["name"] for g in item.get("genres", [])], 
             })
             
         return results

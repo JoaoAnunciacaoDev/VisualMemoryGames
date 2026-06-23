@@ -6,6 +6,9 @@ class GameBase(BaseModel):
     external_id: int
     title: str
     cover_url: Optional[str] = None
+    release_year: int | None
+    platforms: list[str]
+    genres: list[str]
 
 
 class GameCreate(GameBase):

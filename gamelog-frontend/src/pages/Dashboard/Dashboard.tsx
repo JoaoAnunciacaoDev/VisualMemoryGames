@@ -4,12 +4,16 @@ import api from '../../services/api';
 import SearchBar from '../../components/SearchBar/SearchBar';
 import GameCard from '../../components/GameCard/GameCard';
 import GameGrid from '../../components/GameGrid/GameGrid';
+import GameModal from '../../components/GameModal/GameModal';
 import styles from './Dashboard.module.css';
 
 interface GameResult {
   external_id: number;
   title: string;
   cover_url: string;
+  release_year: number | null;
+  platforms: string[];
+  genres: string[];
 }
 
 export default function Dashboard() {
@@ -17,6 +21,17 @@ export default function Dashboard() {
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [searchResults, setSearchResults] = useState<GameResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [addedGames, setAddedGames] = useState<Set<number>>(new Set());
+  const [selectedGame, setSelectedGame] = useState<GameResult | null>(null);
+
+  const handleAddGame = async (game: GameResult) => {
+    try {
+      await api.post('/library/', { external_id: game.external_id });
+      setAddedGames(prev => new Set(prev).add(game.external_id));
+    } catch {
+      alert('Erro ao adicionar jogo.');
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -57,7 +72,10 @@ export default function Dashboard() {
             key={game.external_id}
             title={game.title}
             coverUrl={game.cover_url}
-            onAdd={() => console.log('Adicionar', game.title)}
+            releaseYear={game.release_year}
+            isAdded={addedGames.has(game.external_id)}
+            onAdd={() => handleAddGame(game)}
+            onClick={() => setSelectedGame(game)}
           />
         ))}
       </GameGrid>
@@ -66,6 +84,16 @@ export default function Dashboard() {
           Pesquise por um título para adicionar à sua coleção.
         </div>
       )}
+      <GameModal
+        game={selectedGame ? {
+          title: selectedGame.title,
+          coverUrl: selectedGame.cover_url,
+          releaseYear: selectedGame.release_year,
+          platforms: selectedGame.platforms,
+          genres: selectedGame.genres,
+        } : null}
+        onClose={() => setSelectedGame(null)}
+      />
     </div>
   );
 }

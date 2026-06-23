@@ -11,6 +11,9 @@ class Game(Base):
     external_id = Column(Integer, unique=True, index=True, nullable=False)
     title = Column(String, nullable=False)
     cover_url = Column(String, nullable=True)
+    release_year = Column(Integer, nullable=True)
+    platforms = Column(String, nullable=True)
+    genres = Column(String, nullable=True)
 
     user_games = relationship("UserGame", back_populates="game", cascade="all, delete-orphan")
     tier_items = relationship("TierItem", back_populates="game", cascade="all, delete-orphan")

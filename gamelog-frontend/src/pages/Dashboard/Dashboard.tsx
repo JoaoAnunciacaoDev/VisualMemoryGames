@@ -8,6 +8,7 @@ import SearchBar from '../../components/SearchBar/SearchBar';
 import GameCard from '../../components/GameCard/GameCard';
 import GameGrid from '../../components/GameGrid/GameGrid';
 import GameModal from '../../components/GameModal/GameModal';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import Toast from '../../components/Toast/Toast';
 
 import styles from './Dashboard.module.css';
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [addedGames, setAddedGames] = useState<Map<number, string>>(new Map());
   const [selectedGame, setSelectedGame] = useState<GameResult | null>(null);
   const { toast, showToast, hideToast } = useToast();
+  const [gameToRemove, setGameToRemove] = useState<number | null>(null);
 
   const loadUserLibrary = async () => {
     try {
@@ -100,19 +102,28 @@ export default function Dashboard() {
     }
   };
 
-  const handleRemoveGame = async (externalId: number) => {
+  const handleRemoveClick = (externalId: number) => {
+    setGameToRemove(externalId);
+  };
+
+  const confirmRemove = async () => {
+    if (gameToRemove === null) return;
+
     try {
       const token = localStorage.getItem('token');
-      const userGameId = addedGames.get(externalId);
+      const userGameId = addedGames.get(gameToRemove);
 
       await api.delete(`/user-games/${userGameId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       await loadUserLibrary();
+      setSelectedGame(null);
       showToast('Jogo removido da biblioteca.', 'info');
     } catch {
       showToast('Erro ao remover jogo.', 'error');
+    } finally {
+      setGameToRemove(null);
     }
   };
 
@@ -152,7 +163,7 @@ export default function Dashboard() {
             releaseYear={game.release_year}
             isAdded={addedGames.has(game.external_id)}
             onAdd={() => handleAddGame(game)}
-            onRemove={() => handleRemoveGame(game.external_id)}
+            onRemove={() => handleRemoveClick(game.external_id)}
             onClick={() => setSelectedGame(game)}
           />
         ))}
@@ -175,8 +186,20 @@ export default function Dashboard() {
         
         onClose={() => setSelectedGame(null)}
         onAdd={() => selectedGame && handleAddGame(selectedGame)}
-        onRemove={() => selectedGame && handleRemoveGame(selectedGame.external_id)}
+        onRemove={() => selectedGame && handleRemoveClick(selectedGame.external_id)}
       />
+
+      <ConfirmModal
+        isOpen={gameToRemove !== null}
+        title="Remover Jogo"
+        message="Tem certeza que deseja remover este jogo da sua biblioteca? Você perderá todos os dados salvos sobre ele."
+        confirmText="Sim, remover"
+        cancelText="Cancelar"
+        isDestructive={true}
+        onConfirm={confirmRemove}
+        onCancel={() => setGameToRemove(null)}
+      />
+      
       {toast && (
         <Toast
           message={toast.message}

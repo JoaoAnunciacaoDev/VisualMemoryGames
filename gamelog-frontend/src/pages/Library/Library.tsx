@@ -5,6 +5,7 @@ import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
 import LibraryCard from '../../components/LibraryCard/LibraryCard';
 import GameEditModal from '../../components/GameEditModal/GameEditModal';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import Toast from '../../components/Toast/Toast';
 
 import styles from './Library.module.css';
@@ -42,6 +43,8 @@ export default function Library() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [sortOption, setSortOption] = useState<string>('');
+
+  const [gameToRemove, setGameToRemove] = useState<string | null>(null);
 
   const loadLibrary = async () => {
     try {
@@ -88,21 +91,26 @@ export default function Library() {
     }
   };
 
-  const handleRemove = async (userGameId: string) => {
-    const confirmDelete = window.confirm("Tem certeza que deseja remover este jogo da sua biblioteca?");
-    if (!confirmDelete) return;
+  const handleRemoveClick = (userGameId: string) => {
+    setGameToRemove(userGameId);
+  };
+
+  const confirmRemove = async () => {
+    if (!gameToRemove) return;
 
     try {
       const token = localStorage.getItem('token');
-      await api.delete(`/user-games/${userGameId}`, {
+      await api.delete(`/user-games/${gameToRemove}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setGames(games.filter(g => g.id !== userGameId));
+      setGames(games.filter(g => g.id !== gameToRemove));
       setSelectedGame(null);
       showToast('Jogo removido com sucesso!', 'success');
     } catch {
       showToast('Erro ao remover o jogo.', 'error');
+    } finally {
+      setGameToRemove(null);
     }
   };
 
@@ -190,9 +198,20 @@ export default function Library() {
           initialNotes={selectedGame.notes}
           onSave={handleSave}
           onClose={() => setSelectedGame(null)}
-          onRemove={() => handleRemove(selectedGame.id)}
+          onRemove={() => handleRemoveClick(selectedGame.id)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={gameToRemove !== null}
+        title="Remover Jogo"
+        message="Tem certeza que deseja remover este jogo da sua biblioteca? Você perderá sua nota e comentário."
+        confirmText="Sim, remover"
+        cancelText="Cancelar"
+        isDestructive={true}
+        onConfirm={confirmRemove}
+        onCancel={() => setGameToRemove(null)}
+      />
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={hideToast} />

@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models import custom_lists, user, game, user_game, tierlist  # noqa: F401
-from app.routers import auth, users, games, user_games, tierlists, custom_lists
+from app.routers import auth, users, games, user_games, tierlists, custom_lists  # noqa: F811
 
 load_dotenv()
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import Toast from '../../components/Toast/Toast';
 import styles from './TierList.module.css';
 
@@ -44,6 +45,7 @@ export default function TierLists() {
   const [customLists, setCustomLists] = useState<CustomList[]>([]);
   const [libraryGames, setLibraryGames] = useState<LibraryGame[]>([]);
   const [userId, setUserId] = useState('');
+  const [listToRemove, setListToRemove] = useState<string | null>(null);
 
   const getHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -122,13 +124,17 @@ export default function TierLists() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const confirmDeleteList = async () => {
+    if (!listToRemove) return;
+    
     try {
-      await api.delete(`/tierlists/${id}`, { headers: getHeaders() });
+      await api.delete(`/tierlists/${listToRemove}`, { headers: getHeaders() });
       await loadTierLists();
       showToast('Tier list deletada.', 'info');
     } catch {
       showToast('Erro ao deletar tier list.', 'error');
+    } finally {
+      setListToRemove(null);
     }
   };
 
@@ -254,7 +260,7 @@ export default function TierLists() {
                 </span>
                 <button
                   className={styles.deleteButton}
-                  onClick={() => handleDelete(tl.id)}
+                  onClick={() => setListToRemove(tl.id)}
                   title="Deletar"
                 >
                   🗑
@@ -264,6 +270,17 @@ export default function TierLists() {
           ))}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={listToRemove !== null}
+        title="Deletar Tier List"
+        message="Tem certeza que deseja deletar esta Tier List inteira? Esta ação não pode ser desfeita."
+        confirmText="Sim, deletar"
+        cancelText="Cancelar"
+        isDestructive={true}
+        onConfirm={confirmDeleteList}
+        onCancel={() => setListToRemove(null)}
+      />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>

@@ -11,6 +11,7 @@ import api from '../../services/api';
 import TierRow from '../../components/TierListMaker/TierRow';
 import SortableGame from '../../components/TierListMaker/SortableGame';
 import GameSearchModal from '../../components/GameSearchModal/GameSearchModal';
+import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 import Toast from '../../components/Toast/Toast';
 import styles from './TierListEditor.module.css';
 
@@ -43,6 +44,7 @@ export default function TierListEditor() {
   const [newTierColor, setNewTierColor] = useState('#cccccc');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tierToRemove, setTierToRemove] = useState<string | null>(null);
   const location = useLocation();
 
   const getHeaders = () => ({
@@ -215,17 +217,21 @@ export default function TierListEditor() {
     }
   };
 
-  const handleDeleteTier = async (tierId: string) => {
+  const confirmDeleteTier = async () => {
+    if (!tierToRemove) return;
+    
     try {
-      await api.delete(`/tierlists/category/${tierId}`, { headers: getHeaders() });
+      await api.delete(`/tierlists/category/${tierToRemove}`, { headers: getHeaders() });
       setGames((prev) => ({
         ...prev,
-        [POOL_ID]: [...prev[POOL_ID], ...prev[tierId].map((g) => ({ ...g, itemId: undefined }))],
-        [tierId]: [],
+        [POOL_ID]: [...prev[POOL_ID], ...prev[tierToRemove].map((g) => ({ ...g, itemId: undefined }))],
+        [tierToRemove]: [],
       }));
-      setTiers((prev) => prev.filter((t) => t.id !== tierId));
+      setTiers((prev) => prev.filter((t) => t.id !== tierToRemove));
     } catch {
       showToast('Erro ao deletar tier.', 'error');
+    } finally {
+      setTierToRemove(null);
     }
   };
 
@@ -310,7 +316,7 @@ export default function TierListEditor() {
               games={games[tier.id] ?? []}
               onLabelChange={(label) => handleLabelChange(tier.id, label)}
               onColorChange={(color) => handleColorChange(tier.id, color)}
-              onDelete={() => handleDeleteTier(tier.id)}
+              onDelete={() => setTierToRemove(tier.id)}
             />
           ))}
         </div>
@@ -353,6 +359,17 @@ export default function TierListEditor() {
           onClose={() => setShowSearchModal(false)}
         />
       )}
+
+      <ConfirmModal
+        isOpen={tierToRemove !== null}
+        title="Remover Tier"
+        message="Tem certeza que deseja remover este tier? Os jogos nele voltarão para a área de não classificados."
+        confirmText="Sim, remover"
+        cancelText="Cancelar"
+        isDestructive={true}
+        onConfirm={confirmDeleteTier}
+        onCancel={() => setTierToRemove(null)}
+      />
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>

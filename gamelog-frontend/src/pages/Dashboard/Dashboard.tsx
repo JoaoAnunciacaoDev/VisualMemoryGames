@@ -170,7 +170,12 @@ export default function Dashboard() {
           platforms: selectedGame.platforms,
           genres: selectedGame.genres,
         } : null}
+        
+        isAdded={selectedGame ? addedGames.has(selectedGame.external_id) : false}
+        
         onClose={() => setSelectedGame(null)}
+        onAdd={() => selectedGame && handleAddGame(selectedGame)}
+        onRemove={() => selectedGame && handleRemoveGame(selectedGame.external_id)}
       />
       {toast && (
         <Toast

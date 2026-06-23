@@ -91,3 +91,31 @@
   margin-top: 0.5rem;
   flex-wrap: wrap;
 }
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.removeTextButton {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px;
+  transition: opacity 0.2s;
+}
+
+.removeTextButton:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.removeTextButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

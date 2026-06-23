@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Button from '../Button/Button';
 import styles from './GameEditModal.module.css';
 
@@ -25,6 +25,7 @@ interface Props {
     played_year: number | null;
     notes: string | null;
   }) => Promise<void>;
+  onRemove?: () => void;
   onClose: () => void;
 }
 
@@ -36,6 +37,7 @@ export default function GameEditModal({
   initialPlayedYear,
   initialNotes,
   onSave,
+  onRemove,
   onClose,
 }: Props) {
   const [status, setStatus] = useState(initialStatus);
@@ -45,6 +47,15 @@ export default function GameEditModal({
   const [isSaving, setIsSaving] = useState(false);
 
   const canReview = status !== 'Quero Jogar';
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleStatusChange = (newStatus: string) => {
     setStatus(newStatus);
@@ -74,8 +85,12 @@ export default function GameEditModal({
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.closeButton} onClick={onClose}>
-          ✕
+        <button 
+          className={styles.closeButton} 
+          onClick={onClose}
+          aria-label="Fechar modal"
+        >
+          X
         </button>
 
         <div className={styles.gameInfo}>
@@ -109,7 +124,6 @@ export default function GameEditModal({
             <>
               <label className={styles.label}>
                 Sua nota
-
                 <div className={styles.ratingGrid}>
                     {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
                     <button
@@ -124,7 +138,7 @@ export default function GameEditModal({
                     </button>
                     ))}
                 </div>
-                </label>
+              </label>
 
               <label className={styles.label}>
                 Comentário
@@ -140,13 +154,26 @@ export default function GameEditModal({
           )}
         </div>
 
-        <Button
-          onClick={handleSave}
-          fullWidth
-          disabled={isSaving}
-        >
-          {isSaving ? 'Salvando...' : 'Salvar'}
-        </Button>
+        <div className={styles.actions}>
+          <Button
+            onClick={handleSave}
+            fullWidth
+            disabled={isSaving}
+          >
+            {isSaving ? 'Salvando...' : 'Salvar'}
+          </Button>
+
+          {onRemove && (
+            <button 
+              type="button"
+              onClick={onRemove}
+              disabled={isSaving}
+              className={styles.removeTextButton}
+            >
+              Remover da Biblioteca
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

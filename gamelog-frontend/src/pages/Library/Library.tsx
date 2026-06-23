@@ -41,8 +41,7 @@ export default function Library() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
-  const [sortBy, setSortBy] = useState<'rating' | 'played_year' | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOption, setSortOption] = useState<string>('');
 
   const loadLibrary = async () => {
     try {
@@ -89,14 +88,35 @@ export default function Library() {
     }
   };
 
+  const handleRemove = async (userGameId: string) => {
+    const confirmDelete = window.confirm("Tem certeza que deseja remover este jogo da sua biblioteca?");
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/user-games/${userGameId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setGames(games.filter(g => g.id !== userGameId));
+      setSelectedGame(null);
+      showToast('Jogo removido com sucesso!', 'success');
+    } catch {
+      showToast('Erro ao remover o jogo.', 'error');
+    }
+  };
+
   const filteredGames = games
     .filter((g) => statusFilter === 'Todos' || g.status === statusFilter)
     .filter((g) => g.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (!sortBy) return 0;
-      const aVal = a[sortBy] ?? -1;
-      const bVal = b[sortBy] ?? -1;
-      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+      if (!sortOption) return 0;
+      
+      const [sortBy, sortOrder] = sortOption.split('-');
+      const aVal = a[sortBy as keyof LibraryGame] ?? -1;
+      const bVal = b[sortBy as keyof LibraryGame] ?? -1;
+      
+      return sortOrder === 'asc' ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
     });
 
   if (loading) return <p>Carregando biblioteca...</p>;
@@ -125,22 +145,15 @@ export default function Library() {
         </select>
 
         <select
-          value={sortBy ?? ''}
-          onChange={(e) => setSortBy(e.target.value as 'rating' | 'played_year' | null || null)}
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
           className={styles.select}
         >
-          <option value="">Ordenar por...</option>
-          <option value="rating">Nota</option>
-          <option value="played_year">Ano jogado</option>
-        </select>
-
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-          className={styles.select}
-        >
-          <option value="desc">Decrescente</option>
-          <option value="asc">Crescente</option>
+          <option value="">Ordenar por Padrão</option>
+          <option value="rating-desc">Maior Nota</option>
+          <option value="rating-asc">Menor Nota</option>
+          <option value="played_year-desc">Jogados mais recentemente</option>
+          <option value="played_year-asc">Jogados há mais tempo</option>
         </select>
       </div>
 
@@ -177,6 +190,7 @@ export default function Library() {
           initialNotes={selectedGame.notes}
           onSave={handleSave}
           onClose={() => setSelectedGame(null)}
+          onRemove={() => handleRemove(selectedGame.id)}
         />
       )}
 

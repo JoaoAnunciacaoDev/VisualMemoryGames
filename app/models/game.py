@@ -17,3 +17,4 @@ class Game(Base):
 
     user_games = relationship("UserGame", back_populates="game", cascade="all, delete-orphan")
     tier_items = relationship("TierItem", back_populates="game", cascade="all, delete-orphan")
+    custom_lists = relationship("CustomList", secondary="custom_list_games", back_populates="games")

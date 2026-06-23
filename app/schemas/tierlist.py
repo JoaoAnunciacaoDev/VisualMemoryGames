@@ -10,9 +10,18 @@ class TierItemCreate(TierItemBase):
     pass
 
 
+class GameInTierItem(BaseModel):
+    id: str
+    title: str
+    cover_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TierItemResponse(TierItemBase):
     id: str
     category_id: str
+    game: Optional[GameInTierItem] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -93,3 +102,5 @@ class TierListResponse(TierListBase):
     
     categories: List[TierCategoryResponse] = [] 
     model_config = ConfigDict(from_attributes=True)
+
+

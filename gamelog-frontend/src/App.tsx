@@ -5,6 +5,7 @@ import Login from './pages/Login/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Library from './pages/Library/Library';
 import TierList from './pages/TierList/TierList';
+import TierListEditor from './pages/TierListEditor/TierListEditor';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/library" element={<Library />} />
           <Route path="/tierlists" element={<TierList />} />
+          <Route path="/tierlists/:id" element={<TierListEditor />} />
         </Routes>
       </Layout>
     </BrowserRouter>

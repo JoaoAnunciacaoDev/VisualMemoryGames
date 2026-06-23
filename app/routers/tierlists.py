@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 from app.models.tierlist import TierList, TierCategory, TierItem
@@ -101,7 +101,16 @@ def get_user_tierlists(user_id: str, db: Session = Depends(get_db)):
 
 @router.get("/{tierlist_id}", response_model=TierListResponse)
 def get_tierlist(tierlist_id: str, db: Session = Depends(get_db)):
-    tierlist = db.query(TierList).filter(TierList.id == tierlist_id).first()
+    tierlist = (
+        db.query(TierList)
+        .options(
+            joinedload(TierList.categories)
+            .joinedload(TierCategory.items)
+            .joinedload(TierItem.game)
+        )
+        .filter(TierList.id == tierlist_id)
+        .first()
+    )
     if not tierlist:
         raise HTTPException(status_code=404, detail="Tier List não encontrada.")
     return tierlist

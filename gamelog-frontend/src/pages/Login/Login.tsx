@@ -10,18 +10,25 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast, showToast, hideToast } = useToast();
 
+  const parseError = (err: any): string => {
+    const detail = err.response?.data?.detail;
+    if (!detail) return 'Ocorreu um erro no servidor.';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) return detail.map((d: any) => d.msg).join(', ');
+    return 'Ocorreu um erro no servidor.';
+  };
+
   const handleLogin = async (username: string, password: string) => {
     setError('');
     try {
       const params = new URLSearchParams();
       params.append('username', username);
       params.append('password', password);
-
       const response = await api.post('/login', params);
       localStorage.setItem('token', response.data.access_token);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Ocorreu um erro no servidor.');
+      setError(parseError(err));
     }
   };
 
@@ -31,7 +38,7 @@ export default function Login() {
       await api.post('/users/', { username, email, password });
       showToast('Conta criada com sucesso! Faça o login agora.', 'success');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Ocorreu um erro no servidor.');
+      setError(parseError(err));
     }
   };
 

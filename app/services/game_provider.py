@@ -14,7 +14,7 @@ def search_games_on_rawg(query: str) -> List[Dict]:
     params = {
         "key": RAWG_API_KEY,
         "search": query,
-        "page_size": 10
+        "page_size": 12
     }
     
     try:

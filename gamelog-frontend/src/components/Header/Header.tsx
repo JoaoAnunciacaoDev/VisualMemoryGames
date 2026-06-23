@@ -4,6 +4,12 @@ import styles from './Header.module.css';
 
 export default function Header() {
   const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
 
   return (
     <header className={styles.header}>
@@ -17,9 +23,20 @@ export default function Header() {
         <Button variant="ghost" onClick={() => navigate('/library')}>
           Biblioteca
         </Button>
-        <Button variant="ghost" onClick={() => navigate('/login')}>
-          Entrar
+        <Button variant="ghost" onClick={() => navigate('/tierlists')}>
+          TierLists
         </Button>
+        
+        {token ? (
+          <Button variant="ghost" onClick={handleLogout}>
+            Sair
+          </Button>
+        ) : (
+          <Button variant="ghost" onClick={() => navigate('/login')}>
+            Entrar
+          </Button>
+        )}
+
       </nav>
     </header>
   );

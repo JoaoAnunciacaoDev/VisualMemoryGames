@@ -1,0 +1,201 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.createRow {
+  display: flex;
+  gap: 12px;
+}
+
+.input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+}
+
+.createButton {
+  padding: 10px 18px;
+  background: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+}
+
+.lists {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.listCard {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.listInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.listName {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.listCount {
+  font-size: 13px;
+  color: #888;
+}
+
+.listActions {
+  display: flex;
+  gap: 8px;
+}
+
+.expandButton,
+.deleteButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.expandButton:hover { background: #f0f0f0; }
+.deleteButton { color: #dc3545; }
+.deleteButton:hover { background: #fff0f0; }
+
+.listContent {
+  border-top: 1px solid #eee;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gameGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gameItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 70px;
+  position: relative;
+}
+
+.gameItem.selectable {
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.gameItem.selectable:hover {
+  opacity: 1;
+}
+
+.cover {
+  width: 70px;
+  height: 95px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.noCover {
+  width: 70px;
+  height: 95px;
+  background: #ddd;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.gameTitle {
+  font-size: 11px;
+  text-align: center;
+  color: #333;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removeGame {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.addGameButton {
+  align-self: flex-start;
+  padding: 8px 14px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.addGameLabel {
+  margin: 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.cancelButton {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.allAdded {
+  color: #888;
+  font-size: 13px;
+}

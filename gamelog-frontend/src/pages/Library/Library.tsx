@@ -5,7 +5,7 @@ import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
 import LibraryCard from '../../components/LibraryCard/LibraryCard';
 import GameEditModal from '../../components/GameEditModal/GameEditModal';
-import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
+import CustomListsTab from '../../components/CustomListTab/CustomListTab';
 import Toast from '../../components/Toast/Toast';
 
 import styles from './Library.module.css';
@@ -33,18 +33,21 @@ const STATUS_OPTIONS = [
   'Em Espera',
 ];
 
+type Tab = 'library' | 'lists';
+
 export default function Library() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<Tab>('library');
   const [games, setGames] = useState<LibraryGame[]>([]);
+  const [userId, setUserId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedGame, setSelectedGame] = useState<LibraryGame | null>(null);
   const { toast, showToast, hideToast } = useToast();
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
-  const [sortOption, setSortOption] = useState<string>('');
-
-  const [gameToRemove, setGameToRemove] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'rating' | 'played_year' | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const loadLibrary = async () => {
     try {
@@ -52,9 +55,10 @@ export default function Library() {
       const headers = { Authorization: `Bearer ${token}` };
 
       const meResponse = await api.get('/users/me', { headers });
-      const userId = meResponse.data.id;
+      const id = meResponse.data.id;
+      setUserId(id);
 
-      const libraryResponse = await api.get(`/user-games/user/${userId}`, { headers });
+      const libraryResponse = await api.get(`/user-games/user/${id}`, { headers });
       setGames(libraryResponse.data);
     } catch {
       navigate('/login');
@@ -65,10 +69,7 @@ export default function Library() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    if (!token) { navigate('/login'); return; }
     loadLibrary();
   }, [navigate]);
 
@@ -91,40 +92,14 @@ export default function Library() {
     }
   };
 
-  const handleRemoveClick = (userGameId: string) => {
-    setGameToRemove(userGameId);
-  };
-
-  const confirmRemove = async () => {
-    if (!gameToRemove) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      await api.delete(`/user-games/${gameToRemove}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setGames(games.filter(g => g.id !== gameToRemove));
-      setSelectedGame(null);
-      showToast('Jogo removido com sucesso!', 'success');
-    } catch {
-      showToast('Erro ao remover o jogo.', 'error');
-    } finally {
-      setGameToRemove(null);
-    }
-  };
-
   const filteredGames = games
     .filter((g) => statusFilter === 'Todos' || g.status === statusFilter)
     .filter((g) => g.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (!sortOption) return 0;
-      
-      const [sortBy, sortOrder] = sortOption.split('-');
-      const aVal = a[sortBy as keyof LibraryGame] ?? -1;
-      const bVal = b[sortBy as keyof LibraryGame] ?? -1;
-      
-      return sortOrder === 'asc' ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
+      if (!sortBy) return 0;
+      const aVal = a[sortBy] ?? -1;
+      const bVal = b[sortBy] ?? -1;
+      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
     });
 
   if (loading) return <p>Carregando biblioteca...</p>;
@@ -133,58 +108,83 @@ export default function Library() {
     <div className={styles.page}>
       <h2 className={styles.heading}>Minha Biblioteca</h2>
 
-      <div className={styles.controls}>
-        <input
-          type="text"
-          placeholder="Pesquisar na biblioteca..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className={styles.searchInput}
-        />
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className={styles.select}
+      <div className={styles.tabs}>
+        <button
+          className={`${styles.tab} ${activeTab === 'library' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('library')}
         >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-
-        <select
-          value={sortOption}
-          onChange={(e) => setSortOption(e.target.value)}
-          className={styles.select}
+          Jogos
+        </button>
+        <button
+          className={`${styles.tab} ${activeTab === 'lists' ? styles.activeTab : ''}`}
+          onClick={() => setActiveTab('lists')}
         >
-          <option value="">Ordenar por Padrão</option>
-          <option value="rating-desc">Maior Nota</option>
-          <option value="rating-asc">Menor Nota</option>
-          <option value="played_year-desc">Jogados mais recentemente</option>
-          <option value="played_year-asc">Jogados há mais tempo</option>
-        </select>
+          Minhas Listas
+        </button>
       </div>
 
-      {filteredGames.length === 0 ? (
-        <div className={styles.emptyState}>
-          {games.length === 0
-            ? 'Sua biblioteca está vazia. Adicione jogos pelo Dashboard!'
-            : 'Nenhum jogo encontrado com os filtros aplicados.'}
-        </div>
-      ) : (
-        <div className={styles.grid}>
-          {filteredGames.map((game) => (
-            <LibraryCard
-              key={game.id}
-              title={game.title}
-              coverUrl={game.cover_url}
-              status={game.status}
-              rating={game.rating}
-              playedYear={game.played_year}
-              onClick={() => setSelectedGame(game)}
+      {activeTab === 'library' ? (
+        <>
+          <div className={styles.controls}>
+            <input
+              type="text"
+              placeholder="Pesquisar na biblioteca..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={styles.searchInput}
             />
-          ))}
-        </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={styles.select}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <select
+              value={sortBy ?? ''}
+              onChange={(e) => setSortBy(e.target.value as 'rating' | 'played_year' | null || null)}
+              className={styles.select}
+            >
+              <option value="">Ordenar por...</option>
+              <option value="rating">Nota</option>
+              <option value="played_year">Ano jogado</option>
+            </select>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+              className={styles.select}
+            >
+              <option value="desc">Decrescente</option>
+              <option value="asc">Crescente</option>
+            </select>
+          </div>
+
+          {filteredGames.length === 0 ? (
+            <div className={styles.emptyState}>
+              {games.length === 0
+                ? 'Sua biblioteca está vazia. Adicione jogos pelo Dashboard!'
+                : 'Nenhum jogo encontrado com os filtros aplicados.'}
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {filteredGames.map((game) => (
+                <LibraryCard
+                  key={game.id}
+                  title={game.title}
+                  coverUrl={game.cover_url}
+                  status={game.status}
+                  rating={game.rating}
+                  playedYear={game.played_year}
+                  onClick={() => setSelectedGame(game)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <CustomListsTab userId={userId} libraryGames={games} />
       )}
 
       {selectedGame && (
@@ -198,24 +198,10 @@ export default function Library() {
           initialNotes={selectedGame.notes}
           onSave={handleSave}
           onClose={() => setSelectedGame(null)}
-          onRemove={() => handleRemoveClick(selectedGame.id)}
         />
       )}
 
-      <ConfirmModal
-        isOpen={gameToRemove !== null}
-        title="Remover Jogo"
-        message="Tem certeza que deseja remover este jogo da sua biblioteca? Você perderá sua nota e comentário."
-        confirmText="Sim, remover"
-        cancelText="Cancelar"
-        isDestructive={true}
-        onConfirm={confirmRemove}
-        onCancel={() => setGameToRemove(null)}
-      />
-
-      {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

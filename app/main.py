@@ -2,12 +2,17 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.models import user, game, user_game, tierlist, custom_list  # noqa: F401
+from app.models import custom_lists, user, game, user_game, tierlist  # noqa: F401
 from app.routers import auth, users, games, user_games, tierlists, custom_lists
 
 load_dotenv()
 
 app = FastAPI(title="GameLog API")
+
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 app.add_middleware(
     CORSMiddleware,

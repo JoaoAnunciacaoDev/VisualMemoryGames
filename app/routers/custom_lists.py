@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.models.custom_list import CustomList
+from app.models.custom_lists import CustomList
 from app.models.game import Game
 from app.models.user import User
-from app.schemas.custom_list import CustomListCreate, CustomListResponse
+from app.schemas.custom_lists import CustomListCreate, CustomListResponse
 from app.database import get_db
 from app.security import get_current_user
 

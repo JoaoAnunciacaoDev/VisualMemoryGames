@@ -11,22 +11,65 @@ interface TierListSummary {
   categories: { id: string; name: string; color: string; items: any[] }[];
 }
 
+interface CustomList {
+  id: string;
+  name: string;
+  games: { id: string; title: string; cover_url: string | null }[];
+}
+
+interface LibraryGame {
+  game_id: string;
+  title: string;
+  cover_url: string | null;
+  status: string;
+}
+
+type GameSource = 'empty' | 'all' | 'status' | 'list';
+
+const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Quero Jogar', 'Abandonado', 'Em Espera'];
+
 export default function TierLists() {
   const navigate = useNavigate();
+  const { toast, showToast, hideToast } = useToast();
+
   const [tierLists, setTierLists] = useState<TierListSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTitle, setNewTitle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const { toast, showToast, hideToast } = useToast();
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [gameSource, setGameSource] = useState<GameSource>('empty');
+  const [selectedStatus, setSelectedStatus] = useState('Zerado');
+  const [selectedListId, setSelectedListId] = useState('');
+  const [customLists, setCustomLists] = useState<CustomList[]>([]);
+  const [libraryGames, setLibraryGames] = useState<LibraryGame[]>([]);
+  const [userId, setUserId] = useState('');
+
+  const getHeaders = () => ({
+    Authorization: `Bearer ${localStorage.getItem('token')}`
+  });
+
+  const loadSources = async (uid: string) => {
+    const [listsRes, libraryRes] = await Promise.all([
+      api.get(`/lists/user/${uid}`, { headers: getHeaders() }),
+      api.get(`/user-games/user/${uid}`, { headers: getHeaders() }),
+    ]);
+    setCustomLists(listsRes.data);
+    setLibraryGames(libraryRes.data);
+  };
 
   const loadTierLists = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const meResponse = await api.get('/users/me', { headers });
-      const userId = meResponse.data.id;
-      const response = await api.get(`/tierlists/user/${userId}`, { headers });
-      setTierLists(response.data);
+      const meResponse = await api.get('/users/me', { headers: getHeaders() });
+      const uid = meResponse.data.id;
+      setUserId(uid);
+
+      const [tierlistsRes] = await Promise.all([
+        api.get(`/tierlists/user/${uid}`, { headers: getHeaders() }),
+        loadSources(uid),
+      ]);
+
+      setTierLists(tierlistsRes.data);
     } catch {
       navigate('/login');
     } finally {
@@ -44,11 +87,34 @@ export default function TierLists() {
     if (!newTitle.trim()) return;
     setIsCreating(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await api.post('/tierlists/', { title: newTitle.trim() }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      navigate(`/tierlists/${response.data.id}`);
+      const response = await api.post('/tierlists/', { title: newTitle.trim() }, { headers: getHeaders() });
+      const tierlistId = response.data.id;
+
+      let gamesToAdd: { id: string; title: string; coverUrl: string | null }[] = [];
+
+      if (gameSource === 'all') {
+        gamesToAdd = libraryGames.map((g) => ({
+          id: g.game_id,
+          title: g.title,
+          coverUrl: g.cover_url,
+        }));
+      } else if (gameSource === 'status') {
+        gamesToAdd = libraryGames
+          .filter((g) => g.status === selectedStatus)
+          .map((g) => ({ id: g.game_id, title: g.title, coverUrl: g.cover_url }));
+      } else if (gameSource === 'list') {
+        const list = customLists.find((l) => l.id === selectedListId);
+        gamesToAdd = list?.games.map((g) => ({
+          id: g.id,
+          title: g.title,
+          coverUrl: g.cover_url,
+        })) ?? [];
+      }
+
+      setShowCreateModal(false);
+      setNewTitle('');
+      setGameSource('empty');
+      navigate(`/tierlists/${tierlistId}`, { state: { initialPool: gamesToAdd } });
     } catch {
       showToast('Erro ao criar tier list.', 'error');
     } finally {
@@ -58,10 +124,7 @@ export default function TierLists() {
 
   const handleDelete = async (id: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await api.delete(`/tierlists/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/tierlists/${id}`, { headers: getHeaders() });
       await loadTierLists();
       showToast('Tier list deletada.', 'info');
     } catch {
@@ -75,23 +138,89 @@ export default function TierLists() {
     <div className={styles.page}>
       <h2 className={styles.heading}>Minhas Tier Lists</h2>
 
-      <div className={styles.createRow}>
-        <input
-          type="text"
-          placeholder="Nome da nova tier list..."
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-          className={styles.input}
-        />
-        <button
-          className={styles.createButton}
-          onClick={handleCreate}
-          disabled={isCreating || !newTitle.trim()}
-        >
-          {isCreating ? 'Criando...' : '+ Criar'}
-        </button>
-      </div>
+      <button className={styles.createButton} onClick={() => setShowCreateModal(true)}>
+        + Nova Tier List
+      </button>
+
+      {showCreateModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowCreateModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Nova Tier List</h3>
+
+            <label className={styles.label}>
+              Nome
+              <input
+                type="text"
+                placeholder="Ex: Meus Jogos de 2024"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className={styles.input}
+                autoFocus
+              />
+            </label>
+
+            <label className={styles.label}>
+              Fonte dos jogos
+              <select
+                value={gameSource}
+                onChange={(e) => setGameSource(e.target.value as GameSource)}
+                className={styles.input}
+              >
+                <option value="empty">Vazia (adicionar manualmente)</option>
+                <option value="all">Toda a biblioteca</option>
+                <option value="status">Por status</option>
+                <option value="list">Lista personalizada</option>
+              </select>
+            </label>
+
+            {gameSource === 'status' && (
+              <label className={styles.label}>
+                Status
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className={styles.input}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            {gameSource === 'list' && (
+              <label className={styles.label}>
+                Lista
+                <select
+                  value={selectedListId}
+                  onChange={(e) => setSelectedListId(e.target.value)}
+                  className={styles.input}
+                >
+                  <option value="">Selecione uma lista...</option>
+                  {customLists.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} ({l.games.length} jogos)
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <div className={styles.modalActions}>
+              <button className={styles.cancelButton} onClick={() => setShowCreateModal(false)}>
+                Cancelar
+              </button>
+              <button
+                className={styles.confirmButton}
+                onClick={handleCreate}
+                disabled={isCreating || !newTitle.trim() || (gameSource === 'list' && !selectedListId)}
+              >
+                {isCreating ? 'Criando...' : 'Criar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tierLists.length === 0 ? (
         <div className={styles.emptyState}>

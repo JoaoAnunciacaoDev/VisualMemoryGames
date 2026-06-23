@@ -46,3 +46,32 @@
   color: #888;
   font-size: 16px;
 }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #eee;
+}
+
+.tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.2s;
+}
+
+.tab:hover {
+  color: #007BFF;
+}
+
+.activeTab {
+  color: #007BFF;
+  border-bottom-color: #007BFF;
+  font-weight: 600;
+}

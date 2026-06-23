@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, rectIntersection,
@@ -43,6 +43,7 @@ export default function TierListEditor() {
   const [newTierColor, setNewTierColor] = useState('#cccccc');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   const getHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -70,13 +71,19 @@ export default function TierListEditor() {
           coverUrl: item.game?.cover_url ?? null,
         }));
       }
-      setGames(loadedGames);
+      const initialPool = location.state?.initialPool ?? [];
+
+      setGames((prev) => ({
+        ...prev,
+        [POOL_ID]: initialPool,
+      }));
+
     } catch {
       navigate('/tierlists');
     } finally {
       setLoading(false);
     }
-  }, [id, navigate]);
+  }, [id, navigate, location.state]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');

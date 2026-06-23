@@ -7,6 +7,7 @@ from app.models.user import User
 from app.models.game import Game
 
 from app.schemas.game import UserGameCreate, UserGameResponse, UserGameUpdate, LibraryGameResponse
+from app.enums.game_status import GameStatus
 from app.database import get_db
 from app.security import get_current_user
 
@@ -96,6 +97,17 @@ def update_user_game(
         raise HTTPException(status_code=403, detail="Você não tem permissão para alterar este jogo.")
 
     update_data = game_update.model_dump(exclude_unset=True)
+
+    new_status = update_data.get(
+        "status",
+        db_user_game.status
+    )
+
+    if new_status == GameStatus.WANT_TO_PLAY:
+        update_data["rating"] = None
+        update_data["played_year"] = None
+        update_data["notes"] = None
+    
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
 

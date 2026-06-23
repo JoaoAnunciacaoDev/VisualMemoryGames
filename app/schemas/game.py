@@ -1,6 +1,11 @@
 import json
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from datetime import datetime
+from app.enums.game_status import GameStatus
+
+
+CURRENT_YEAR = datetime.now().year
 
 
 class GameBase(BaseModel):
@@ -29,9 +34,9 @@ class GameResponse(GameBase):
 
 
 class UserGameBase(BaseModel):
-    rating: Optional[int] = None
-    status: str = "Quero Jogar"
-    played_year: Optional[int] = None
+    rating: Optional[int] = Field(default=None, ge=0, le=10)
+    status: GameStatus = GameStatus.WANT_TO_PLAY
+    played_year: Optional[int] = Field(default=None, ge=1970, le=CURRENT_YEAR)
     notes: Optional[str] = None
 
 
@@ -40,9 +45,9 @@ class UserGameCreate(UserGameBase):
 
 
 class UserGameUpdate(BaseModel):
-    rating: Optional[int] = None
-    status: Optional[str] = None
-    played_year: Optional[int] = None
+    rating: Optional[int] = Field(default=None, ge=0, le=10)
+    status: Optional[GameStatus] = None
+    played_year: Optional[int] = Field(default=None, ge=1970, le=CURRENT_YEAR)
     notes: Optional[str] = None
 
 
@@ -64,7 +69,7 @@ class LibraryGameResponse(BaseModel):
     release_year: Optional[int] = None
     rating: Optional[int] = None
     status: str
-    played_year: Optional[int] = None
+    played_year: Optional[int] = Field(default=None, ge=1970, le=CURRENT_YEAR)
     notes: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TierItemBase(BaseModel):
@@ -18,8 +18,16 @@ class TierItemResponse(TierItemBase):
 
 
 class TierCategoryBase(BaseModel):
-    name: str
-    order_index: int
+    name: str = Field(min_length=1, max_length=50)
+    order_index: int = Field(ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("O nome da categoria não pode estar vazio")
+        return value
 
 
 class TierCategoryCreate(TierCategoryBase):
@@ -27,8 +35,17 @@ class TierCategoryCreate(TierCategoryBase):
 
 
 class TierCategoryUpdate(BaseModel):
-    name: Optional[str] = None
-    order_index: Optional[int] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    order_index: Optional[int] = Field(default=None, ge=0)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        if value is not None:
+            value = value.strip()
+            if not value:
+                raise ValueError("O nome da categoria não pode estar vazio")
+        return value
 
 
 class TierCategoryResponse(TierCategoryBase):
@@ -40,7 +57,15 @@ class TierCategoryResponse(TierCategoryBase):
 
 
 class TierListBase(BaseModel):
-    title: str
+    title: str = Field(min_length=1, max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("O título da Tier List não pode estar vazio")
+        return value
 
 
 class TierListCreate(TierListBase):
@@ -48,7 +73,16 @@ class TierListCreate(TierListBase):
 
 
 class TierListUpdate(BaseModel):
-    title: Optional[str] = None
+    title: Optional[str] = Field(default=None, min_length=1, max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, value):
+        if value is not None:
+            value = value.strip()
+            if not value:
+                raise ValueError("O título da Tier List não pode estar vazio")
+        return value
 
 
 class TierListResponse(TierListBase):

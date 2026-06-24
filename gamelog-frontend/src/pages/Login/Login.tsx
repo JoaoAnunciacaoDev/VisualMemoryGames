@@ -26,7 +26,7 @@ export default function Login() {
       params.append('password', password);
       const response = await api.post('/login', params);
       localStorage.setItem('token', response.data.access_token);
-      navigate('/dashboard');
+      navigate('/library');
     } catch (err: any) {
       setError(parseError(err));
     }

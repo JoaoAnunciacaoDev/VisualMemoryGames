@@ -40,7 +40,6 @@ def add_game_to_library(
         game_id=user_game.game_id,
         rating=user_game.rating,
         status=user_game.status,
-        played_year=user_game.played_year,
         notes=user_game.notes
     )
 
@@ -74,7 +73,6 @@ def get_user_library(user_id: str, db: Session = Depends(get_db)):
             release_year=game.release_year,
             rating=user_game.rating,
             status=user_game.status,
-            played_year=user_game.played_year,
             notes=user_game.notes,
         ))
 
@@ -105,7 +103,6 @@ def update_user_game(
 
     if new_status == GameStatus.WANT_TO_PLAY:
         update_data["rating"] = None
-        update_data["played_year"] = None
         update_data["notes"] = None
     
     for key, value in update_data.items():

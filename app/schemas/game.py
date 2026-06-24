@@ -38,15 +38,6 @@ class UserGameBase(BaseModel):
     started_at: Optional[date] = None
     finished_at: Optional[date] = None
     notes: Optional[str] = None
-    
-    @field_validator('played_year')
-    @classmethod
-    def validate_played_year(cls, value):
-        if value is not None:
-            current_year = datetime.now().year
-            if value > current_year:
-                raise ValueError(f"O ano jogado não pode ser maior que o ano atual ({current_year})")
-        return value
 
 
 class UserGameCreate(UserGameBase):
@@ -60,21 +51,11 @@ class UserGameUpdate(BaseModel):
     finished_at: Optional[date] = None
     notes: Optional[str] = None
 
-    @field_validator('played_year')
-    @classmethod
-    def validate_played_year(cls, value):
-        if value is not None:
-            current_year = datetime.now().year
-            if value > current_year:
-                raise ValueError(f"O ano jogado não pode ser maior que o ano atual ({current_year})")
-        return value
-
 
 class UserGameResponse(UserGameBase):
     id: str
     user_id: str
     game_id: str
-    external_id: int
     
     model_config = ConfigDict(from_attributes=True)
 

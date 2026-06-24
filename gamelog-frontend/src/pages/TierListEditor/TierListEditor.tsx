@@ -52,10 +52,41 @@ export default function TierListEditor() {
   const existingGameIds = new Set(
     Object.values(games).flat().map((g) => g.id)
   );
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [gameToRemove, setGameToRemove] = useState<string | null>(null);
 
   const getHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('token')}`
   });
+
+  const handleRemoveGameFromTierList = async (gameId: string) => {
+    const allGames = Object.values(games).flat();
+    const game = allGames.find((g) => g.id === gameId);
+    if (!game?.itemId) return;
+
+    const container = Object.keys(games).find((key) =>
+      games[key].some((g) => g.id === gameId)
+    );
+    if (!container) return;
+
+    const categoryId = container === POOL_ID ? poolCategoryId : container;
+    if (!categoryId) return;
+
+    try {
+      await api.delete(
+        `/tierlists/category/${categoryId}/items/${game.itemId}`,
+        { headers: getHeaders() }
+      );
+      setGames((prev) => ({
+        ...prev,
+        [container]: prev[container].filter((g) => g.id !== gameId),
+      }));
+      setSelectedGameId(null);
+      showToast('Jogo removido da tier list.', 'info');
+    } catch {
+      showToast('Erro ao remover jogo.', 'error');
+    }
+  };
 
   const loadTierList = useCallback(async () => {
     try {
@@ -408,6 +439,9 @@ export default function TierListEditor() {
               onLabelChange={(label) => handleLabelChange(tier.id, label)}
               onColorChange={(color) => handleColorChange(tier.id, color)}
               onDelete={() => setTierToRemove(tier.id)}
+              onRemoveGame={(gameId) => setGameToRemove(gameId)}
+              selectedGameId={selectedGameId}
+              onSelectGame={setSelectedGameId}
             />
           ))}
         </div>
@@ -434,7 +468,13 @@ export default function TierListEditor() {
 
         <div className={styles.poolArea}>
           <h3>Jogos não classificados</h3>
-          <TierRow id={POOL_ID} games={games[POOL_ID] ?? []} />
+          <TierRow
+            id={POOL_ID}
+            games={games[POOL_ID] ?? []}
+            onRemoveGame={(gameId) => setGameToRemove(gameId)}
+            selectedGameId={selectedGameId}
+            onSelectGame={setSelectedGameId}
+          />
         </div>
 
         <DragOverlay>
@@ -453,6 +493,22 @@ export default function TierListEditor() {
       )}
 
       <ConfirmModal
+        isOpen={gameToRemove !== null}
+        title="Remover Jogo"
+        message="Tem certeza que deseja remover este jogo da tier list?"
+        confirmText="Sim, remover"
+        cancelText="Cancelar"
+        isDestructive={true}
+        onConfirm={async () => {
+          if (gameToRemove) {
+            await handleRemoveGameFromTierList(gameToRemove);
+            setGameToRemove(null);
+          }
+        }}
+        onCancel={() => setGameToRemove(null)}
+      />
+
+      <ConfirmModal
         isOpen={tierToRemove !== null}
         title="Remover Tier"
         message="Tem certeza que deseja remover este tier? Os jogos nele voltarão para a área de não classificados."
@@ -462,6 +518,8 @@ export default function TierListEditor() {
         onConfirm={confirmDeleteTier}
         onCancel={() => setTierToRemove(null)}
       />
+
+      <div className={styles.page} onClick={() => setSelectedGameId(null)}></div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>

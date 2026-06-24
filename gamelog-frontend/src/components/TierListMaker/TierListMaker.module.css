@@ -164,3 +164,52 @@
 .addTierButton:hover {
   background-color: #0056b3;
 }
+
+.sortableGame {
+  position: relative;
+  width: 60px;
+  height: 80px;
+  border-radius: 4px;
+  overflow: visible;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dragHandle {
+  width: 60px;
+  height: 80px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.dragHandle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.selected {
+  outline: 2px solid #007BFF;
+  border-radius: 4px;
+}
+
+.removeGameButton {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+}

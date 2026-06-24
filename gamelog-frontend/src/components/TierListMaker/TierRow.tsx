@@ -18,9 +18,12 @@ interface Props {
   onLabelChange?: (newLabel: string) => void;
   onColorChange?: (newColor: string) => void;
   onDelete?: () => void;
+  onRemoveGame?: (gameId: string) => void;
+  selectedGameId?: string | null;
+  onSelectGame?: (gameId: string | null) => void;
 }
 
-export default function TierRow({ id, label, games, color, onLabelChange, onColorChange, onDelete }: Props) {
+export default function TierRow({ id, label, games, color, onLabelChange, onColorChange, onDelete, onRemoveGame, selectedGameId, onSelectGame }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [editingLabel, setEditingLabel] = useState(false);
 
@@ -82,6 +85,9 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
               id={game.id}
               title={game.title}
               coverUrl={game.coverUrl}
+              isSelected={selectedGameId === game.id}
+              onSelect={() => onSelectGame?.(selectedGameId === game.id ? null : game.id)}
+              onRemove={onRemoveGame ? () => onRemoveGame(game.id) : undefined}
             />
           ))}
           {games.length === 0 && (

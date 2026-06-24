@@ -98,3 +98,27 @@
   font-size: 14px;
   color: #555;
 }
+
+.selected {
+  outline: 2px solid #007BFF;
+  border-radius: 4px;
+}
+
+.removeGameButton {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+}

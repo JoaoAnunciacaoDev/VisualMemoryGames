@@ -6,9 +6,12 @@ interface Props {
   id: string;
   title: string;
   coverUrl: string | null;
+  onRemove?: () => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
-export default function SortableGame({ id, title, coverUrl }: Props) {
+export default function SortableGame({ id, title, coverUrl, onRemove, isSelected, onSelect }: Props) {
   const {
     attributes,
     listeners,
@@ -21,23 +24,40 @@ export default function SortableGame({ id, title, coverUrl }: Props) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 999 : 1,
+    opacity: isDragging ? 0.3 : 1,
+    visibility: isDragging ? 'hidden' as const : 'visible' as const,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className={styles.sortableGame}
+      className={`${styles.sortableGame} ${isSelected ? styles.selected : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect?.();
+      }}
       title={title}
     >
-      {coverUrl ? (
-        <img src={coverUrl} alt={title} draggable={false} />
-      ) : (
-        <div className={styles.noCover}>{title.substring(0, 2).toUpperCase()}</div>
+      <div className={styles.dragHandle} {...attributes} {...listeners}>
+        {coverUrl ? (
+          <img src={coverUrl} alt={title} draggable={false} />
+        ) : (
+          <div className={styles.noCover}>{title.substring(0, 2).toUpperCase()}</div>
+        )}
+      </div>
+
+      {isSelected && onRemove && (
+        <button
+          className={styles.removeGameButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          title="Remover da tier list"
+        >
+          X
+        </button>
       )}
     </div>
   );

@@ -28,7 +28,7 @@ class TierItemResponse(TierItemBase):
 
 class TierCategoryBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
-    order_index: int = Field(ge=0)
+    order_index: int = Field(ge=-1)
     color: str = '#cccccc'
 
     @field_validator("name")
@@ -46,7 +46,7 @@ class TierCategoryCreate(TierCategoryBase):
 
 class TierCategoryUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=50)
-    order_index: Optional[int] = Field(default=None, ge=0)
+    order_index: Optional[int] = Field(default=None, ge=-1)
     color: Optional[str] = None
 
     @field_validator("name")

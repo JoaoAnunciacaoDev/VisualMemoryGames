@@ -11,9 +11,10 @@ interface GameResult {
 interface Props {
   onSelect: (game: { id: string; title: string; coverUrl: string | null }) => void;
   onClose: () => void;
+  existingGameIds: Set<string>;
 }
 
-export default function GameSearchModal({ onSelect, onClose }: Props) {
+export default function GameSearchModal({ onSelect, onClose, existingGameIds }: Props) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GameResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -89,20 +90,24 @@ export default function GameSearchModal({ onSelect, onClose }: Props) {
         </div>
 
         <div className={styles.results}>
-          {results.map((game) => (
-            <div
-              key={game.external_id}
-              className={styles.resultItem}
-              onClick={() => handleSelect(game)}
-            >
-              {game.cover_url ? (
-                <img src={game.cover_url} alt={game.title} className={styles.cover} />
-              ) : (
-                <div className={styles.noCover}>{game.title.substring(0, 2).toUpperCase()}</div>
-              )}
-              <span className={styles.resultTitle}>{game.title}</span>
-            </div>
-          ))}
+          {results.map((game) => {
+            const alreadyAdded = existingGameIds.has(String(game.external_id));
+            return (
+              <div
+                key={game.external_id}
+                className={`${styles.resultItem} ${alreadyAdded ? styles.alreadyAdded : ''}`}
+                onClick={() => !alreadyAdded && handleSelect(game)}
+              >
+                {game.cover_url ? (
+                  <img src={game.cover_url} alt={game.title} className={styles.cover} />
+                ) : (
+                  <div className={styles.noCover}>{game.title.substring(0, 2).toUpperCase()}</div>
+                )}
+                <span className={styles.resultTitle}>{game.title}</span>
+                {alreadyAdded && <span className={styles.addedBadge}>Adicionado</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
@@ -40,12 +40,18 @@ export default function TierListEditor() {
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [games, setGames] = useState<Record<string, GameItem[]>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeContainer, setActiveContainer] = useState<string | null>(null);
   const [newTierLabel, setNewTierLabel] = useState('');
   const [newTierColor, setNewTierColor] = useState('#cccccc');
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tierToRemove, setTierToRemove] = useState<string | null>(null);
+  const [poolCategoryId, setPoolCategoryId] = useState<string | null>(null);
   const location = useLocation();
+  const initialPoolProcessed = useRef(false);
+  const existingGameIds = new Set(
+    Object.values(games).flat().map((g) => g.id)
+  );
 
   const getHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -57,15 +63,23 @@ export default function TierListEditor() {
       const data = response.data;
       setTitle(data.title);
 
-      const loadedTiers: Tier[] = data.categories.map((cat: any) => ({
+      const poolCat = data.categories.find((cat: any) => cat.name === '__pool__');
+      const normalCats = data.categories.filter((cat: any) => cat.name !== '__pool__');
+
+      const loadedTiers: Tier[] = normalCats.map((cat: any) => ({
         id: cat.id,
         label: cat.name,
         color: cat.color,
       }));
       setTiers(loadedTiers);
 
+      if (poolCat) {
+        setPoolCategoryId(poolCat.id);
+      }
+
       const loadedGames: Record<string, GameItem[]> = {};
-      for (const cat of data.categories) {
+
+      for (const cat of normalCats) {
         loadedGames[cat.id] = cat.items.map((item: any) => ({
           id: item.game_id,
           itemId: item.id,
@@ -74,8 +88,42 @@ export default function TierListEditor() {
         }));
       }
 
-      const initialPool = location.state?.initialPool ?? [];
-      loadedGames[POOL_ID] = initialPool;
+      const savedPool: GameItem[] = poolCat?.items.map((item: any) => ({
+        id: item.game_id,
+        itemId: item.id,
+        title: item.game?.title ?? 'Jogo',
+        coverUrl: item.game?.cover_url ?? null,
+      })) ?? [];
+
+      const initialPool: GameItem[] = location.state?.initialPool ?? [];
+      if (initialPool.length > 0 && poolCat && !initialPoolProcessed.current) {
+        initialPoolProcessed.current = true;
+
+        const savedPoolIds = new Set(savedPool.map((g) => g.id));
+        const newGames = initialPool.filter((g) => !savedPoolIds.has(g.id));
+
+        const savedNewGames: GameItem[] = [];
+        for (const game of newGames) {
+          try {
+            const response = await api.post(
+              `/tierlists/category/${poolCat.id}/items`,
+              { game_id: game.id },
+              { headers: getHeaders() }
+            );
+            savedNewGames.push({ ...game, itemId: response.data.id });
+          } catch (err: any) {
+            if (err.response?.status === 400) {
+              console.warn(`Jogo ${game.title} já está na tier list, ignorando.`);
+            } else {
+              savedNewGames.push(game);
+            }
+          }
+        }
+
+        loadedGames[POOL_ID] = [...savedPool, ...savedNewGames];
+      } else {
+        loadedGames[POOL_ID] = savedPool;
+      }
 
       setGames(loadedGames);
     } catch {
@@ -101,24 +149,22 @@ export default function TierListEditor() {
     return Object.keys(games).find((key) => games[key].some((g) => g.id === itemId));
   }, [games]);
 
-  const [activeContainer, setActiveContainer] = useState<string | null>(null);
-
   const handleDragStart = (event: DragStartEvent) => {
-    const id = event.active.id as string;
-    setActiveId(id);
-    setActiveContainer(findContainer(id) ?? null);
+    const dragId = event.active.id as string;
+    setActiveId(dragId);
+    setActiveContainer(findContainer(dragId) ?? null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
     if (!over) return;
-    const activeContainer = findContainer(active.id as string);
-    const overContainer = findContainer(over.id as string) ?? (over.id as string);
-    if (!activeContainer || !overContainer || activeContainer === overContainer) return;
+    const fromContainer = findContainer(active.id as string);
+    const toContainer = findContainer(over.id as string) ?? (over.id as string);
+    if (!fromContainer || !toContainer || fromContainer === toContainer) return;
 
     setGames((prev) => {
-      const activeItems = [...prev[activeContainer]];
-      const overItems = [...(prev[overContainer] ?? [])];
+      const activeItems = [...prev[fromContainer]];
+      const overItems = [...(prev[toContainer] ?? [])];
       const activeIndex = activeItems.findIndex((g) => g.id === active.id);
       const overIndex = overItems.findIndex((g) => g.id === over.id);
       const newIndex = overIndex >= 0 ? overIndex : overItems.length;
@@ -126,8 +172,8 @@ export default function TierListEditor() {
 
       return {
         ...prev,
-        [activeContainer]: activeItems.filter((g) => g.id !== active.id),
-        [overContainer]: [...overItems.slice(0, newIndex), item, ...overItems.slice(newIndex)],
+        [fromContainer]: activeItems.filter((g) => g.id !== active.id),
+        [toContainer]: [...overItems.slice(0, newIndex), item, ...overItems.slice(newIndex)],
       };
     });
   };
@@ -135,6 +181,7 @@ export default function TierListEditor() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+
     if (!over || !activeContainer) {
       setActiveContainer(null);
       return;
@@ -157,7 +204,10 @@ export default function TierListEditor() {
 
     const allGames = Object.values(games).flat();
     const game = allGames.find((g) => g.id === active.id);
-    if (!game) { setActiveContainer(null); return; }
+    if (!game) {
+      setActiveContainer(null);
+      return;
+    }
 
     if (overContainer !== POOL_ID) {
       try {
@@ -187,22 +237,35 @@ export default function TierListEditor() {
         await loadTierList();
       }
     } else {
-      if (game.itemId) {
+      if (game.itemId && poolCategoryId) {
         try {
-          await api.delete(
-            `/tierlists/category/${activeContainer}/items/${game.itemId}`,
+          await api.put(
+            `/tierlists/category/${activeContainer}/items/${game.itemId}/move`,
+            { target_category_id: poolCategoryId },
             { headers: getHeaders() }
           );
+        } catch (err) {
+          console.error('Erro ao mover para pool:', err);
+          showToast('Erro ao mover jogo para o pool.', 'error');
+          await loadTierList();
+        }
+      } else if (!game.itemId && poolCategoryId) {
+        try {
+          const response = await api.post(
+            `/tierlists/category/${poolCategoryId}/items`,
+            { game_id: game.id },
+            { headers: getHeaders() }
+          );
+          const newItemId = response.data.id;
           setGames((prev) => ({
             ...prev,
             [POOL_ID]: prev[POOL_ID].map((g) =>
-              g.id === game.id ? { ...g, itemId: undefined } : g
+              g.id === game.id ? { ...g, itemId: newItemId } : g
             ),
           }));
         } catch (err) {
-          console.error('Erro ao remover:', err);
-          showToast('Erro ao remover jogo do tier.', 'error');
-          await loadTierList();
+          console.error('Erro ao salvar no pool:', err);
+          showToast('Erro ao salvar jogo no pool.', 'error');
         }
       }
     }
@@ -231,7 +294,6 @@ export default function TierListEditor() {
 
   const confirmDeleteTier = async () => {
     if (!tierToRemove) return;
-    
     try {
       await api.delete(`/tierlists/category/${tierToRemove}`, { headers: getHeaders() });
       setGames((prev) => ({
@@ -275,12 +337,29 @@ export default function TierListEditor() {
   };
 
   const handleGameFound = async (game: { id: string; title: string; coverUrl: string | null }) => {
-    setGames((prev) => ({
-      ...prev,
-      [POOL_ID]: [...prev[POOL_ID], { ...game, itemId: undefined }],
-    }));
-    setShowSearchModal(false);
-    showToast(`${game.title} adicionado ao pool!`, 'success');
+    try {
+      if (poolCategoryId) {
+        const response = await api.post(
+          `/tierlists/category/${poolCategoryId}/items`,
+          { game_id: game.id },
+          { headers: getHeaders() }
+        );
+        const newItemId = response.data.id;
+        setGames((prev) => ({
+          ...prev,
+          [POOL_ID]: [...prev[POOL_ID], { ...game, itemId: newItemId }],
+        }));
+      } else {
+        setGames((prev) => ({
+          ...prev,
+          [POOL_ID]: [...prev[POOL_ID], { ...game, itemId: undefined }],
+        }));
+      }
+      setShowSearchModal(false);
+      showToast(`${game.title} adicionado ao pool!`, 'success');
+    } catch {
+      showToast('Erro ao adicionar jogo.', 'error');
+    }
   };
 
   const activeGame = activeId
@@ -369,6 +448,7 @@ export default function TierListEditor() {
         <GameSearchModal
           onSelect={handleGameFound}
           onClose={() => setShowSearchModal(false)}
+          existingGameIds={existingGameIds}
         />
       )}
 

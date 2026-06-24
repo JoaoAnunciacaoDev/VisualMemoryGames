@@ -21,7 +21,7 @@ router = APIRouter(prefix="/tierlists", tags=["Tier Lists"])
 
 @router.post("/", response_model=TierListResponse, status_code=status.HTTP_201_CREATED)
 def create_tierlist(
-    tierlist: TierListCreate, 
+    tierlist: TierListCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -30,14 +30,22 @@ def create_tierlist(
     db.commit()
     db.refresh(new_tierlist)
 
+    pool_category = TierCategory(
+        tierlist_id=new_tierlist.id,
+        name="__pool__",
+        color="#cccccc",
+        order_index=-1
+    )
+    db.add(pool_category)
+
     default_categories = [
-    {"name": "S", "color": "#ff7f7f"},
-    {"name": "A", "color": "#ffbf7f"},
-    {"name": "B", "color": "#ffff7f"},
-    {"name": "C", "color": "#7fff7f"},
-    {"name": "D", "color": "#7fbfff"},
+        {"name": "S", "color": "#ff7f7f"},
+        {"name": "A", "color": "#ffbf7f"},
+        {"name": "B", "color": "#ffff7f"},
+        {"name": "C", "color": "#7fff7f"},
+        {"name": "D", "color": "#7fbfff"},
     ]
-    
+
     for index, cat in enumerate(default_categories):
         category = TierCategory(
             tierlist_id=new_tierlist.id,
@@ -46,11 +54,11 @@ def create_tierlist(
             order_index=index
         )
         db.add(category)
-    
+
     db.commit()
     db.refresh(new_tierlist)
-
     return new_tierlist
+
 
 @router.delete("/{tierlist_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_tierlist(
@@ -74,8 +82,6 @@ def delete_tierlist(
 
 @router.post("/category/{category_id}/items", response_model=TierItemResponse, status_code=status.HTTP_201_CREATED)
 def add_item_to_category(category_id: str, item: TierItemCreate, db: Session = Depends(get_db)):
-    """Adiciona um jogo a uma categoria específica da Tier List."""
-    
     category = db.query(TierCategory).filter(TierCategory.id == category_id).first()
     if not category:
         raise HTTPException(status_code=404, detail="Categoria não encontrada.")
@@ -84,11 +90,22 @@ def add_item_to_category(category_id: str, item: TierItemCreate, db: Session = D
     if not game:
         raise HTTPException(status_code=404, detail="Jogo não encontrado no catálogo.")
 
+    existing = (
+        db.query(TierItem)
+        .join(TierCategory, TierCategory.id == TierItem.category_id)
+        .filter(
+            TierCategory.tierlist_id == category.tierlist_id,
+            TierItem.game_id == item.game_id
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Este jogo já está na tier list.")
+
     new_item = TierItem(category_id=category_id, game_id=item.game_id)
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
-
     return new_item
 
 

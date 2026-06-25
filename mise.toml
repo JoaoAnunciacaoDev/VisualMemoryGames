@@ -4,6 +4,23 @@ node = "20"
 [tasks."api.dev"]
 run = "fastapi dev app/main.py"
 
+[tasks.setup]
+depends = ["setup.back", "setup.front"]
+
 [tasks."api.front"]
-dir = "gamelog-frontend"
+dir = "frontend"
 run = "npm run dev"
+
+[tasks."setup.back"]
+run = """
+poetry install
+poetry run alembic upgrade head
+"""
+
+[tasks."setup.front"]
+dir = "frontend"
+run = "npm install"
+
+[tasks."front.lint"]
+dir = "frontend"
+run = "npm run lint"

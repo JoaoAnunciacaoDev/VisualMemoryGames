@@ -1,0 +1,163 @@
+# GameLog
+
+Aplicação full-stack para gerenciamento de bibliotecas de jogos digitais e criação de tier lists personalizadas.
+
+## Tecnologias
+
+### Backend
+
+* Python 3.12
+* FastAPI
+* SQLAlchemy
+* Alembic
+* SQLite
+* Poetry
+* Pytest
+
+### Frontend
+
+* React 18
+* TypeScript
+* Vite
+* Axios
+* React Router DOM
+
+### Ferramentas
+
+* Mise
+
+## Funcionalidades
+
+* Autenticação de usuários com JWT
+* Pesquisa de jogos através da API RAWG
+* Biblioteca pessoal de jogos
+* Dashboard interativo
+* Criação de tier lists
+* Rotas protegidas com autenticação
+* Integração entre frontend e backend via API REST
+
+## Pré-requisitos
+
+Antes de começar, instale:
+
+* Mise
+* Poetry
+
+## Instalação
+
+Clone o repositório e execute:
+
+```bash
+mise install
+mise run setup
+```
+
+Esse comando irá:
+
+* Instalar as dependências do backend com Poetry
+* Executar as migrações do banco de dados com Alembic
+* Instalar as dependências do frontend
+
+## Executando o Backend
+
+Na raiz do projeto:
+
+```bash
+mise run api.dev
+```
+
+A API ficará disponível em:
+
+```text
+http://localhost:8000
+```
+
+## Executando o Frontend
+
+Em outro terminal, na raiz do projeto:
+
+```bash
+mise run api.front
+```
+
+A aplicação ficará disponível em:
+
+```text
+http://localhost:5173
+```
+
+## Estrutura do Projeto
+
+```text
+GameLog/
+├── app/
+│   ├── enums/
+│   ├── models/
+│   ├── routers/
+│   ├── schemas/
+│   ├── services/
+│   ├── tests/
+│   ├── database.py
+│   ├── main.py
+│   └── security.py
+│
+├── alembic/
+│   └── versions/
+│
+├── frontend/
+│   ├── public/
+│   └── src/
+│       ├── assets/
+│       ├── components/
+│       │   ├── AuthForm/
+│       │   ├── Button/
+│       │   ├── ConfirmModal/
+│       │   ├── CustomListTab/
+│       │   ├── Footer/
+│       │   ├── GameCard/
+│       │   ├── GameEditModal/
+│       │   ├── GameGrid/
+│       │   ├── GameModal/
+│       │   ├── GameSearchModal/
+│       │   ├── Header/
+│       │   ├── Input/
+│       │   ├── Layout/
+│       │   ├── LibraryCard/
+│       │   ├── SearchBar/
+│       │   ├── SelectGamesModal/
+│       │   ├── TierListMaker/
+│       │   └── Toast/
+│       │
+│       ├── hooks/
+│       ├── pages/
+│       │   ├── Home/
+│       │   ├── Login/
+│       │   ├── Library/
+│       │   ├── TierList/
+│       │   └── TierListEditor/
+│       │
+│       ├── services/
+│       ├── styles/
+│       ├── types/
+│       ├── App.tsx
+│       └── main.tsx
+│
+├── mise.toml
+├── pyproject.toml
+├── alembic.ini
+└── README.md
+```
+
+## Testes
+
+Backend:
+
+```bash
+pytest
+```
+
+Frontend:
+
+```bash
+mise front.lint
+```

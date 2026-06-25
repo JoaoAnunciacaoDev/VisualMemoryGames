@@ -1,8 +1,11 @@
+import { useState } from 'react';
+
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { useState } from 'react';
-import SortableGame from './SortableGame';
-import styles from './TierListMaker.module.css';
+
+import SortableGame from '@/components/TierListMaker/SortableGame';
+
+import styles from '@/TierListMaker.module.css';
 
 interface GameItem {
   id: string;

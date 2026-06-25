@@ -1,6 +1,6 @@
-import api from '../services/api';
-import { getAuthHeaders } from '../services/auth';
-import { GameResult } from '../types/game';
+import api from '@/services/api';
+import { getAuthHeaders } from '@/services/auth';
+import { GameResult } from '@/types/game';
 
 
 export async function addGameToLibrary(game: GameResult): Promise<void> {

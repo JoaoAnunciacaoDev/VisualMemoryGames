@@ -1,4 +1,4 @@
-import styles from './GameGrid.module.css';
+import styles from '@/GameGrid.module.css';
 
 interface Props {
   children: React.ReactNode;

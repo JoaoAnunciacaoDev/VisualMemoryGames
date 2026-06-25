@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import api from '../services/api';
-import { getAuthHeaders } from '../services/auth';
-import { LibraryGame } from '../types/game';
+import api from '@/services/api';
+import { getAuthHeaders } from '@/services/auth';
+import { LibraryGame } from '@/types/game';
 
 
 export function useLibrary(userId: string) {

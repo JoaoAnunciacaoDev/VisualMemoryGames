@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import Button from '../Button/Button';
-import Input from '../Input/Input';
-import styles from './SearchBar.module.css';
+import Button from '@/components/Button/Button';
+import Input from '@/components/Input/Input';
+import styles from '@/SearchBar.module.css';
 
 interface Props {
   onSearch: (query: string) => void;

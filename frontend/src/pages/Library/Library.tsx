@@ -1,21 +1,23 @@
 import { useState, useMemo } from 'react';
-import { useToast } from '../../hooks/useToast';
-import { useAuth } from '../../hooks/useAuth';
-import { useLibrary } from '../../hooks/useLibrary';
-import { useLibraryFilters } from '../../hooks/useLibraryFilters';
-import { useGameSearch } from '../../hooks/useGameSearch';
-import { addGameToLibrary } from '../../hooks/useAddGame';
-import { LibraryGame, GameResult } from '../../types/game';
 
-import LibraryCard from '../../components/LibraryCard/LibraryCard';
-import GameEditModal from '../../components/GameEditModal/GameEditModal';
-import CustomListsTab from '../../components/CustomListTab/CustomListTab';
-import Toast from '../../components/Toast/Toast';
-import SearchBar from '../../components/SearchBar/SearchBar';
-import GameCard from '../../components/GameCard/GameCard';
-import GameGrid from '../../components/GameGrid/GameGrid';
-import GameModal from '../../components/GameModal/GameModal';
-import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
+import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import { useLibrary } from '@/hooks/useLibrary';
+import { useLibraryFilters } from '@/hooks/useLibraryFilters';
+import { useGameSearch } from '@/hooks/useGameSearch';
+import { addGameToLibrary } from '@/hooks/useAddGame';
+
+import LibraryCard from '@/components/LibraryCard/LibraryCard';
+import GameEditModal from '@/components/GameEditModal/GameEditModal';
+import CustomListsTab from '@/components/CustomListTab/CustomListTab';
+import Toast from '@/components/Toast/Toast';
+import SearchBar from '@/components/SearchBar/SearchBar';
+import GameCard from '@/components/GameCard/GameCard';
+import GameGrid from '@/components/GameGrid/GameGrid';
+import GameModal from '@/components/GameModal/GameModal';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+
+import { LibraryGame, GameResult } from '@/types/game';
 
 import styles from './Library.module.css';
 

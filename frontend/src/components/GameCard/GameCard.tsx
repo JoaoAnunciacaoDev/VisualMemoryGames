@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import styles from './GameCard.module.css';
+import styles from '@/GameCard.module.css';
 
 interface Props {
   title: string;

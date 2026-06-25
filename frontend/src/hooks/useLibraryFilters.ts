@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { LibraryGame } from '../types/game';
+import { LibraryGame } from '@/types/game';
 
 type SortBy = 'rating' | 'started_at' | 'finished_at' | null;
 

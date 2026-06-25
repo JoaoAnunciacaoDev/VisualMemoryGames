@@ -1,20 +1,25 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, rectIntersection,
   DragStartEvent, DragOverEvent, DragEndEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
-import { useToast } from '../../hooks/useToast';
-import { getAuthHeaders } from '../../services/auth';
-import api from '../../services/api';
-import TierRow from '../../components/TierListMaker/TierRow';
-import SortableGame from '../../components/TierListMaker/SortableGame';
-import GameSearchModal from '../../components/GameSearchModal/GameSearchModal';
-import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
-import Toast from '../../components/Toast/Toast';
-import styles from './TierListEditor.module.css';
+
+import TierRow from '@/components/TierListMaker/TierRow';
+import SortableGame from '@/components/TierListMaker/SortableGame';
+import GameSearchModal from '@/components/GameSearchModal/GameSearchModal';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Toast from '@/components/Toast/Toast';
+
+import { useToast } from '@/hooks/useToast';
+
+import { getAuthHeaders } from '@/services/auth';
+import api from '@/services/api';
+
+import styles from '@/TierListEditor.module.css';
 
 interface GameItem {
   id: string;

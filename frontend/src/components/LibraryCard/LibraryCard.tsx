@@ -1,4 +1,4 @@
-import styles from './LibraryCard.module.css';
+import styles from '@/LibraryCard.module.css';
 
 interface Props {
   title: string;

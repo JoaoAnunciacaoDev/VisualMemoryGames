@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
-import { getAuthHeaders, clearToken } from '../services/auth';
+import api from '@/services/api';
+import { getAuthHeaders, clearToken } from '@/services/auth';
 
 export function useAuth() {
   const navigate = useNavigate();

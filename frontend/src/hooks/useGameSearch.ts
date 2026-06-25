@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import api from '../services/api';
-import { GameResult } from '../types/game';
+import api from '@/services/api';
+import { GameResult } from '@/types/game';
 
 export function useGameSearch() {
   const [searchResults, setSearchResults] = useState<GameResult[]>([]);

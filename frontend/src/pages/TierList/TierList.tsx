@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useToast } from '../../hooks/useToast';
-import { useAuth } from '../../hooks/useAuth';
-import { getAuthHeaders } from '../../services/auth';
-import api from '../../services/api';
-import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
-import Toast from '../../components/Toast/Toast';
-import styles from './TierList.module.css';
+
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Toast from '@/components/Toast/Toast';
+
+import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+
+import { getAuthHeaders } from '@/services/auth';
+import api from '@/services/api';
+
+import styles from '@/TierList.module.css';
 
 interface TierListSummary {
   id: string;

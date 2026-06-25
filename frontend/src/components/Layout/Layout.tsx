@@ -1,6 +1,6 @@
-import Header from '../Header/Header';
-import Footer from '../Footer/Footer';
-import styles from './Layout.module.css';
+import Header from '@/components/Header/Header';
+import Footer from '@/components/Footer/Footer';
+import styles from '@/Layout.module.css';
 
 interface Props {
   children: React.ReactNode;

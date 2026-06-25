@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useToast } from '../../hooks/useToast';
-import { getAuthHeaders } from '../../services/auth';
-import api from '../../services/api';
-import ConfirmModal from '../ConfirmModal/ConfirmModal';
-import SelectGamesModal from '../SelectGamesModal/SelectGamesModal';
-import Toast from '../Toast/Toast';
-import styles from './CustomListTab.module.css';
+import { useToast } from '@/hooks/useToast';
+import { getAuthHeaders } from '@/services/auth';
+import api from '@/services/api';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
+import Toast from '@/components/Toast/Toast';
+import styles from '@/CustomListTab.module.css';
 
 interface GameInList {
   id: string;

@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
-import AuthForm from '../../components/AuthForm/AuthForm';
-import Toast from '../../components/Toast/Toast';
-import { useToast } from '../../hooks/useToast';
+
+import AuthForm from '@/components/AuthForm/AuthForm';
+import Toast from '@/components/Toast/Toast';
+
+import { useToast } from '@/hooks/useToast';
+
+import api from '@/services/api';
+
 
 export default function Login() {
   const [error, setError] = useState('');

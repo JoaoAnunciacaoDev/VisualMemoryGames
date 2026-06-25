@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, MouseEvent } from 'react';
+
 import styles from '@/GameCard.module.css';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 export default function GameCard({ title, coverUrl, releaseYear, isAdded, onAdd, onRemove, onClick }: Props) {
   const [isHoveringButton, setIsHoveringButton] = useState(false);
 
-  const handleButtonClick = (e: React.MouseEvent) => {
+  const handleButtonClick = (e: MouseEvent) => {
     e.stopPropagation();
     if (isAdded) onRemove();
     else onAdd();

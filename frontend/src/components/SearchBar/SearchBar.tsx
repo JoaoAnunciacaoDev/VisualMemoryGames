@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, SyntheticEvent } from 'react';
 import Button from '@/components/Button/Button';
 import Input from '@/components/Input/Input';
 import styles from '@/SearchBar.module.css';
@@ -11,7 +11,7 @@ interface Props {
 export default function SearchBar({ onSearch, isSearching }: Props) {
   const [query, setQuery] = useState('');
 
-  const handleSubmit = (e: React.SyntheticEvent) => {
+  const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     if (query.trim()) onSearch(query);
   };

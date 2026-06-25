@@ -1,5 +1,5 @@
 {
-  "name": "gamelog-frontend",
+  "name": "frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -24,6 +24,8 @@
     "@eslint/js": "^10.0.1",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.22",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",

@@ -1,10 +1,11 @@
+import { ChangeEvent } from 'react';
 import styles from '@/Input.module.css';
 
 interface Props {
   type?: 'text' | 'email' | 'password';
   placeholder?: string;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
 }
 

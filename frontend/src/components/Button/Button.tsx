@@ -1,7 +1,8 @@
+import { ReactNode } from 'react';
 import styles from '@/Button.module.css';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
   onClick?: () => void;
   type?: 'button' | 'submit' | 'reset';
   variant?: 'primary' | 'danger' | 'ghost';

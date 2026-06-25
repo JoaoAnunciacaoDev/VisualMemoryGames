@@ -1,7 +1,8 @@
+import { ReactNode } from 'react';
 import styles from '@/GameGrid.module.css';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function GameGrid({ children }: Props) {

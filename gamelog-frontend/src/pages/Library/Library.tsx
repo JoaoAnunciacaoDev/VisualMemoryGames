@@ -1,14 +1,16 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
 import { useToast } from '../../hooks/useToast';
-
-import api from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import { useLibrary } from '../../hooks/useLibrary';
+import { useLibraryFilters } from '../../hooks/useLibraryFilters';
+import { useGameSearch } from '../../hooks/useGameSearch';
+import { addGameToLibrary } from '../../hooks/useAddGame';
+import { LibraryGame, GameResult } from '../../types/game';
 
 import LibraryCard from '../../components/LibraryCard/LibraryCard';
 import GameEditModal from '../../components/GameEditModal/GameEditModal';
 import CustomListsTab from '../../components/CustomListTab/CustomListTab';
 import Toast from '../../components/Toast/Toast';
-
 import SearchBar from '../../components/SearchBar/SearchBar';
 import GameCard from '../../components/GameCard/GameCard';
 import GameGrid from '../../components/GameGrid/GameGrid';
@@ -17,93 +19,28 @@ import ConfirmModal from '../../components/ConfirmModal/ConfirmModal';
 
 import styles from './Library.module.css';
 
-interface LibraryGame {
-  id: string;
-  game_id: string;
-  external_id: number;
-  title: string;
-  cover_url: string | null;
-  release_year: number | null;
-  rating: number | null;
-  status: string;
-  started_at: string | null;
-  finished_at: string | null;
-  notes: string | null;
-}
-
-interface GameResult {
-  external_id: number;
-  title: string;
-  cover_url: string;
-  release_year: number | null;
-  platforms: string[];
-  genres: string[];
-}
-
 const STATUS_OPTIONS = [
-  'Todos',
-  'Quero Jogar',
-  'Jogando',
-  'Zerado',
-  'Platinado',
-  'Abandonado',
-  'Em Espera',
+  'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
 ];
 
 type Tab = 'library' | 'lists' | 'search';
 type SortBy = 'rating' | 'started_at' | 'finished_at' | null;
 
 export default function Library() {
-  const navigate = useNavigate();
+  const { userId, loading } = useAuth();
+  const { games, loadLibrary, updateGame, removeGame } = useLibrary(userId);
+  const { filtered, search, setSearch, statusFilter, setStatusFilter, sortBy, setSortBy, sortOrder, setSortOrder } = useLibraryFilters(games);
+  const { searchResults, isSearching, searchGames } = useGameSearch();
   const { toast, showToast, hideToast } = useToast();
-  
-  const [userId, setUserId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState<Tab>('library');
-
-  const [games, setGames] = useState<LibraryGame[]>([]);
   const [selectedLibraryGame, setSelectedLibraryGame] = useState<LibraryGame | null>(null);
-  const [librarySearch, setLibrarySearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-  const [sortBy, setSortBy] = useState<SortBy>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const [searchResults, setSearchResults] = useState<GameResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [selectedSearchGame, setSelectedSearchGame] = useState<GameResult | null>(null);
   const [gameToRemove, setGameToRemove] = useState<number | null>(null);
-
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('token')}`
-  });
 
   const addedGames = useMemo(() => {
     return new Map<number, string>(games.map((g) => [g.external_id, g.id]));
   }, [games]);
-
-  const loadLibrary = async () => {
-    try {
-      const headers = getAuthHeaders();
-      const meResponse = await api.get('/users/me', { headers });
-      const id = meResponse.data.id;
-      setUserId(id);
-
-      const libraryResponse = await api.get(`/user-games/user/${id}`, { headers });
-      setGames(libraryResponse.data);
-    } catch {
-      navigate('/login');
-    }
-  };
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { 
-      navigate('/login'); 
-      return; 
-    }
-    
-    loadLibrary().finally(() => setLoading(false));
-  }, [navigate]);
 
   const handleSaveLibraryGame = async (data: {
     status: string;
@@ -113,12 +50,8 @@ export default function Library() {
     notes: string | null;
   }) => {
     if (!selectedLibraryGame) return;
-
     try {
-      await api.put(`/user-games/${selectedLibraryGame.id}`, data, {
-        headers: getAuthHeaders()
-      });
-      await loadLibrary();
+      await updateGame(selectedLibraryGame.id, data);
       setSelectedLibraryGame(null);
       showToast('Jogo atualizado com sucesso!', 'success');
     } catch {
@@ -126,90 +59,22 @@ export default function Library() {
     }
   };
 
-  const filteredGames = games
-    .filter((g) => statusFilter === 'Todos' || g.status === statusFilter)
-    .filter((g) => g.title.toLowerCase().includes(librarySearch.toLowerCase()))
-    .sort((a, b) => {
-      if (!sortBy) return 0;
-
-      if (sortBy === 'rating') {
-        const aVal = a.rating ?? -1;
-        const bVal = b.rating ?? -1;
-        return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
-      }
-
-      const dateField = sortBy;
-      const aDate = a[dateField] ? new Date(a[dateField] as string).getTime() : 0;
-      const bDate = b[dateField] ? new Date(b[dateField] as string).getTime() : 0;
-
-      return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
-    });
-
-  const handleSearch = async (query: string) => {
-    setIsSearching(true);
-    try {
-      const response = await api.get(`/games/search?q=${query}`);
-      setSearchResults(response.data.results || response.data);
-    } catch {
-      showToast('Não foi possível buscar os jogos.', 'error');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   const handleAddGame = async (game: GameResult) => {
     try {
-      const headers = getAuthHeaders();
-
-      const gameResponse = await api.post('/games/', {
-        external_id: game.external_id,
-        title: game.title,
-        cover_url: game.cover_url,
-        release_year: game.release_year,
-        platforms: game.platforms,
-        genres: game.genres,
-      }, { headers });
-
-      await api.post('/user-games/', { game_id: gameResponse.data.id }, { headers });
+      await addGameToLibrary(game);
       await loadLibrary();
       showToast('Jogo adicionado à biblioteca!', 'success');
-
-    } catch (err: any) {
-      if (err.response?.status === 400) {
-        try {
-          const headers = getAuthHeaders();
-          const gamesResponse = await api.get('/games/', { headers });
-          const existing = gamesResponse.data.find((g: any) => g.external_id === game.external_id);
-
-          if (existing) {
-            await api.post('/user-games/', { game_id: existing.id }, { headers });
-            await loadLibrary();
-            showToast('Jogo adicionado à biblioteca!', 'success');
-          }
-        } catch {
-          showToast('Erro ao adicionar jogo.', 'error');
-        }
-      } else {
-        showToast('Erro ao adicionar jogo.', 'error');
-      }
+    } catch {
+      showToast('Erro ao adicionar jogo.', 'error');
     }
-  };
-
-  const handleRemoveClick = (externalId: number) => {
-    setGameToRemove(externalId);
   };
 
   const confirmRemove = async () => {
     if (gameToRemove === null) return;
-
     try {
       const userGameId = addedGames.get(gameToRemove);
-
-      await api.delete(`/user-games/${userGameId}`, {
-        headers: getAuthHeaders()
-      });
-
-      await loadLibrary();
+      if (!userGameId) return;
+      await removeGame(userGameId);
       setSelectedSearchGame(null);
       showToast('Jogo removido da biblioteca.', 'info');
     } catch {
@@ -223,28 +88,18 @@ export default function Library() {
 
   return (
     <div className={styles.page}>
-      
       <header className={styles.header}>
         <h2 className={styles.heading}>Minha Biblioteca</h2>
       </header>
 
       <div className={styles.tabs}>
-        <button
-          className={`${styles.tab} ${activeTab === 'library' ? styles.activeTab : ''}`}
-          onClick={() => setActiveTab('library')}
-        >
+        <button className={`${styles.tab} ${activeTab === 'library' ? styles.activeTab : ''}`} onClick={() => setActiveTab('library')}>
           Meus Jogos
         </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'search' ? styles.activeTab : ''}`}
-          onClick={() => setActiveTab('search')}
-        >
+        <button className={`${styles.tab} ${activeTab === 'search' ? styles.activeTab : ''}`} onClick={() => setActiveTab('search')}>
           Pesquisar / Adicionar
         </button>
-        <button
-          className={`${styles.tab} ${activeTab === 'lists' ? styles.activeTab : ''}`}
-          onClick={() => setActiveTab('lists')}
-        >
+        <button className={`${styles.tab} ${activeTab === 'lists' ? styles.activeTab : ''}`} onClick={() => setActiveTab('lists')}>
           Minhas Listas
         </button>
       </div>
@@ -255,24 +110,16 @@ export default function Library() {
             <input
               type="text"
               placeholder="Pesquisar na biblioteca..."
-              value={librarySearch}
-              onChange={(e) => setLibrarySearch(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className={styles.searchInput}
             />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className={styles.select}
-            >
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={styles.select}>
+              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <select
               value={sortBy ?? ''}
-              onChange={(e) =>
-                setSortBy(e.target.value === '' ? null : (e.target.value as Exclude<SortBy, null>))
-              }
+              onChange={(e) => setSortBy(e.target.value === '' ? null : (e.target.value as Exclude<SortBy, null>))}
               className={styles.select}
             >
               <option value="">Ordenar por</option>
@@ -280,17 +127,13 @@ export default function Library() {
               <option value="started_at">Data de início</option>
               <option value="finished_at">Data de término</option>
             </select>
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-              className={styles.select}
-            >
+            <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')} className={styles.select}>
               <option value="desc">Decrescente</option>
               <option value="asc">Crescente</option>
             </select>
           </div>
 
-          {filteredGames.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className={styles.emptyState}>
               {games.length === 0
                 ? 'Sua biblioteca está vazia. Vá na aba "Pesquisar / Adicionar" para buscar jogos!'
@@ -298,7 +141,7 @@ export default function Library() {
             </div>
           ) : (
             <div className={styles.grid}>
-              {filteredGames.map((game) => (
+              {filtered.map((game) => (
                 <LibraryCard
                   key={game.id}
                   title={game.title}
@@ -317,8 +160,7 @@ export default function Library() {
 
       {activeTab === 'search' && (
         <>
-          <SearchBar onSearch={handleSearch} isSearching={isSearching} />
-          
+          <SearchBar onSearch={searchGames} isSearching={isSearching} />
           <GameGrid>
             {searchResults.map((game) => (
               <GameCard
@@ -328,12 +170,11 @@ export default function Library() {
                 releaseYear={game.release_year}
                 isAdded={addedGames.has(game.external_id)}
                 onAdd={() => handleAddGame(game)}
-                onRemove={() => handleRemoveClick(game.external_id)}
+                onRemove={() => setGameToRemove(game.external_id)}
                 onClick={() => setSelectedSearchGame(game)}
               />
             ))}
           </GameGrid>
-          
           {searchResults.length === 0 && !isSearching && (
             <div className={styles.emptyState}>
               Pesquise por um título para adicionar à sua coleção.
@@ -372,7 +213,7 @@ export default function Library() {
         isAdded={selectedSearchGame ? addedGames.has(selectedSearchGame.external_id) : false}
         onClose={() => setSelectedSearchGame(null)}
         onAdd={() => selectedSearchGame && handleAddGame(selectedSearchGame)}
-        onRemove={() => selectedSearchGame && handleRemoveClick(selectedSearchGame.external_id)}
+        onRemove={() => selectedSearchGame && setGameToRemove(selectedSearchGame.external_id)}
       />
 
       <ConfirmModal

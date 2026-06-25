@@ -46,8 +46,8 @@ export default function LibraryCard({ title, coverUrl, status, rating, startedAt
       <div className={styles.info}>
         <h3 className={styles.title}>{title}</h3>
         <div className={styles.meta}>
-          {rating !== null && <span>⭐ {rating}/10</span>}
-          {year && <span>📅 {year}</span>}
+          {rating !== null && <span>{rating}/10</span>}
+          {year && <span>{year}</span>}
         </div>
       </div>
     </div>

@@ -56,7 +56,7 @@ mise run setup
 2. Iniciar a Interface (Frontend)
   mise run api.front
   Ficará disponível em: http://localhost:5173
-
+```
 ## 🗂️ Estrutura do Projeto
 
 GameLog/
@@ -120,7 +120,11 @@ GameLog/
 
 ## 🧪 Testes de Qualidade
 Testes do Backend (Pytest):
+```bash
   pytest
+```
 
 Análise de Código do Frontend (Linting):
+```bash
   mise front.lint
+```

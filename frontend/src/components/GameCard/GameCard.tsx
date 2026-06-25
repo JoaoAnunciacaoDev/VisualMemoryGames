@@ -1,6 +1,6 @@
 import { useState, MouseEvent } from 'react';
 
-import styles from '@/GameCard.module.css';
+import styles from '@/components/GameCard/GameCard.module.css';
 
 interface Props {
   title: string;

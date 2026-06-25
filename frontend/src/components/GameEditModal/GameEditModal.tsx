@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Button from '@/components/Button/Button';
-import styles from '@/GameEditModal.module.css';
+import styles from '@/components/GameEditModal/GameEditModal.module.css';
 
 const STATUS_OPTIONS = [
   'Quero Jogar',

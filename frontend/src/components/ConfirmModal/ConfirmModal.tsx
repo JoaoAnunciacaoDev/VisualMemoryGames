@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import styles from '@/ConfirmModal.module.css';
+import styles from '@/components/ConfirmModal/ConfirmModal.module.css';
 
 interface Props {
   isOpen: boolean;

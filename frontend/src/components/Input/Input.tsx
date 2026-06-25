@@ -1,5 +1,5 @@
 import { ChangeEvent } from 'react';
-import styles from '@/Input.module.css';
+import styles from '@/components/Input/Input.module.css';
 
 interface Props {
   type?: 'text' | 'email' | 'password';

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import styles from '@/GameModal.module.css';
+import styles from '@/components/GameModal/GameModal.module.css';
 
 interface Game {
   title: string;

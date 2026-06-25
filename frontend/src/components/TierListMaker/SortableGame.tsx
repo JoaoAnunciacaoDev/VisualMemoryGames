@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import styles from '@/TierListMaker.module.css';
+import styles from '@/components/TierListMaker/TierListStyle.module.css';
 
 interface Props {
   id: string;

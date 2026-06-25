@@ -5,7 +5,7 @@ import api from '@/services/api';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
 import Toast from '@/components/Toast/Toast';
-import styles from '@/CustomListTab.module.css';
+import styles from '@/components/CustomListTab/CustomListTab.module.css';
 
 interface GameInList {
   id: string;

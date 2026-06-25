@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/useToast';
 import { getAuthHeaders } from '@/services/auth';
 import api from '@/services/api';
 
-import styles from '@/TierListEditor.module.css';
+import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 
 interface GameItem {
   id: string;

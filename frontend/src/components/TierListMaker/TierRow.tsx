@@ -5,7 +5,7 @@ import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortabl
 
 import SortableGame from '@/components/TierListMaker/SortableGame';
 
-import styles from '@/TierListMaker.module.css';
+import styles from '@/components/TierListMaker/TierListStyle.module.css';
 
 interface GameItem {
   id: string;

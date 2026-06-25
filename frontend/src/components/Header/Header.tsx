@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
-import styles from '@/Header.module.css';
+import styles from '@/components/Header/Header.module.css';
 
 export default function Header() {
   const navigate = useNavigate();

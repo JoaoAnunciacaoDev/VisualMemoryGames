@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getAuthHeaders } from '@/services/auth';
 import api from '@/services/api';
 
-import styles from '@/TierList.module.css';
+import styles from '@/pages/TierList/TierList.module.css';
 
 interface TierListSummary {
   id: string;

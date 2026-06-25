@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
-import styles from '@/Layout.module.css';
+import styles from '@/components/Layout/Layout.module.css';
 
 interface Props {
   children: ReactNode;

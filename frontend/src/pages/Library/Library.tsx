@@ -19,7 +19,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 
 import { LibraryGame, GameResult } from '@/types/game';
 
-import styles from './Library.module.css';
+import styles from '@/pages/Library/Library.module.css';
 
 const STATUS_OPTIONS = [
   'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',

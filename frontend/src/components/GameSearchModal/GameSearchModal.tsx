@@ -3,7 +3,7 @@ import { useState } from 'react';
 import api from '@/services/api';
 import { getAuthHeaders } from '@/services/auth';
 
-import styles from '@/GameSearchModal.module.css';
+import styles from '@/components/GameSearchModal/GameSearchModal.module.css';
 
 interface GameResult {
   external_id: number;

@@ -1,7 +1,7 @@
 import { useState, SyntheticEvent } from 'react';
 import Button from '@/components/Button/Button';
 import Input from '@/components/Input/Input';
-import styles from '@/AuthForm.module.css';
+import styles from '@/components/AuthForm/AuthForm.module.css';
 
 interface Props {
   onLogin: (username: string, password: string) => Promise<void>;

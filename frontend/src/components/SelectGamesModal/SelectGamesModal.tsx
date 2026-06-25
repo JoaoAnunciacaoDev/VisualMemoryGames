@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import styles from '@/SelectGamesModal.module.css';
+import styles from '@/components/SelectGamesModal/SelectGamesModal.module.css';
 
 interface LibraryGame {
   game_id: string;

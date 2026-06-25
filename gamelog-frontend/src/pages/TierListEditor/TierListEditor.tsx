@@ -7,6 +7,7 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import { useToast } from '../../hooks/useToast';
+import { getAuthHeaders } from '../../services/auth';
 import api from '../../services/api';
 import TierRow from '../../components/TierListMaker/TierRow';
 import SortableGame from '../../components/TierListMaker/SortableGame';
@@ -55,10 +56,6 @@ export default function TierListEditor() {
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [gameToRemove, setGameToRemove] = useState<string | null>(null);
 
-  const getHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('token')}`
-  });
-
   const handleRemoveGameFromTierList = async (gameId: string) => {
     const allGames = Object.values(games).flat();
     const game = allGames.find((g) => g.id === gameId);
@@ -75,7 +72,7 @@ export default function TierListEditor() {
     try {
       await api.delete(
         `/tierlists/category/${categoryId}/items/${game.itemId}`,
-        { headers: getHeaders() }
+        { headers: getAuthHeaders() }
       );
       setGames((prev) => ({
         ...prev,
@@ -90,7 +87,7 @@ export default function TierListEditor() {
 
   const loadTierList = useCallback(async () => {
     try {
-      const response = await api.get(`/tierlists/${id}`, { headers: getHeaders() });
+      const response = await api.get(`/tierlists/${id}`, { headers: getAuthHeaders() });
       const data = response.data;
       setTitle(data.title);
 
@@ -141,7 +138,7 @@ export default function TierListEditor() {
             const response = await api.post(
               `/tierlists/category/${poolCat.id}/items`,
               { game_id: game.id },
-              { headers: getHeaders() }
+              { headers: getAuthHeaders() }
             );
             savedNewGames.push({ ...game, itemId: response.data.id });
           } catch (err: any) {
@@ -167,10 +164,8 @@ export default function TierListEditor() {
   }, [id, navigate, location.state]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { navigate('/login'); return; }
     loadTierList();
-  }, [loadTierList, navigate]);
+  }, [loadTierList]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -241,7 +236,7 @@ export default function TierListEditor() {
             await api.put(
               `/tierlists/category/${activeContainer}/reorder`,
               { item_ids: itemIds },
-              { headers: getHeaders() }
+              { headers: getAuthHeaders() }
             );
           } catch {
             showToast('Erro ao salvar ordem.', 'error');
@@ -265,13 +260,13 @@ export default function TierListEditor() {
           await api.put(
             `/tierlists/category/${activeContainer}/items/${game.itemId}/move`,
             { target_category_id: overContainer },
-            { headers: getHeaders() }
+            { headers: getAuthHeaders() }
           );
         } else {
           const response = await api.post(
             `/tierlists/category/${overContainer}/items`,
             { game_id: game.id },
-            { headers: getHeaders() }
+            { headers: getAuthHeaders() }
           );
           const newItemId = response.data.id;
           setGames((prev) => ({
@@ -292,7 +287,7 @@ export default function TierListEditor() {
           await api.put(
             `/tierlists/category/${activeContainer}/items/${game.itemId}/move`,
             { target_category_id: poolCategoryId },
-            { headers: getHeaders() }
+            { headers: getAuthHeaders() }
           );
         } catch (err) {
           console.error('Erro ao mover para pool:', err);
@@ -304,7 +299,7 @@ export default function TierListEditor() {
           const response = await api.post(
             `/tierlists/category/${poolCategoryId}/items`,
             { game_id: game.id },
-            { headers: getHeaders() }
+            { headers: getAuthHeaders() }
           );
           const newItemId = response.data.id;
           setGames((prev) => ({
@@ -330,7 +325,7 @@ export default function TierListEditor() {
         name: newTierLabel.trim(),
         color: newTierColor,
         order_index: tiers.length,
-      }, { headers: getHeaders() });
+      }, { headers: getAuthHeaders() });
 
       const cat = response.data;
       setTiers((prev) => [...prev, { id: cat.id, label: cat.name, color: cat.color }]);
@@ -345,7 +340,7 @@ export default function TierListEditor() {
   const confirmDeleteTier = async () => {
     if (!tierToRemove) return;
     try {
-      await api.delete(`/tierlists/category/${tierToRemove}`, { headers: getHeaders() });
+      await api.delete(`/tierlists/category/${tierToRemove}`, { headers: getAuthHeaders() });
       setGames((prev) => ({
         ...prev,
         [POOL_ID]: [...prev[POOL_ID], ...prev[tierToRemove].map((g) => ({ ...g, itemId: undefined }))],
@@ -361,7 +356,7 @@ export default function TierListEditor() {
 
   const handleLabelChange = async (tierId: string, newLabel: string) => {
     try {
-      await api.put(`/tierlists/category/${tierId}`, { name: newLabel }, { headers: getHeaders() });
+      await api.put(`/tierlists/category/${tierId}`, { name: newLabel }, { headers: getAuthHeaders() });
       setTiers((prev) => prev.map((t) => t.id === tierId ? { ...t, label: newLabel } : t));
     } catch {
       showToast('Erro ao renomear tier.', 'error');
@@ -370,7 +365,7 @@ export default function TierListEditor() {
 
   const handleColorChange = async (tierId: string, newColor: string) => {
     try {
-      await api.put(`/tierlists/category/${tierId}`, { color: newColor }, { headers: getHeaders() });
+      await api.put(`/tierlists/category/${tierId}`, { color: newColor }, { headers: getAuthHeaders() });
       setTiers((prev) => prev.map((t) => t.id === tierId ? { ...t, color: newColor } : t));
     } catch {
       showToast('Erro ao mudar cor.', 'error');
@@ -379,7 +374,7 @@ export default function TierListEditor() {
 
   const handleTitleSave = async () => {
     try {
-      await api.put(`/tierlists/${id}`, { title }, { headers: getHeaders() });
+      await api.put(`/tierlists/${id}`, { title }, { headers: getAuthHeaders() });
       setEditingTitle(false);
     } catch {
       showToast('Erro ao salvar título.', 'error');
@@ -392,7 +387,7 @@ export default function TierListEditor() {
         const response = await api.post(
           `/tierlists/category/${poolCategoryId}/items`,
           { game_id: game.id },
-          { headers: getHeaders() }
+          { headers: getAuthHeaders() }
         );
         const newItemId = response.data.id;
         setGames((prev) => ({

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import api from '../../services/api';
+import { getAuthHeaders } from '../../services/auth';
 import styles from './GameSearchModal.module.css';
 
 interface GameResult {
@@ -34,10 +35,9 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
 
   const handleSelect = async (game: GameResult) => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
+      const headers = getAuthHeaders();
       let gameId: string;
+
       try {
         const response = await api.post('/games/', {
           external_id: game.external_id,

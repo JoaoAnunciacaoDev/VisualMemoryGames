@@ -41,26 +41,33 @@ Para garantir o isolamento perfeito do ambiente, este projeto utiliza o [Mise](h
 
 Clone o repositório e execute os comandos abaixo na raiz do projeto para preparar todo o ecossistema (backend e frontend):
 
-```bash
 # Instala o Node.js e ferramentas definidas no ficheiro mise.toml
+```bash
 mise install
+```
 
 # Executa as migrações (Alembic) e instala dependências (Poetry e NPM)
+```bash
 mise run setup
+```
 
 ## Execução Local
 1. Iniciar a API (Backend)
-  mise run api.dev
-  A API ficará disponível em: http://localhost:8000
-
-2. Iniciar a Interface (Frontend)
-  mise run api.front
-  Ficará disponível em: http://localhost:5173
+```bash
+mise run api.dev
 ```
+A API ficará disponível em: http://localhost:8000
+
+3. Iniciar a Interface (Frontend)
+```bash
+  mise run api.front
+```
+Ficará disponível em: http://localhost:5173
+
 ## 🗂️ Estrutura do Projeto
 
+```bash
 GameLog/
-
 ├── app/
 │   ├── enums/
 │   ├── models/
@@ -117,6 +124,7 @@ GameLog/
 ├── pyproject.toml
 ├── alembic.ini
 └── README.md
+```
 
 ## 🧪 Testes de Qualidade
 Testes do Backend (Pytest):

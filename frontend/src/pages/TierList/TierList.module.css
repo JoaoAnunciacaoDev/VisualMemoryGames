@@ -2,11 +2,14 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 20px;
+
+  color: #ffeacc;
 }
 
 .heading {
   font-size: 1.8rem;
   margin-bottom: 24px;
+  color: #ffeacc;
 }
 
 .createRow {
@@ -17,20 +20,39 @@
 
 .input {
   flex: 1;
+
   padding: 10px 14px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.15);
+
+  background: #201826;
+  color: #ffeacc;
+
   font-size: 15px;
+
+  outline: none;
+}
+
+.input:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
 }
 
 .createButton {
   padding: 10px 20px;
-  background-color: #007BFF;
-  color: white;
+  margin-bottom: 24px;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
+
   font-size: 15px;
+  font-weight: 600;
 }
 
 .createButton:disabled {
@@ -45,14 +67,17 @@
 }
 
 .card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 12px;
+
   overflow: hidden;
-  background: white;
+
+  background: #201826;
 }
 
 .cardPreview {
   cursor: pointer;
+
   display: flex;
   flex-direction: column;
 }
@@ -61,31 +86,40 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   padding: 6px 12px;
 }
 
 .previewLabel {
   font-weight: bold;
   font-size: 13px;
+
+  color: #ffeacc;
 }
 
 .previewCount {
   font-size: 12px;
-  opacity: 0.8;
+  opacity: 0.7;
+  color: #ffeacc;
 }
 
 .cardFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   padding: 12px;
-  border-top: 1px solid #eee;
+
+  border-top: 1px solid rgba(255, 234, 204, 0.12);
 }
 
 .cardTitle {
   font-weight: 600;
   cursor: pointer;
+
   font-size: 15px;
+
+  color: #ffeacc;
 }
 
 .cardTitle:hover {
@@ -95,9 +129,13 @@
 .deleteButton {
   background: none;
   border: none;
+
   cursor: pointer;
+
   font-size: 16px;
-  opacity: 0.6;
+
+  color: #ff995e;
+  opacity: 0.7;
 }
 
 .deleteButton:hover {
@@ -107,42 +145,56 @@
 .emptyState {
   text-align: center;
   padding: 60px 20px;
-  color: #888;
+
+  color: rgba(255, 234, 204, 0.6);
 }
 
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+
+  background: rgba(0, 0, 0, 0.65);
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   z-index: 100;
 }
 
 .modal {
-  background: white;
+  background: #201826;
+
+  border: 1px solid rgba(255, 234, 204, 0.12);
   border-radius: 12px;
+
   padding: 28px;
+
   width: 90%;
   max-width: 460px;
+
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  color: #ffeacc;
 }
 
 .modalTitle {
   margin: 0;
   font-size: 1.3rem;
+  color: #ffeacc;
 }
 
 .label {
   display: flex;
   flex-direction: column;
   gap: 6px;
+
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+
+  color: rgba(255, 234, 204, 0.85);
 }
 
 .modalActions {
@@ -154,19 +206,28 @@
 
 .cancelButton {
   padding: 8px 16px;
-  background: none;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+
+  background: transparent;
+  border: 1px solid rgba(255, 234, 204, 0.2);
+  border-radius: 6px;
+
   cursor: pointer;
+
+  color: rgba(255, 234, 204, 0.8);
 }
 
 .confirmButton {
   padding: 8px 20px;
-  background: #007BFF;
-  color: white;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
+
+  font-weight: 600;
 }
 
 .confirmButton:disabled {

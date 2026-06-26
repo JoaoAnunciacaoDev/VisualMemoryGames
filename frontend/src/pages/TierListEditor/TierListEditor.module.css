@@ -1,51 +1,67 @@
 .page {
   max-width: 100%;
-  max-height: 100%;
-  min-width: 320px;
   min-height: 100vh;
-  margin: 0 auto;
+
   padding: 32px 20px;
-  color: #333;
-  background-color: #1A1A1A;
+
+  background: #3f324d;
+  color: #ffeacc;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   margin-bottom: 24px;
-  color: #fff;
+
+  color: #ffeacc;
 }
 
 .title {
   font-size: 1.8rem;
   margin: 0;
+
   cursor: pointer;
+
+  color: #ffeacc;
 }
 
 .title:hover::after {
   content: ' ✎';
   font-size: 1rem;
-  color: #aaa;
+  color: rgba(255, 234, 204, 0.6);
 }
 
 .titleInput {
   font-size: 1.8rem;
+
   border: none;
-  border-bottom: 2px solid #007BFF;
+  border-bottom: 2px solid #de1d6a;
+
   outline: none;
+
   flex: 1;
   margin-right: 16px;
+
+  background: transparent;
+  color: #ffeacc;
 }
 
 .addGameButton {
   padding: 10px 18px;
-  background-color: #28a745;
-  color: white;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
+
   font-size: 14px;
+  font-weight: 600;
+
   white-space: nowrap;
 }
 
@@ -53,78 +69,116 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 10px;
+
   overflow: hidden;
+
   margin-bottom: 16px;
+
+  background: #201826;
 }
 
 .addTierRow {
   display: flex;
   gap: 8px;
   align-items: center;
+
   margin-bottom: 24px;
 }
 
 .addTierInput {
   flex: 1;
+
   padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.15);
+
+  background: #201826;
+  color: #ffeacc;
+
   font-size: 14px;
+
+  outline: none;
+}
+
+.addTierInput:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
 }
 
 .colorPicker {
   width: 36px;
   height: 36px;
-  border: none;
+
+  border: 1px solid rgba(255, 234, 204, 0.15);
+  border-radius: 6px;
+
   padding: 0;
   cursor: pointer;
+
   background: none;
-  border-radius: 4px;
 }
 
 .addTierButton {
   padding: 8px 16px;
-  background-color: #007BFF;
-  color: white;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
+
+  font-weight: 600;
 }
 
 .poolArea {
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 10px;
+
   padding: 12px;
+
+  background: #201826;
 }
 
 .poolArea h3 {
   margin: 0 0 12px 0;
+
   font-size: 14px;
-  color: #b6b6b6;
+
+  color: rgba(255, 234, 204, 0.7);
 }
 
 .selected {
-  outline: 2px solid #007BFF;
-  border-radius: 4px;
+  outline: 2px solid #de1d6a;
+  border-radius: 6px;
 }
 
 .removeGameButton {
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #dc3545;
-  color: white;
+
+  background: #ff995e;
+  color: #201826;
+
   border: none;
   border-radius: 50%;
+
   width: 18px;
   height: 18px;
+
   font-size: 10px;
+
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  line-height: 1;
+
   z-index: 10;
 }

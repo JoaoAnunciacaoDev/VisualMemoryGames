@@ -2,4 +2,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 20px;
+
+  align-items: start;
+}
+
+.grid > * {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.grid > * {
+  will-change: transform;
 }

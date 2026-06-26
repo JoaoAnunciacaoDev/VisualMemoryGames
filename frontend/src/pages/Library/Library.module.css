@@ -4,14 +4,14 @@
   min-height: 100vh;
   margin: 0 auto;
   padding: 32px 20px;
-  background-color: #1A1A1A;
+  background-color: #3f324d;
+  color: #ffeacc;
 }
-
 
 .heading {
   font-size: 1.8rem;
   margin-bottom: 24px;
-  color: #fff;
+  color: #ffeacc;
 }
 
 .controls {
@@ -21,22 +21,56 @@
   margin-bottom: 28px;
 }
 
-.searchInput {
+.searchInput,
+.select {
   flex: 1;
   min-width: 200px;
   padding: 10px 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.2);
   font-size: 14px;
+  background: #201826;
+  color: #ffeacc;
+  outline: none;
 }
 
-.select {
-  padding: 10px 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-  background: white;
+.searchInput::placeholder {
+  color: rgba(255, 234, 204, 0.5);
+}
+
+.searchInput:focus,
+.select:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 234, 204, 0.15);
+}
+
+.tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
   cursor: pointer;
+  font-size: 15px;
+  color: rgba(255, 234, 204, 0.6);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  color: #ff995e;
+}
+
+.activeTab {
+  color: #de1d6a;
+  border-bottom-color: #de1d6a;
+  font-weight: 600;
 }
 
 .grid {
@@ -48,37 +82,8 @@
 .emptyState {
   text-align: center;
   padding: 60px 20px;
-  color: #888;
+  color: rgba(255, 234, 204, 0.6);
   font-size: 16px;
-}
-
-.tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #eee;
-}
-
-.tab {
-  padding: 10px 20px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  color: #a5a3a3;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: color 0.2s;
-}
-
-.tab:hover {
-  color: #007BFF;
-}
-
-.activeTab {
-  color: #007BFF;
-  border-bottom-color: #007BFF;
-  font-weight: 600;
 }
 
 .manualSection {
@@ -91,7 +96,7 @@
 }
 
 .manualDescription {
-  color: #666;
+  color: rgba(255, 234, 204, 0.7);
   font-size: 15px;
   max-width: 400px;
   margin: 0;
@@ -99,14 +104,16 @@
 
 .manualButton {
   padding: 12px 24px;
-  background: #007BFF;
-  color: white;
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .manualButton:hover {
-  background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(222, 29, 106, 0.25);
 }

@@ -8,16 +8,20 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 10px;
+
   overflow: hidden;
+  background: #201826;
 }
 
 .tierRow {
   display: flex;
   align-items: stretch;
   min-height: 80px;
-  border-bottom: 1px solid #ddd;
+
+  border-bottom: 1px solid rgba(255, 234, 204, 0.12);
 }
 
 .tierRow:last-child {
@@ -25,7 +29,7 @@
 }
 
 .tierRowOver {
-  outline: 2px dashed #007BFF;
+  outline: 2px dashed #de1d6a;
 }
 
 .tierLabelWrapper {
@@ -33,8 +37,10 @@
   flex-direction: row;
   align-items: stretch;
   justify-content: center;
+
   gap: 8px;
   padding: 4px;
+
   min-width: 90px;
 }
 
@@ -42,10 +48,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+
   width: 120px;
-  border-radius: 4px;
+
+  border-radius: 6px;
+
   font-weight: bold;
   font-size: 1.2rem;
+
   cursor: pointer;
   user-select: none;
 
@@ -53,158 +63,116 @@
   white-space: normal;
   word-break: break-word;
   line-height: 1.1;
+
   padding: 4px;
+
+  color: #ffeacc;
 }
 
 .tierLabelInput {
   width: 50px;
   text-align: center;
+
   font-size: 1rem;
   font-weight: bold;
-  border: none;
-  background: transparent;
-  outline: 1px solid white;
-  color: inherit;
+
+  border: 1px solid rgba(255, 234, 204, 0.2);
+  border-radius: 4px;
+
+  background: #3f324d;
+  color: #ffeacc;
+
+  outline: none;
 }
 
 .colorPicker {
   width: 28px;
   flex: 1;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+
+  border: 1px solid rgba(255, 234, 204, 0.2);
   border-radius: 4px;
+
   padding: 0;
   cursor: pointer;
+
   background: none;
   overflow: hidden;
 }
 
 .colorPicker:hover {
-  background: #ffe6e6;
-  border-color: #dc3545;
+  border-color: #ff995e;
 }
 
 .deleteTierButton {
   width: 100%;
   flex: 1;
+
   background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 153, 94, 0.3);
   border-radius: 4px;
-  color: #dc3545;
+
+  color: #ff995e;
+
   cursor: pointer;
+
   font-size: 14px;
   font-weight: bold;
+
   padding: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+
+  transition: all 0.2s ease;
 }
 
 .deleteTierButton:hover {
-  background: #ffe6e6;
-  border-color: #dc3545;
+  background: rgba(255, 153, 94, 0.12);
 }
 
 .tierContent {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+
   padding: 8px;
+
   flex: 1;
   align-items: center;
+
   min-height: 80px;
 }
 
 .emptyTier {
-  color: #bbb;
+  color: rgba(255, 234, 204, 0.5);
   font-size: 13px;
+
   padding: 8px;
   width: 100%;
   text-align: center;
 }
 
 .sortableGame {
-  width: 60px;
-  height: 80px;
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: grab;
-  flex-shrink: 0;
-}
-
-.sortableGame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-
-.noCover {
-  width: 100%;
-  height: 100%;
-  background: #ccc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.poolArea {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.poolArea h3 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  color: #555;
-}
-
-.addTierRow {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.addTierInput {
-  flex: 1;
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 14px;
-}
-
-.addTierButton {
-  padding: 8px 16px;
-  background-color: #007BFF;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.addTierButton:hover {
-  background-color: #0056b3;
-}
-
-.sortableGame {
   position: relative;
+
   width: 60px;
   height: 80px;
-  border-radius: 4px;
+
+  border-radius: 6px;
   overflow: visible;
-  cursor: pointer;
+
+  cursor: grab;
   flex-shrink: 0;
 }
 
 .dragHandle {
   width: 60px;
   height: 80px;
-  border-radius: 4px;
+
+  border-radius: 6px;
   overflow: hidden;
+
   cursor: grab;
 }
 
@@ -216,33 +184,118 @@
 }
 
 .selected {
-  outline: 2px solid #007BFF;
-  border-radius: 4px;
+  outline: 2px solid #de1d6a;
+  border-radius: 6px;
+}
+
+.noCover {
+  width: 100%;
+  height: 100%;
+
+  background: #3f324d;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: bold;
+  font-size: 14px;
+
+  color: rgba(255, 234, 204, 0.6);
 }
 
 .removeGameButton {
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #dc3545;
-  color: white;
+
+  background: #ff995e;
+  color: #201826;
+
   border: none;
   border-radius: 50%;
+
   width: 18px;
   height: 18px;
+
   font-size: 10px;
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   line-height: 1;
   z-index: 10;
+}
+
+.poolArea {
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 10px;
+
+  padding: 12px;
+
+  background: #201826;
+}
+
+.poolArea h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+
+  color: rgba(255, 234, 204, 0.8);
+}
+
+.addTierRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.addTierInput {
+  flex: 1;
+
+  padding: 8px 12px;
+
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.15);
+
+  background: #3f324d;
+  color: #ffeacc;
+
+  font-size: 14px;
+
+  outline: none;
+}
+
+.addTierInput:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
+}
+
+.addTierButton {
+  padding: 8px 16px;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
+  border: none;
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.addTierButton:hover {
+  transform: translateY(-2px);
 }
 
 .tierControls {
   display: flex;
   flex-direction: column;
   justify-content: center;
+
   gap: 4px;
   width: 28px;
 }

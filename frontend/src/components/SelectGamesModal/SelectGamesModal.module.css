@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,46 +9,84 @@
 }
 
 .modal {
-  background: white;
+  background: #201826;
+  border: 1px solid rgba(255, 234, 204, 0.12);
   border-radius: 12px;
+
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
+
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  color: #ffeacc;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(255, 234, 204, 0.12);
 }
 
-.header h3 { margin: 0; }
+.header h3 {
+  margin: 0;
+  color: #ffeacc;
+}
 
 .closeButton {
-  background: none;
-  border: none;
+  background: rgba(255, 234, 204, 0.08);
+  border: 1px solid rgba(255, 234, 204, 0.12);
+
   font-size: 18px;
   cursor: pointer;
-  color: #666;
+
+  color: #ffeacc;
+
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(222, 29, 106, 0.15);
+  border-color: rgba(222, 29, 106, 0.35);
 }
 
 .searchInput {
   margin: 12px 20px;
   padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.15);
+
+  background: #3f324d;
+  color: #ffeacc;
+
   font-size: 14px;
+
+  outline: none;
+}
+
+.searchInput:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
 }
 
 .count {
   padding: 0 20px 8px;
   font-size: 13px;
-  color: #007BFF;
+  color: rgba(255, 234, 204, 0.7);
   min-height: 24px;
 }
 
@@ -62,65 +100,92 @@
   display: flex;
   align-items: center;
   gap: 12px;
+
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 8px;
+
   cursor: pointer;
-  transition: background 0.15s;
+
+  transition: background 0.15s ease;
   margin-bottom: 4px;
 }
 
-.gameItem:hover { background: #f5f5f5; }
+.gameItem:hover {
+  background: rgba(255, 234, 204, 0.06);
+}
 
-.gameSelected { background: #e8f0fe; }
-.gameSelected:hover { background: #dce8fd; }
+.gameSelected {
+  background: rgba(222, 29, 106, 0.15);
+}
+
+.gameSelected:hover {
+  background: rgba(222, 29, 106, 0.22);
+}
 
 .cover {
   width: 36px;
   height: 48px;
+
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: 4px;
+
   flex-shrink: 0;
+  border: 1px solid rgba(255, 234, 204, 0.12);
 }
 
 .noCover {
   width: 36px;
   height: 48px;
-  background: #ddd;
-  border-radius: 3px;
+
+  background: #3f324d;
+  border-radius: 4px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-weight: bold;
   font-size: 12px;
+
+  color: rgba(255, 234, 204, 0.6);
+
   flex-shrink: 0;
 }
 
 .title {
   flex: 1;
   font-size: 14px;
+  color: #ffeacc;
 }
 
 .checkbox {
   width: 20px;
   height: 20px;
-  border: 2px solid #ccc;
+
+  border: 2px solid rgba(255, 234, 204, 0.25);
   border-radius: 4px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-size: 12px;
   flex-shrink: 0;
+
+  color: transparent;
+
+  transition: all 0.2s ease;
 }
 
 .checked {
-  background: #007BFF;
-  border-color: #007BFF;
-  color: white;
+  background: #de1d6a;
+  border-color: #de1d6a;
+  color: #ffeacc;
 }
 
 .empty {
   text-align: center;
-  color: #888;
+  color: rgba(255, 234, 204, 0.6);
   padding: 20px 0;
   font-size: 14px;
 }
@@ -129,25 +194,35 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+
   padding: 16px 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(255, 234, 204, 0.12);
 }
 
 .cancelButton {
   padding: 8px 16px;
-  background: none;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+
+  background: transparent;
+  border: 1px solid rgba(255, 234, 204, 0.2);
+  border-radius: 6px;
+
   cursor: pointer;
+
+  color: rgba(255, 234, 204, 0.8);
 }
 
 .confirmButton {
   padding: 8px 20px;
-  background: #007BFF;
-  color: white;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
+
+  font-weight: 600;
 }
 
 .confirmButton:disabled {

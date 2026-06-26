@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9,15 +9,91 @@
 }
 
 .modal {
-  background: white;
+  background: #201826;
+  border: 1px solid rgba(255, 234, 204, 0.12);
   border-radius: 12px;
-  max-width: 460px;
+  max-width: 720px;
   width: 90%;
   position: relative;
   padding: 24px;
-  max-height: 90vh; 
+  max-height: 90vh;
+
   display: flex;
   flex-direction: column;
+  color: #ffeacc;
+}
+
+.fileLabel {
+  display: flex;
+  padding: 8px 12px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  border: 1px dashed #ccc;
+  color: #333;
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+}
+
+.fileInput {
+  display: none;
+}
+
+.fileLabel:hover { background: #e5e5e5; }
+
+.orDivider {
+  font-size: 16px;
+  color: #aaa;
+  text-align: center;
+  padding: 4px 0;
+}
+
+.closeButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  background: rgba(255, 234, 204, 0.08);
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 50%;
+
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #ffeacc;
+
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(222, 29, 106, 0.15);
+  border-color: rgba(222, 29, 106, 0.35);
+}
+
+.gameInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 234, 204, 0.12);
+}
+
+.cover {
+  width: 60px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.15);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #ffeacc;
 }
 
 .fields {
@@ -33,43 +109,10 @@
 .fields::-webkit-scrollbar {
   width: 6px;
 }
+
 .fields::-webkit-scrollbar-thumb {
-  background-color: #ccc;
+  background-color: rgba(255, 234, 204, 0.2);
   border-radius: 4px;
-}
-
-.closeButton {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(0,0,0,0.1);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.gameInfo {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
-}
-
-.cover {
-  width: 60px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.2rem;
 }
 
 .label {
@@ -78,23 +121,38 @@
   gap: 6px;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: rgba(255, 234, 204, 0.85);
 }
 
 .select,
-.input {
+.input,
+.textarea {
   padding: 8px 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.15);
   font-size: 14px;
+
+  background: #3f324d;
+  color: #ffeacc;
+
+  outline: none;
+}
+
+.select:focus,
+.input:focus,
+.textarea:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
 }
 
 .textarea {
-  padding: 8px 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  font-size: 14px;
   resize: vertical;
+}
+
+.dateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .ratingGrid {
@@ -105,66 +163,66 @@
   flex-wrap: wrap;
 }
 
-.ratingButtonActive {
-  background: #b6acac;
+.ratingButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+
+  border: 1px solid rgba(255, 234, 204, 0.2);
+  background: #3f324d;
+
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 500;
+  color: #ffeacc;
+
+  transition: all 0.2s ease;
 }
 
-.actions {
+.ratingButton:hover {
+  background: rgba(255, 153, 94, 0.15);
+  border-color: #ff995e;
+}
+
+.ratingButtonActive {
+  background: #de1d6a;
+  color: #ffeacc;
+  border-color: #de1d6a;
+}
+
+.actions,
+.modalActions {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-top: 16px;
 }
 
-.removeTextButton {
+.removeTextButton,
+.removeButton {
   background: none;
   border: none;
-  color: #ef4444;
+
+  color: #ff995e;
   font-size: 14px;
   font-weight: 500;
+
   cursor: pointer;
   padding: 8px;
-  transition: opacity 0.2s;
+
+  transition: opacity 0.2s ease, text-decoration 0.2s ease;
 }
 
-.removeTextButton:hover {
-  opacity: 0.8;
-  text-decoration: underline;
-}
-
-.removeTextButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.dateRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.modalActions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.removeButton {
-  background: transparent;
-  color: #ff4d4d;
-  border: none;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 8px;
-  transition: opacity 0.2s;
-}
-
+.removeTextButton:hover,
 .removeButton:hover {
   opacity: 0.8;
   text-decoration: underline;
 }
 
+.removeTextButton:disabled,
 .removeButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -175,31 +233,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+
   font-weight: 500;
-}
-
-.ratingButton {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid #ccc;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 500;
-  color: #333;
-  transition: all 0.2s ease;
-}
-
-.ratingButton:hover {
-  background: #f0f0f0;
-  border-color: #999;
-}
-
-.ratingButtonActive {
-  background: #b6acac;
-  color: white; 
-  border-color: #b6acac;
+  color: rgba(255, 234, 204, 0.85);
 }

@@ -2,26 +2,41 @@
   max-width: 400px;
   margin: 50px auto;
   padding: 30px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 12px;
+
+  background: #201826;
+
+  color: #ffeacc;
 }
 
 .title {
   text-align: center;
   margin-bottom: 20px;
+  color: #ffeacc;
 }
 
 .error {
-  color: red;
+  color: #ff995e;
   text-align: center;
+  margin: 0;
 }
 
 .toggleButton {
   margin-top: 15px;
+
   background: none;
   border: none;
-  color: blue;
+
+  color: #de1d6a;
+
   cursor: pointer;
   text-decoration: underline;
+
   width: 100%;
+}
+
+.toggleButton:hover {
+  color: #ff995e;
 }

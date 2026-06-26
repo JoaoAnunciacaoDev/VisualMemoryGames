@@ -12,25 +12,52 @@
 .input {
   flex: 1;
   padding: 10px 14px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  border-radius: 6px;
+
+  border: 1px solid rgba(255, 234, 204, 0.15);
+  background: #201826;
+
   font-size: 15px;
+  color: #ffeacc;
+
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.input::placeholder {
+  color: rgba(255, 234, 204, 0.5);
+}
+
+.input:focus {
+  border-color: #de1d6a;
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
 }
 
 .createButton {
   padding: 10px 18px;
-  background: #007BFF;
-  color: white;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
   font-size: 14px;
+  font-weight: 600;
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.createButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(222, 29, 106, 0.25);
 }
 
 .emptyState {
   text-align: center;
   padding: 60px 20px;
-  color: #888;
+  color: rgba(255, 234, 204, 0.6);
 }
 
 .lists {
@@ -40,17 +67,21 @@
 }
 
 .listCard {
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 10px;
+
+  background: #201826;
+
   overflow: hidden;
-  background: white;
 }
 
 .listHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+
   padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 234, 204, 0.12);
 }
 
 .listInfo {
@@ -62,11 +93,12 @@
 .listName {
   font-weight: 600;
   font-size: 15px;
+  color: #ffeacc;
 }
 
 .listCount {
   font-size: 13px;
-  color: #888;
+  color: rgba(255, 234, 204, 0.6);
 }
 
 .listActions {
@@ -79,18 +111,31 @@
   background: none;
   border: none;
   cursor: pointer;
+
   font-size: 14px;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  border-radius: 6px;
+
+  color: rgba(255, 234, 204, 0.8);
+
+  transition: all 0.2s ease;
 }
 
-.expandButton:hover { background: #f0f0f0; }
-.deleteButton { color: #dc3545; }
-.deleteButton:hover { background: #fff0f0; }
+.expandButton:hover {
+  background: rgba(255, 234, 204, 0.08);
+}
+
+.deleteButton {
+  color: #ff995e;
+}
+
+.deleteButton:hover {
+  background: rgba(255, 153, 94, 0.12);
+}
 
 .listContent {
-  border-top: 1px solid #eee;
   padding: 16px;
+
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -107,6 +152,7 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
+
   width: 70px;
   position: relative;
 }
@@ -114,7 +160,7 @@
 .gameItem.selectable {
   cursor: pointer;
   opacity: 0.85;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s ease;
 }
 
 .gameItem.selectable:hover {
@@ -125,25 +171,32 @@
   width: 70px;
   height: 95px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 234, 204, 0.12);
 }
 
 .noCover {
   width: 70px;
   height: 95px;
-  background: #ddd;
-  border-radius: 4px;
+
+  background: #3f324d;
+  border-radius: 6px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-weight: bold;
   font-size: 14px;
+  color: rgba(255, 234, 204, 0.6);
 }
 
 .gameTitle {
   font-size: 11px;
   text-align: center;
-  color: #333;
+
+  color: rgba(255, 234, 204, 0.75);
+
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -154,14 +207,19 @@
   position: absolute;
   top: -6px;
   right: -6px;
-  background: #dc3545;
-  color: white;
+
+  background: #ff995e;
+  color: #201826;
+
   border: none;
   border-radius: 50%;
+
   width: 18px;
   height: 18px;
+
   font-size: 10px;
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,42 +228,57 @@
 
 .addGameButton {
   align-self: flex-start;
+
   padding: 8px 14px;
-  background: #28a745;
-  color: white;
+
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
+
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+
   cursor: pointer;
   font-size: 13px;
+  font-weight: 600;
 }
 
 .addGameLabel {
   margin: 0;
   font-size: 13px;
-  color: #555;
+  color: rgba(255, 234, 204, 0.7);
 }
 
 .cancelButton {
   align-self: flex-start;
+
   padding: 6px 12px;
+
   background: none;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid rgba(255, 234, 204, 0.2);
+  border-radius: 6px;
+
   cursor: pointer;
   font-size: 13px;
+
+  color: rgba(255, 234, 204, 0.8);
 }
 
 .allAdded {
-  color: #888;
+  color: rgba(255, 234, 204, 0.6);
   font-size: 13px;
 }
 
 .editInput {
   font-size: 15px;
   font-weight: 600;
+
   border: none;
-  border-bottom: 2px solid #007BFF;
+  border-bottom: 2px solid #de1d6a;
   outline: none;
+
   padding: 2px 4px;
   width: 200px;
+
+  background: transparent;
+  color: #ffeacc;
 }

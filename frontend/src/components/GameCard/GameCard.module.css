@@ -1,16 +1,24 @@
 .card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: #fff;
+  border: 1px solid rgba(255, 234, 204, 0.12);
+  border-radius: 10px;
+  background-color: #201826;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(222, 29, 106, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
 }
 
 .imageWrapper {
   width: 100%;
   height: 150px;
   overflow: hidden;
+  background: #3f324d;
 }
 
 .cover {
@@ -18,16 +26,22 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+
+.card:hover .cover {
+  transform: scale(1.05);
 }
 
 .coverFallback {
   width: 100%;
   height: 150px;
-  background-color: #eee;
+  background-color: #3f324d;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #aaa;
+  color: rgba(255, 234, 204, 0.5);
+  font-size: 12px;
 }
 
 .info {
@@ -36,31 +50,45 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 10px;
+  color: #ffeacc;
 }
 
 .title {
-  margin: 0 0 10px 0;
+  margin: 0;
   font-size: 16px;
+  font-weight: 600;
+  color: #ffeacc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .addButton {
   margin-top: auto;
   width: 100%;
-  padding: 8px;
-  background-color: #007BFF;
-  color: white;
+  padding: 10px;
+  background: linear-gradient(135deg, #de1d6a, #ff995e);
+  color: #ffeacc;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.addButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(222, 29, 106, 0.25);
 }
 
 .added {
-  background-color: #28a745;
-  cursor: pointer;
+  background: #93c2b1;
+  color: #201826;
 }
 
 .remove {
-  background-color: #dc3545;
-  cursor: pointer;
+  background: transparent;
+  color: #ff995e;
+  border: 1px solid rgba(255, 153, 94, 0.3);
 }

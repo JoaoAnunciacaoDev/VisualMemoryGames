@@ -20,7 +20,7 @@
 
 ## 🎯 Sobre o Projeto
 
-O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface SPA (Single Page Application) fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções e organizar jogos em *tier lists*.
+O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções e organizar jogos em *tier lists*.
 
 ## ✨ Funcionalidades Principais
 

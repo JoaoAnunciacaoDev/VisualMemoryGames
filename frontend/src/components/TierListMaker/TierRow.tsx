@@ -4,13 +4,12 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 
 import SortableGame from '@/components/TierListMaker/SortableGame';
-
 import styles from '@/components/TierListMaker/TierListStyle.module.css';
 
 interface GameItem {
   id: string;
   title: string;
-  coverUrl: string | null;
+  coverUrl: string | undefined;
 }
 
 interface Props {
@@ -34,7 +33,6 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
     <div className={`${styles.tierRow} ${isOver ? styles.tierRowOver : ''}`}>
       {label !== undefined && (
         <div className={styles.tierLabelWrapper}>
-
           <div className={styles.tierControls}>
             {onColorChange && (
               <input
@@ -45,9 +43,8 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
                 title="Mudar cor"
               />
             )}
-
             {onDelete && (
-              <button
+               <button
                 className={styles.deleteTierButton}
                 onClick={onDelete}
                 title="Deletar tier"
@@ -84,7 +81,6 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
               label
             )}
           </div>
-
         </div>
       )}
 

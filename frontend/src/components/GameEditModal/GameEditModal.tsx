@@ -16,9 +16,11 @@ const STATUS_OPTIONS = [
   'Em Espera',
 ];
 
+export type EditGamePayload = Partial<UpdateLibraryGame> & { custom_cover_file?: File | null };
+
 interface Props {
   game: LibraryGame;
-  onSave: (data: Partial<UpdateLibraryGame>) => Promise<void>;
+  onSave: (data: EditGamePayload) => Promise<void>;
   onRemove: () => Promise<void>;
   onClose: () => void;
 }
@@ -43,6 +45,9 @@ export default function GameEditModal({
     notes: game.notes ?? '',
   });
 
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+
   const [isSaving, setIsSaving] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -62,7 +67,6 @@ export default function GameEditModal({
   const handleStatusChange = (newStatus: string) => {
     setForm((prev) => {
       const isWantToPlay = newStatus === 'Quero Jogar';
-
       return {
         ...prev,
         status: newStatus,
@@ -74,10 +78,24 @@ export default function GameEditModal({
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+    updateField('custom_cover_url', '');
+  };
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateField('custom_cover_url', e.target.value);
+    setCoverFile(null);
+    setCoverPreview(null);
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
 
-    const payload: Partial<UpdateLibraryGame> = {
+    const payload: EditGamePayload = {
       status: form.status,
       favorite: form.favorite,
       rating: canReview ? form.rating : null,
@@ -89,6 +107,7 @@ export default function GameEditModal({
       custom_cover_url: form.custom_cover_url || null,
       notes: canReview ? (form.notes || null) : null,
       hours_played: form.hours_played,
+      custom_cover_file: coverFile, 
     };
 
     try {
@@ -108,6 +127,11 @@ export default function GameEditModal({
     }
   };
 
+  const displayCover = coverPreview 
+    || (form.custom_cover_url ? resolveImageUrl(form.custom_cover_url) : null)
+    || (game.custom_cover_url ? resolveImageUrl(game.custom_cover_url) : null)
+    || (game.cover_url ? resolveImageUrl(game.cover_url) : null);
+
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -116,9 +140,9 @@ export default function GameEditModal({
         </button>
 
         <div className={styles.gameInfo}>
-          {game.cover_url && (
+          {displayCover && (
             <img
-              src={resolveImageUrl(game.cover_url) ?? undefined}
+              src={displayCover}
               alt={game.title}
               className={styles.cover}
             />
@@ -127,7 +151,6 @@ export default function GameEditModal({
         </div>
 
         <div className={styles.fields}>
-          
           <div className={styles.dateRow}>
             <label className={styles.label}>
               Status
@@ -237,6 +260,42 @@ export default function GameEditModal({
                 )}
               </div>
 
+              <div className={styles.coverSection}>
+                <label className={styles.label}>
+                  Capa customizada (URL)
+                  <input
+                    type="url"
+                    className={styles.input}
+                    value={form.custom_cover_url ?? ''}
+                    onChange={handleUrlChange}
+                    placeholder="https://exemplo.com/capa.jpg"
+                    disabled={!!coverFile}
+                  />
+                </label>
+                
+                <div className={styles.orDivider}>ou</div>
+                
+                <label className={styles.fileLabel}>
+                  {coverFile ? coverFile.name : 'Escolher arquivo do PC'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className={styles.fileInput}
+                  />
+                </label>
+                
+                {coverFile && (
+                  <button
+                    type="button"
+                    className={styles.clearFile}
+                    onClick={() => { setCoverFile(null); setCoverPreview(null); }}
+                  >
+                    Remover arquivo
+                  </button>
+                )}
+              </div>
+
               <label className={styles.label}>
                 Sua nota
                 <div className={styles.ratingGrid}>
@@ -253,17 +312,6 @@ export default function GameEditModal({
                     </button>
                   ))}
                 </div>
-              </label>
-
-              <label className={styles.label}>
-                URL da capa customizada
-                <input
-                  type="url"
-                  className={styles.input}
-                  value={form.custom_cover_url ?? ''}
-                  onChange={(e) => updateField('custom_cover_url', e.target.value)}
-                  placeholder="https://exemplo.com/capa.jpg"
-                />
               </label>
 
               <label className={styles.label}>

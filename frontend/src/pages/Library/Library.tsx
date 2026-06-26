@@ -21,6 +21,7 @@ import { LibraryGame, GameResult } from '@/types/game';
 
 import styles from '@/pages/Library/Library.module.css';
 import ManualGameModal from '@/components/ManualGameModal/ManualGameModal';
+import { getBestGameCover } from '@/services/media';
 
 const STATUS_OPTIONS = [
   'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
@@ -153,7 +154,7 @@ export default function Library() {
                 <LibraryCard
                   key={game.id}
                   title={game.title}
-                  coverUrl={game.cover_url}
+                  coverUrl={getBestGameCover(game)}
                   status={game.status}
                   rating={game.rating}
                   startedAt={game.started_at}

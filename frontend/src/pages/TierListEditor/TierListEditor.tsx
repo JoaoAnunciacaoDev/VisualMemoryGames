@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
   useSensor, useSensors, rectIntersection,
@@ -15,16 +14,16 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Toast from '@/components/Toast/Toast';
 
 import { useToast } from '@/hooks/useToast';
-
 import { getAuthHeaders } from '@/services/auth';
 import api from '@/services/api';
+import { getBestGameCover } from '@/services/media';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 
 interface GameItem {
   id: string;
   title: string;
-  coverUrl: string | null;
+  coverUrl: string | undefined;
   itemId?: string;
 }
 
@@ -65,7 +64,6 @@ export default function TierListEditor() {
     const allGames = Object.values(games).flat();
     const game = allGames.find((g) => g.id === gameId);
     if (!game?.itemId) return;
-
     const container = Object.keys(games).find((key) =>
       games[key].some((g) => g.id === gameId)
     );
@@ -73,7 +71,6 @@ export default function TierListEditor() {
 
     const categoryId = container === POOL_ID ? poolCategoryId : container;
     if (!categoryId) return;
-
     try {
       await api.delete(
         `/tierlists/category/${categoryId}/items/${game.itemId}`,
@@ -119,7 +116,10 @@ export default function TierListEditor() {
           id: item.game_id,
           itemId: item.id,
           title: item.game?.title ?? 'Jogo',
-          coverUrl: item.game?.cover_url ?? null,
+          coverUrl: getBestGameCover({
+            cover_url: item.game?.cover_url,
+            custom_cover_url: item.game?.custom_cover_url
+          }),
         }));
       }
 
@@ -127,13 +127,15 @@ export default function TierListEditor() {
         id: item.game_id,
         itemId: item.id,
         title: item.game?.title ?? 'Jogo',
-        coverUrl: item.game?.cover_url ?? null,
+        coverUrl: getBestGameCover({
+            cover_url: item.game?.cover_url,
+            custom_cover_url: item.game?.custom_cover_url
+          }),
       })) ?? [];
 
       const initialPool: GameItem[] = location.state?.initialPool ?? [];
       if (initialPool.length > 0 && poolCat && !initialPoolProcessed.current) {
         initialPoolProcessed.current = true;
-
         const savedPoolIds = new Set(savedPool.map((g) => g.id));
         const newGames = initialPool.filter((g) => !savedPoolIds.has(g.id));
 
@@ -145,12 +147,12 @@ export default function TierListEditor() {
               { game_id: game.id },
               { headers: getAuthHeaders() }
             );
-            savedNewGames.push({ ...game, itemId: response.data.id });
+            savedNewGames.push({ ...game, coverUrl: game.coverUrl ?? undefined, itemId: response.data.id });
           } catch (err: any) {
             if (err.response?.status === 400) {
               console.warn(`Jogo ${game.title} já está na tier list, ignorando.`);
             } else {
-              savedNewGames.push(game);
+              savedNewGames.push({ ...game, coverUrl: game.coverUrl ?? undefined });
             }
           }
         }
@@ -214,14 +216,12 @@ export default function TierListEditor() {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-
     if (!over || !activeContainer) {
       setActiveContainer(null);
       return;
     }
 
     const overContainer = findContainer(over.id as string) ?? (over.id as string);
-
     if (activeContainer === overContainer) {
       const activeIndex = games[activeContainer].findIndex((g) => g.id === active.id);
       const overIndex = games[overContainer].findIndex((g) => g.id === over.id);
@@ -231,12 +231,10 @@ export default function TierListEditor() {
           ...prev,
           [activeContainer]: reordered,
         }));
-
         if (activeContainer !== POOL_ID) {
           const itemIds = reordered
             .filter((g) => g.itemId)
             .map((g) => g.itemId as string);
-
           try {
             await api.put(
               `/tierlists/category/${activeContainer}/reorder`,
@@ -331,7 +329,6 @@ export default function TierListEditor() {
         color: newTierColor,
         order_index: tiers.length,
       }, { headers: getAuthHeaders() });
-
       const cat = response.data;
       setTiers((prev) => [...prev, { id: cat.id, label: cat.name, color: cat.color }]);
       setGames((prev) => ({ ...prev, [cat.id]: [] }));
@@ -344,14 +341,16 @@ export default function TierListEditor() {
 
   const confirmDeleteTier = async () => {
     if (!tierToRemove) return;
+    const tierId = tierToRemove;
+
     try {
-      await api.delete(`/tierlists/category/${tierToRemove}`, { headers: getAuthHeaders() });
+      await api.delete(`/tierlists/category/${tierId}`, { headers: getAuthHeaders() });
       setGames((prev) => ({
         ...prev,
-        [POOL_ID]: [...prev[POOL_ID], ...prev[tierToRemove].map((g) => ({ ...g, itemId: undefined }))],
-        [tierToRemove]: [],
+        [POOL_ID]: [...prev[POOL_ID], ...prev[tierId].map((g) => ({ ...g, itemId: undefined }))],
+        [tierId]: [],
       }));
-      setTiers((prev) => prev.filter((t) => t.id !== tierToRemove));
+      setTiers((prev) => prev.filter((t) => t.id !== tierId));
     } catch {
       showToast('Erro ao deletar tier.', 'error');
     } finally {
@@ -388,6 +387,12 @@ export default function TierListEditor() {
 
   const handleGameFound = async (game: { id: string; title: string; coverUrl: string | null }) => {
     try {
+      const newGameItem: GameItem = {
+        id: game.id,
+        title: game.title,
+        coverUrl: game.coverUrl ?? undefined,
+      };
+
       if (poolCategoryId) {
         const response = await api.post(
           `/tierlists/category/${poolCategoryId}/items`,
@@ -397,12 +402,12 @@ export default function TierListEditor() {
         const newItemId = response.data.id;
         setGames((prev) => ({
           ...prev,
-          [POOL_ID]: [...prev[POOL_ID], { ...game, itemId: newItemId }],
+          [POOL_ID]: [...prev[POOL_ID], { ...newGameItem, itemId: newItemId }],
         }));
       } else {
         setGames((prev) => ({
           ...prev,
-          [POOL_ID]: [...prev[POOL_ID], { ...game, itemId: undefined }],
+          [POOL_ID]: [...prev[POOL_ID], newGameItem],
         }));
       }
       setShowSearchModal(false);
@@ -419,7 +424,7 @@ export default function TierListEditor() {
   if (loading) return <p>Carregando...</p>;
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} onClick={() => setSelectedGameId(null)}>
       <div className={styles.header}>
         {editingTitle ? (
           <input
@@ -435,7 +440,10 @@ export default function TierListEditor() {
             {title}
           </h2>
         )}
-        <button className={styles.addGameButton} onClick={() => setShowSearchModal(true)}>
+        <button className={styles.addGameButton} onClick={(e) => {
+          e.stopPropagation();
+          setShowSearchModal(true);
+        }}>
           + Adicionar Jogo
         </button>
       </div>
@@ -537,8 +545,6 @@ export default function TierListEditor() {
         onConfirm={confirmDeleteTier}
         onCancel={() => setTierToRemove(null)}
       />
-
-      <div className={styles.page} onClick={() => setSelectedGameId(null)}></div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>

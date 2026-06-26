@@ -5,6 +5,7 @@ from typing import List
 
 from app.models.tierlist import TierList, TierCategory, TierItem
 from app.models.user import User
+from app.models.user_game import UserGame
 from app.models.game import Game
 
 from app.security import get_current_user
@@ -128,7 +129,11 @@ def get_user_tierlists(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{tierlist_id}", response_model=TierListResponse)
-def get_tierlist(tierlist_id: str, db: Session = Depends(get_db)):
+def get_tierlist(
+    tierlist_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     tierlist = (
         db.query(TierList)
         .options(
@@ -139,8 +144,23 @@ def get_tierlist(tierlist_id: str, db: Session = Depends(get_db)):
         .filter(TierList.id == tierlist_id)
         .first()
     )
+    
     if not tierlist:
         raise HTTPException(status_code=404, detail="Tier List não encontrada.")
+    
+    user_games = db.query(UserGame).filter(UserGame.user_id == tierlist.user_id).all()
+    
+    custom_covers = {
+        ug.game_id: ug.custom_cover_url 
+        for ug in user_games 
+        if ug.custom_cover_url is not None and str(ug.custom_cover_url).strip() != ""
+    }
+
+    for category in tierlist.categories:
+        for item in category.items:
+            if item.game and item.game.id in custom_covers:
+                setattr(item.game, "custom_cover_url", custom_covers[item.game.id])
+
     return tierlist
 
 

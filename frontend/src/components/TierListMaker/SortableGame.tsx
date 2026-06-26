@@ -1,4 +1,3 @@
-import { resolveImageUrl } from '@/services/media';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import styles from '@/components/TierListMaker/TierListStyle.module.css';
@@ -6,7 +5,7 @@ import styles from '@/components/TierListMaker/TierListStyle.module.css';
 interface Props {
   id: string;
   title: string;
-  coverUrl: string | null;
+  coverUrl: string | undefined;
   onRemove?: () => void;
   isSelected?: boolean;
   onSelect?: () => void;
@@ -42,9 +41,11 @@ export default function SortableGame({ id, title, coverUrl, onRemove, isSelected
     >
       <div className={styles.dragHandle} {...attributes} {...listeners}>
         {coverUrl ? (
-          <img src={resolveImageUrl(coverUrl) ?? undefined} alt={title} draggable={false} />
+          <img src={coverUrl} alt={title} className={styles.cover} />
         ) : (
-          <div className={styles.noCover}>{title.substring(0, 2).toUpperCase()}</div>
+          <div className={styles.coverFallback}>
+            <span>Sem Imagem</span>
+          </div>
         )}
       </div>
 

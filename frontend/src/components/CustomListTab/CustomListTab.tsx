@@ -7,7 +7,7 @@ import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
 import Toast from '@/components/Toast/Toast';
 import styles from '@/components/CustomListTab/CustomListTab.module.css';
 import { LibraryGame } from '@/types/game';
-import { resolveImageUrl } from '@/services/media';
+import { getBestGameCover } from '@/services/media';
 
 interface GameInList {
   id: string;
@@ -179,7 +179,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                     {list.games.map((game) => (
                       <div key={game.id} className={styles.gameItem}>
                         {game.cover_url ? (
-                          <img src={resolveImageUrl(game.cover_url) ?? ''} alt={game.title} className={styles.cover} />
+                          <img src={getBestGameCover(game)} alt={game.title} className={styles.cover} />
                         ) : (
                           <div className={styles.noCover}>{game.title.substring(0, 2).toUpperCase()}</div>
                         )}

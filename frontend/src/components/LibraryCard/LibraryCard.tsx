@@ -1,9 +1,8 @@
-import { resolveImageUrl } from '@/services/media';
 import styles from '@/components/LibraryCard/LibraryCard.module.css';
 
 interface Props {
   title: string;
-  coverUrl: string | null;
+  coverUrl: string | undefined;
   status: string;
   rating: number | null;
   startedAt: string | null;
@@ -31,7 +30,7 @@ export default function LibraryCard({ title, coverUrl, status, rating, startedAt
     <div className={styles.card} onClick={onClick}>
       <div className={styles.imageWrapper}>
         {coverUrl ? (
-          <img src={resolveImageUrl(coverUrl) ?? undefined} alt={title} className={styles.cover} />
+          <img src={coverUrl} alt={title} className={styles.cover} />
         ) : (
           <div className={styles.coverFallback}>
             <span>Sem Imagem</span>

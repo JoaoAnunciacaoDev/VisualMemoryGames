@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import api from '@/services/api';
-import { resolveImageUrl } from '@/services/media';
+import { getBestGameCover } from '@/services/media';
 
 import { getAuthHeaders } from '@/services/auth';
 
@@ -103,7 +103,7 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
                 onClick={() => !alreadyAdded && handleSelect(game)}
               >
                 {game.cover_url ? (
-                  <img src={resolveImageUrl(game.cover_url) ?? ''} alt={game.title} className={styles.cover} />
+                  <img src={getBestGameCover(game)} alt={game.title} className={styles.cover} />
                 ) : (
                   <div className={styles.noCover}>{game.title.substring(0, 2).toUpperCase()}</div>
                 )}

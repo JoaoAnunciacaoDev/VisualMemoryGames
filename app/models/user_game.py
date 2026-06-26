@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Boolean, Column, Enum, Float, Integer, String, Text, Date, ForeignKey
+from sqlalchemy import Boolean, Column, Enum, Float, String, Text, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.enums.game_stores import Store

@@ -22,7 +22,10 @@ def search_games_on_rawg(query: str) -> List[Dict]:
         response.raise_for_status()
         data = response.json()
         
+        platforms = []
+        genres = []
         results = []
+        
         for item in data.get("results", []):
             released = item.get("released")
             results.append({
@@ -30,8 +33,8 @@ def search_games_on_rawg(query: str) -> List[Dict]:
                 "title": item["name"],
                 "cover_url": item.get("background_image"),
                 "release_year": int(released[:4]) if released else None,
-                "platforms": [p["platform"]["name"] for p in item.get("platforms", [])],
-                "genres": [g["name"] for g in item.get("genres", [])], 
+                "platforms": [p["platform"]["name"] for p in (item.get("platforms") or [])],
+                "genres": [g["name"] for g in (item.get("genres") or [])], 
             })
             
         return results

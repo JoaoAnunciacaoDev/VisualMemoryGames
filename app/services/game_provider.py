@@ -22,8 +22,6 @@ def search_games_on_rawg(query: str) -> List[Dict]:
         response.raise_for_status()
         data = response.json()
         
-        platforms = []
-        genres = []
         results = []
         
         for item in data.get("results", []):

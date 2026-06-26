@@ -18,5 +18,11 @@ export interface LibraryGame {
   status: string;
   started_at: string | null;
   finished_at: string | null;
+  acquired_at: string | null;
+  platinum_at: string |null;
+  hours_played: number | null;
+  store: string | null;
+  custom_cover_url: string | null;
+  favorite: boolean;
   notes: string | null;
 }

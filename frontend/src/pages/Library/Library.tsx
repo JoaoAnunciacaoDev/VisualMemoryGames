@@ -50,14 +50,11 @@ export default function Library() {
     );
   }, [games]);
 
-  const handleSaveLibraryGame = async (data: {
-    status: string;
-    rating: number | null;
-    started_at: string | null;
-    finished_at: string | null;
-    notes: string | null;
-  }) => {
+  const handleSaveLibraryGame = async (
+    data: Partial<LibraryGame>
+  ) => {
     if (!selectedLibraryGame) return;
+
     try {
       await updateGame(selectedLibraryGame.id, data);
       setSelectedLibraryGame(null);
@@ -200,26 +197,18 @@ export default function Library() {
 
       {selectedLibraryGame && (
         <GameEditModal
-            userGameId={selectedLibraryGame.id}
-            title={selectedLibraryGame.title}
-            coverUrl={selectedLibraryGame.cover_url}
-            initialStatus={selectedLibraryGame.status}
-            initialRating={selectedLibraryGame.rating}
-            initialStartedAt={selectedLibraryGame.started_at}
-            initialFinishedAt={selectedLibraryGame.finished_at}
-            initialNotes={selectedLibraryGame.notes}
+            game={selectedLibraryGame}
             onSave={handleSaveLibraryGame}
             onRemove={async () => {
-              try {
-                await removeGame(selectedLibraryGame.id);
-                setSelectedLibraryGame(null);
-                showToast('Jogo removido da biblioteca.', 'info');
-              } catch {
-                showToast('Erro ao remover jogo.', 'error');
-              }
+                try {
+                    await removeGame(selectedLibraryGame.id);
+                    setSelectedLibraryGame(null);
+                    showToast('Jogo removido da biblioteca.', 'info');
+                } catch {
+                    showToast('Erro ao remover jogo.', 'error');
+                }
             }}
-          onClose={() => setSelectedLibraryGame(null)}
-
+            onClose={() => setSelectedLibraryGame(null)}
         />
       )}
 

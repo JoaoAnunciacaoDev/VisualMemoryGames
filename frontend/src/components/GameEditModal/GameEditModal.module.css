@@ -13,9 +13,29 @@
   border-radius: 12px;
   max-width: 460px;
   width: 90%;
-  overflow: hidden;
   position: relative;
   padding: 24px;
+  max-height: 90vh; 
+  display: flex;
+  flex-direction: column;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+  overflow-y: auto;
+  padding-right: 8px;
+  flex: 1;
+}
+
+.fields::-webkit-scrollbar {
+  width: 6px;
+}
+.fields::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
 }
 
 .closeButton {
@@ -50,13 +70,6 @@
 .title {
   margin: 0;
   font-size: 1.2rem;
-}
-
-.fields {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
 }
 
 .label {
@@ -155,4 +168,38 @@
 .removeButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+.ratingButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.ratingButton:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.ratingButtonActive {
+  background: #b6acac;
+  color: white; 
+  border-color: #b6acac;
 }

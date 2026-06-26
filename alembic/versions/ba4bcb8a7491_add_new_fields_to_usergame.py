@@ -1,8 +1,8 @@
-"""add is_manual created_by to game make external_id nullable
+"""Add new fields to usergame
 
-Revision ID: 6206f5d33611
+Revision ID: ba4bcb8a7491
 Revises: 
-Create Date: 2026-06-25 19:03:09.337206
+Create Date: 2026-06-26 11:53:15.782720
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6206f5d33611'
+revision: str = 'ba4bcb8a7491'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -78,11 +78,17 @@ def upgrade() -> None:
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('game_id', sa.String(), nullable=False),
-    sa.Column('rating', sa.Integer(), nullable=True),
+    sa.Column('rating', sa.Float(), nullable=True),
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('started_at', sa.Date(), nullable=True),
     sa.Column('finished_at', sa.Date(), nullable=True),
+    sa.Column('acquired_at', sa.Date(), nullable=True),
+    sa.Column('platinum_at', sa.Date(), nullable=True),
+    sa.Column('hours_played', sa.Float(), nullable=True),
+    sa.Column('store', sa.Enum('STEAM', 'EPIC', 'GOG', 'ITCH', 'PS_STORE', 'XBOX', 'NINTENDO', 'GOOGLE_PLAY', 'APP_STORE', 'PHYSICAL', 'OTHER', name='store'), nullable=True),
+    sa.Column('custom_cover_url', sa.String(), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('favorite', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')

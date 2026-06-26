@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import api from '@/services/api';
 import { getAuthHeaders } from '@/services/auth';
 import { LibraryGame } from '@/types/game';
+import { UpdateLibraryGame } from '@/types/updateGame';
 
 
 export function useLibrary(userId: string) {
@@ -27,21 +28,18 @@ export function useLibrary(userId: string) {
     if (userId) loadLibrary();
   }, [userId, loadLibrary]);
 
-  const updateGame = async (userGameId: string, data: {
-    status: string;
-    rating: number | null;
-    started_at: string | null;
-    finished_at: string | null;
-    notes: string | null;
-  }) => {
-    await api.put(`/user-games/${userGameId}`, data, {
+  const updateGame = async (
+      id: string,
+      data: Partial<UpdateLibraryGame>
+  ) => {
+    await api.put(`/user-games/${id}`, data, {
       headers: getAuthHeaders()
     });
     await loadLibrary();
   };
 
-  const removeGame = async (userGameId: string) => {
-    await api.delete(`/user-games/${userGameId}`, {
+  const removeGame = async (id: string) => {
+    await api.delete(`/user-games/${id}`, {
       headers: getAuthHeaders()
     });
     await loadLibrary();

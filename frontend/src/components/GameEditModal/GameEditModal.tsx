@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
+import Input from '@/components/Shared/Input/Input'
 import Modal from '@/components/Shared/Modal/Modal';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { resolveImageUrl } from '@/services/media';
@@ -55,6 +56,11 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
 
   const canReview = form.status !== 'Quero Jogar';
 
+  const [editTitle, setEditTitle] = useState(game.title);
+  const [editReleaseYear, setEditReleaseYear] = useState(game.release_year?.toString() ?? '');
+  const [editPlatforms, setEditPlatforms] = useState(game.platforms?.join(', ') ?? '');
+  const [editGenres, setEditGenres] = useState(game.genres?.join(', ') ?? '');
+
   const updateField = <K extends keyof UpdateLibraryGame>(
     field: K,
     value: UpdateLibraryGame[K]
@@ -97,14 +103,43 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
     setIsSaving(true);
 
     try {
-      let finalCoverUrl = form.custom_cover_url;
+      if (game.is_manual) {
+        const gameFormData = new FormData();
+        gameFormData.append('title', editTitle.trim());
+        if (editReleaseYear) gameFormData.append('release_year', editReleaseYear);
+        gameFormData.append(
+          'platforms',
+          JSON.stringify(
+            editPlatforms
+              .split(',')
+              .map((p) => p.trim())
+              .filter(Boolean)
+          )
+        );
+        gameFormData.append(
+          'genres',
+          JSON.stringify(
+            editGenres
+              .split(',')
+              .map((g) => g.trim())
+              .filter(Boolean)
+          )
+        );
 
-      if (coverFile) {
-        const formData = new FormData();
-        formData.append('cover_file', coverFile);
-        const uploadRes = await api.put(`/user-games/${game.id}/cover`, formData, {
+        await api.put(`/games/manual/${game.game_id}`, gameFormData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
+      }
+
+      let finalCoverUrl = form.custom_cover_url;
+      if (coverFile) {
+        const coverFormData = new FormData();
+        coverFormData.append('cover_file', coverFile);
+        const uploadRes = await api.put(
+          `/user-games/${game.id}/cover`,
+          coverFormData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
         finalCoverUrl = uploadRes.data.custom_cover_url;
       }
 
@@ -118,15 +153,14 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
         platinum_at: form.platinum_at || null,
         store: form.store || null,
         custom_cover_url: finalCoverUrl || null,
-        notes: canReview ? (form.notes || null) : null,
+        notes: canReview ? form.notes || null : null,
         hours_played: form.hours_played,
       };
 
       await api.put(`/user-games/${game.id}`, payload);
-
       await onSave(payload);
     } catch {
-
+      // Toast
     } finally {
       setIsSaving(false);
     }
@@ -159,6 +193,53 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
         </div>
 
         <div className={`${styles.fields} scrollbar-gamelog`}>
+          <div className={styles.dateRow}>
+            {game.is_manual && (
+              <>
+                <div className={styles.dateRow}>
+                  <label className={styles.label}>
+                    Nome do jogo
+                    <Input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                    />
+                  </label>
+                  <label className={styles.label}>
+                    Ano de lançamento
+                    <Input
+                      type="number"
+                      value={editReleaseYear}
+                      onChange={(e) => setEditReleaseYear(e.target.value)}
+                      min={1970}
+                      max={new Date().getFullYear() + 2}
+                    />
+                  </label>
+                </div>
+                <div className={styles.dateRow}>
+                  <label className={styles.label}>
+                    Plataformas
+                    <Input
+                      type="text"
+                      placeholder="PC, PlayStation 5"
+                      value={editPlatforms}
+                      onChange={(e) => setEditPlatforms(e.target.value)}
+                    />
+                  </label>
+                  <label className={styles.label}>
+                    Géneros
+                    <Input
+                      type="text"
+                      placeholder="RPG, Ação"
+                      value={editGenres}
+                      onChange={(e) => setEditGenres(e.target.value)}
+                    />
+                  </label>
+                </div>
+              </>
+            )}
+          </div>
+
           <div className={styles.dateRow}>
             <label className={styles.label}>
               Status
@@ -203,21 +284,15 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
             </label>
 
             <label className={styles.label}>
-              Horas jogadas
+              Adquirido em
               <input
-                type="number"
-                min={0}
-                step={0.1}
+                type="date"
                 className={styles.input}
-                value={form.hours_played ?? ''}
-                onChange={(e) =>
-                  updateField(
-                    'hours_played',
-                    e.target.value === '' ? null : Number(e.target.value)
-                  )
-                }
+                value={form.acquired_at ?? ''}
+                onChange={(e) => updateField('acquired_at', e.target.value)}
               />
             </label>
+            
           </div>
 
           {canReview && (
@@ -233,27 +308,38 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
                   />
                 </label>
 
-                <label className={styles.label}>
-                  Data de conclusão
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={form.finished_at ?? ''}
-                    onChange={(e) => updateField('finished_at', e.target.value)}
-                  />
-                </label>
+                {(form.status === 'Zerado' || form.status === 'Platinado') && (
+                  <label className={styles.label}>
+                    Data de conclusão
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={form.finished_at ?? ''}
+                      onChange={(e) => updateField('finished_at', e.target.value)}
+                    />
+                  </label>
+                )}
+                
               </div>
 
+              <label className={styles.label}>
+                Horas jogadas
+                <input
+                  type="number"
+                  min={0}
+                  step={0.1}
+                  className={styles.input}
+                  value={form.hours_played ?? ''}
+                  onChange={(e) =>
+                    updateField(
+                      'hours_played',
+                      e.target.value === '' ? null : Number(e.target.value)
+                    )
+                  }
+                />
+              </label>
+
               <div className={styles.dateRow}>
-                <label className={styles.label}>
-                  Adquirido em
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={form.acquired_at ?? ''}
-                    onChange={(e) => updateField('acquired_at', e.target.value)}
-                  />
-                </label>
 
                 {form.status === 'Platinado' && (
                   <label className={styles.label}>
@@ -265,45 +351,6 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
                       onChange={(e) => updateField('platinum_at', e.target.value)}
                     />
                   </label>
-                )}
-              </div>
-
-              <div className={styles.coverSection}>
-                <label className={styles.label}>
-                  Capa customizada (URL)
-                  <input
-                    type="url"
-                    className={styles.input}
-                    value={form.custom_cover_url ?? ''}
-                    onChange={handleUrlChange}
-                    placeholder="https://exemplo.com/capa.jpg"
-                    disabled={!!coverFile}
-                  />
-                </label>
-
-                <div className={styles.orDivider}>ou</div>
-
-                <label className={styles.fileLabel}>
-                  {coverFile ? coverFile.name : 'Escolher arquivo do PC'}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className={styles.fileInput}
-                  />
-                </label>
-
-                {coverFile && (
-                  <button
-                    type="button"
-                    className={styles.clearFile}
-                    onClick={() => {
-                      setCoverFile(null);
-                      setCoverPreview(null);
-                    }}
-                  >
-                    Remover arquivo
-                  </button>
                 )}
               </div>
 
@@ -337,6 +384,45 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
               </label>
             </>
           )}
+
+          <div className={styles.coverSection}>
+            <label className={styles.label}>
+              Capa customizada (URL)
+              <input
+                type="url"
+                className={styles.input}
+                value={form.custom_cover_url ?? ''}
+                onChange={handleUrlChange}
+                placeholder="https://exemplo.com/capa.jpg"
+                disabled={!!coverFile}
+              />
+            </label>
+
+            <div className={styles.orDivider}>ou</div>
+
+            <label className={styles.fileLabel}>
+              {coverFile ? coverFile.name : 'Escolher arquivo do PC'}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className={styles.fileInput}
+              />
+            </label>
+
+            {coverFile && (
+              <button
+                type="button"
+                className={styles.clearFile}
+                onClick={() => {
+                  setCoverFile(null);
+                  setCoverPreview(null);
+                }}
+              >
+                Remover arquivo
+              </button>
+            )}
+          </div>
         </div>
 
         <div className={styles.footer}>

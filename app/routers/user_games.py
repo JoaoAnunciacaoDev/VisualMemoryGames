@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
@@ -94,6 +95,10 @@ def get_user_library(user_id: str, db: Session = Depends(get_db)):
                 favorite=user_game.favorite,
 
                 notes=user_game.notes,
+                
+                is_manual=game.is_manual,
+                platforms=game.platforms if isinstance(game.platforms, list) else json.loads(game.platforms or '[]'),
+                genres=game.genres if isinstance(game.genres, list) else json.loads(game.genres or '[]'),
                 )
             )
 

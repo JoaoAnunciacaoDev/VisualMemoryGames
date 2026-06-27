@@ -25,6 +25,9 @@ export interface LibraryGame {
   custom_cover_url: string | null;
   favorite: boolean;
   notes: string | null;
+  is_manual: boolean;
+  platforms: string[];
+  genres: string[];
 }
 
 export interface GameDisplay {

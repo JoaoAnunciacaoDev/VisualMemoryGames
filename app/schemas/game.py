@@ -135,5 +135,9 @@ class LibraryGameResponse(BaseModel):
     favorite: bool = False
 
     notes: Optional[str] = None
+    
+    is_manual: bool = False
+    platforms: list[str] = []
+    genres: list[str] = []
 
     model_config = ConfigDict(from_attributes=True)

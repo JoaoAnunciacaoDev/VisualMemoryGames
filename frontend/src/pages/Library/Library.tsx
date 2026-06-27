@@ -22,6 +22,7 @@ import Button from '@/components/Shared/Button/Button';
 
 import { LibraryGame, GameResult } from '@/types/game';
 import { getBestGameCover } from '@/services/media';
+import { groupBy } from '@/services/groupBy';
 import styles from '@/pages/Library/Library.module.css';
 
 const STATUS_OPTIONS = [
@@ -44,6 +45,21 @@ export default function Library() {
   const [showManualModal, setShowManualModal] = useState(false);
 
   const removeConfirm = useConfirmAction<number>();
+
+  // Estado para controlar quais seções de status estão colapsadas
+  const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
+
+  const toggleStatusCollapse = (status: string) => {
+    setCollapsedStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  };
 
   const addedGames = useMemo(() => {
     return new Map<number, string>(
@@ -146,20 +162,44 @@ export default function Library() {
                 : 'Nenhum jogo encontrado com os filtros aplicados.'}
             </div>
           ) : (
-            <div className={styles.grid}>
-              {filtered.map((game) => (
-                <LibraryCard
-                  key={game.id}
-                  title={game.title}
-                  coverUrl={getBestGameCover(game)}
-                  status={game.status}
-                  rating={game.rating}
-                  startedAt={game.started_at}
-                  finishedAt={game.finished_at}
-                  onClick={() => setSelectedLibraryGame(game)}
-                />
-              ))}
-            </div>
+            (() => {
+              const STATUS_ORDER = ['Jogando', 'Zerado', 'Platinado', 'Em Espera', 'Abandonado', 'Quero Jogar'];
+              const grouped = groupBy(filtered, 'status');
+              return (
+                <div className={styles.groupedContainer}>
+                  {STATUS_ORDER.filter((s) => grouped[s]?.length > 0).map((status) => {
+                    const isCollapsed = collapsedStatuses.has(status);
+                    return (
+                      <div key={status} className={styles.statusGroup}>
+                        <h3
+                          className={`${styles.statusGroupTitle} ${!isCollapsed ? styles.statusGroupTitleExpanded : ''}`}
+                          onClick={() => toggleStatusCollapse(status)}
+                          title="Clique para expandir/recolher"
+                        >
+                          {isCollapsed ? '▶' : '▼'} {status}
+                        </h3>
+                        {!isCollapsed && (
+                          <div className={styles.grid}>
+                            {grouped[status].map((game) => (
+                              <LibraryCard
+                                key={game.id}
+                                title={game.title}
+                                coverUrl={getBestGameCover(game)}
+                                status={game.status}
+                                rating={game.rating}
+                                startedAt={game.started_at}
+                                finishedAt={game.finished_at}
+                                onClick={() => setSelectedLibraryGame(game)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
         </>
       )}

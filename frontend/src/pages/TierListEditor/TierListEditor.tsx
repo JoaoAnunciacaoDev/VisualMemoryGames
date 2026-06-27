@@ -15,7 +15,6 @@ import Input from '@/components/Shared/Input/Input';
 
 import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
-import { GameItem } from '@/types';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 

@@ -33,7 +33,7 @@ type SortBy = 'rating' | 'started_at' | 'finished_at' | null;
 
 export default function Library() {
   const { userId, loading } = useAuth();
-  const { games, loadLibrary, updateGame, removeGame } = useLibrary(userId);
+  const { games, loadLibrary, removeGame } = useLibrary(userId);
   const { filtered, search, setSearch, statusFilter, setStatusFilter, sortBy, setSortBy, sortOrder, setSortOrder } = useLibraryFilters(games);
   const { searchResults, isSearching, searchGames } = useGameSearch();
   const { showToast } = useToast();
@@ -53,10 +53,9 @@ export default function Library() {
     );
   }, [games]);
 
-  const handleSaveLibraryGame = async (data: Partial<LibraryGame>) => {
-    if (!selectedLibraryGame) return;
+  const handleSaveLibraryGame = async () => {
     try {
-      await updateGame(selectedLibraryGame.id, data);
+      await loadLibrary();
       setSelectedLibraryGame(null);
       showToast('Jogo atualizado com sucesso!', 'success');
     } catch {

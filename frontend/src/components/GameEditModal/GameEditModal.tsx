@@ -8,6 +8,7 @@ import styles from '@/components/GameEditModal/GameEditModal.module.css';
 import { LibraryGame } from '@/types/game';
 import { STORE_OPTIONS } from '@/types/enums';
 import { UpdateLibraryGame } from '@/types/updateGame';
+import api from '@/services/api';
 
 const STATUS_OPTIONS = [
   'Quero Jogar',
@@ -95,23 +96,37 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
   const handleSave = async () => {
     setIsSaving(true);
 
-    const payload: EditGamePayload = {
-      status: form.status,
-      favorite: form.favorite,
-      rating: canReview ? form.rating : null,
-      started_at: form.started_at || null,
-      finished_at: form.finished_at || null,
-      acquired_at: form.acquired_at || null,
-      platinum_at: form.platinum_at || null,
-      store: form.store || null,
-      custom_cover_url: form.custom_cover_url || null,
-      notes: canReview ? (form.notes || null) : null,
-      hours_played: form.hours_played,
-      custom_cover_file: coverFile,
-    };
-
     try {
+      let finalCoverUrl = form.custom_cover_url;
+
+      if (coverFile) {
+        const formData = new FormData();
+        formData.append('cover_file', coverFile);
+        const uploadRes = await api.put(`/user-games/${game.id}/cover`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        finalCoverUrl = uploadRes.data.custom_cover_url;
+      }
+
+      const payload = {
+        status: form.status,
+        favorite: form.favorite,
+        rating: canReview ? form.rating : null,
+        started_at: form.started_at || null,
+        finished_at: form.finished_at || null,
+        acquired_at: form.acquired_at || null,
+        platinum_at: form.platinum_at || null,
+        store: form.store || null,
+        custom_cover_url: finalCoverUrl || null,
+        notes: canReview ? (form.notes || null) : null,
+        hours_played: form.hours_played,
+      };
+
+      await api.put(`/user-games/${game.id}`, payload);
+
       await onSave(payload);
+    } catch {
+
     } finally {
       setIsSaving(false);
     }

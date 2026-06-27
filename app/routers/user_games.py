@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -10,6 +12,10 @@ from app.schemas.game import UserGameCreate, UserGameResponse, UserGameUpdate, L
 from app.enums.game_status import GameStatus
 from app.database import get_db
 from app.security import get_current_user
+
+
+UPLOAD_DIR = "uploads/covers"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 router = APIRouter(prefix="/user-games", tags=["User Games"])
@@ -133,6 +139,46 @@ def update_user_game(
     db.refresh(db_user_game)
 
     return db_user_game
+
+
+@router.put("/{user_game_id}/cover", response_model=UserGameResponse)
+async def update_custom_cover(
+    user_game_id: str,
+    cover_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_user_game = db.query(UserGame).filter(UserGame.id == user_game_id).first()
+    if not db_user_game:
+        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+    if str(db_user_game.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão.")
+
+    if cover_file.filename and '.' in cover_file.filename:
+        extension = cover_file.filename.rsplit('.', 1)[-1].lower()
+        if extension not in ('jpg', 'jpeg', 'png', 'gif', 'webp'):
+            extension = 'jpg'
+    else:
+        content_type = cover_file.content_type or 'image/jpeg'
+        extension = content_type.split('/')[-1] if '/' in content_type else 'jpg'
+        if extension == 'jpeg':
+            extension = 'jpg'
+
+    filename = f"{uuid.uuid4()}.{extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as f:
+        content = await cover_file.read()
+        f.write(content)
+
+    cover_url = f"/uploads/covers/{filename}"
+
+    setattr(db_user_game, 'custom_cover_url', cover_url)
+    db.commit()
+    db.refresh(db_user_game)
+
+    return db_user_game
+
 
 @router.delete("/{user_game_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_game_from_library(

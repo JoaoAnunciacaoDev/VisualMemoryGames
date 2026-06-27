@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 
+import { getBestGameCover } from '@/services/media';
 import api from '@/services/api';
 
 import type { TierListSummary, CustomList, LibraryGame } from '@/types';
@@ -72,14 +73,38 @@ export default function TierLists() {
       let gamesToAdd: { id: string; title: string; coverUrl: string | null }[] = [];
 
       if (gameSource === 'all') {
-        gamesToAdd = libraryGames.map((g) => ({ id: g.game_id, title: g.title, coverUrl: g.cover_url }));
+        gamesToAdd = libraryGames.map((g) => ({
+           id: g.game_id, 
+           title: g.title, 
+           coverUrl: getBestGameCover({
+              cover_url: g.cover_url,
+              custom_cover_url: g.custom_cover_url,
+            }) ?? null,
+          }));
+
       } else if (gameSource === 'status') {
         gamesToAdd = libraryGames
           .filter((g) => g.status === selectedStatus)
-          .map((g) => ({ id: g.game_id, title: g.title, coverUrl: g.cover_url }));
+          .map((g) => ({ 
+            id: g.game_id, 
+            title: g.title, 
+            coverUrl: getBestGameCover({
+              cover_url: g.cover_url,
+              custom_cover_url: g.custom_cover_url,
+            }) ?? null, 
+          }));
+
       } else if (gameSource === 'list') {
         const list = customLists.find((l) => l.id === selectedListId);
-        gamesToAdd = list?.games.map((g) => ({ id: g.id, title: g.title, coverUrl: g.cover_url })) ?? [];
+        gamesToAdd = list?.games.map((g) => ({ 
+          id: g.id, 
+          title: g.title, 
+          coverUrl: getBestGameCover({
+              cover_url: g.cover_url,
+              custom_cover_url: null,
+            }) ?? null,
+        })) ?? [];
+
       }
 
       setShowCreateModal(false);

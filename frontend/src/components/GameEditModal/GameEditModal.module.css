@@ -1,4 +1,3 @@
-/* Sobrescreve o overflow do Modal para que o footer fique fixo */
 .modalContent {
   display: flex;
   flex-direction: column;

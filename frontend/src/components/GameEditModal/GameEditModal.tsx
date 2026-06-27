@@ -9,6 +9,7 @@ import styles from '@/components/GameEditModal/GameEditModal.module.css';
 import { LibraryGame } from '@/types/game';
 import { STORE_OPTIONS } from '@/types/enums';
 import { EditGamePayload } from '@/hooks/useGameEditForm';
+import RatingStars from '@/components/RatingStars/RatingStars';
 
 const STATUS_OPTIONS = [
   'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
@@ -163,13 +164,11 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
 
               <label className={styles.label}>
                 Sua nota
-                <div className={styles.ratingGrid}>
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                    <button key={value} type="button" className={`${styles.ratingButton} ${form.rating === value ? styles.ratingButtonActive : ''}`} onClick={() => updateField('rating', value)}>
-                      {value}
-                    </button>
-                  ))}
-                </div>
+
+                <RatingStars
+                  value={form.rating ?? 0}
+                  onChange={(value: number) => updateField('rating', value)}
+                />
               </label>
 
               <label className={styles.label}>

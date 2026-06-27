@@ -1,0 +1,46 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.0rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.starWrapper {
+  position: relative;
+}
+
+.star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 2.5rem;
+  color: var(--border);
+  transition: color var(--transition-fast);
+  padding: 0.125rem 0.525rem;
+  line-height: 1;
+}
+
+.full {
+  color: var(--secondary);
+}
+
+.half {
+  background: linear-gradient(
+    90deg,
+    var(--secondary) 50%,
+    var(--border) 50%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.value {
+  margin-left: 0.75rem;
+  font-weight: 600;
+  min-width: 3rem;
+  color: var(--text);
+  font-size: var(--font-size-sm);
+}

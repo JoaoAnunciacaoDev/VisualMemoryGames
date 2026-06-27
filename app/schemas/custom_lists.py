@@ -19,6 +19,7 @@ class CustomListResponse(BaseModel):
     id: str
     user_id: str
     name: str
+    is_system: bool = False
     games: List[GameInList] = []
 
     model_config = ConfigDict(from_attributes=True)

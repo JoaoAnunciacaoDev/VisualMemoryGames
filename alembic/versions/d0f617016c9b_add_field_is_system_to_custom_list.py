@@ -1,8 +1,8 @@
-"""Add new fields to usergame
+"""Add field is_system to custom_list
 
-Revision ID: ba4bcb8a7491
+Revision ID: d0f617016c9b
 Revises: 
-Create Date: 2026-06-26 11:53:15.782720
+Create Date: 2026-06-27 13:55:16.651025
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ba4bcb8a7491'
+revision: str = 'd0f617016c9b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,6 +34,7 @@ def upgrade() -> None:
     sa.Column('id', sa.String(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
+    sa.Column('is_system', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )

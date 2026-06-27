@@ -190,7 +190,7 @@ export default function Library() {
       )}
 
       {activeTab === 'lists' && (
-        <CustomListsTab userId={userId} libraryGames={games} />
+        <CustomListsTab userId={userId} libraryGames={games} onLibraryChange={loadLibrary} />
       )}
 
       {activeTab === 'manual' && (

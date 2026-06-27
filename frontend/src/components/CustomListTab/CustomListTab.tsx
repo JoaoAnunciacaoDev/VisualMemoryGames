@@ -22,14 +22,16 @@ interface CustomList {
   id: string;
   name: string;
   games: GameInList[];
+  is_system: boolean;
 }
 
 interface Props {
   userId: string;
   libraryGames: LibraryGame[];
+  onLibraryChange: () => void;
 }
 
-export default function CustomListsTab({ userId, libraryGames }: Props) {
+export default function CustomListsTab({ userId, libraryGames, onLibraryChange }: Props) {
   const [lists, setLists] = useState<CustomList[]>([]);
   const [newListName, setNewListName] = useState('');
   const [expandedList, setExpandedList] = useState<string | null>(null);
@@ -44,7 +46,12 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   const loadLists = async () => {
     try {
       const response = await api.get(`/lists/user/${userId}`);
-      setLists(response.data);
+      const sorted = response.data.sort((a: CustomList, b: CustomList) => {
+        if (a.is_system && !b.is_system) return -1;
+        if (!a.is_system && b.is_system) return 1;
+        return a.name.localeCompare(b.name);
+      });
+      setLists(sorted);
     } catch {
       showToast('Erro ao carregar listas.', 'error');
     }
@@ -115,6 +122,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
         `/lists/${removeGameModal.target.listId}/games/${removeGameModal.target.gameId}`
       );
       await loadLists();
+      onLibraryChange();
       showToast('Jogo removido da lista.', 'info');
     } catch {
       showToast('Erro ao remover jogo.', 'error');
@@ -148,7 +156,9 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
             <Card key={list.id} className={styles.listCard}>
               <div className={styles.listHeader}>
                 <div className={styles.listInfo}>
-                  {editingListId === list.id ? (
+                  {list.is_system ? (
+                    <span className={styles.listName}>⭐ {list.name}</span>
+                  ) : editingListId === list.id ? (
                     <input
                       className={styles.editInput}
                       value={editingListName}
@@ -189,13 +199,15 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                   >
                     {expandedList === list.id ? '▲' : '▼'}
                   </Button>
-                  <Button
-                    variant="ghost"
-                    className={`${styles.iconButton} ${styles.deleteIcon}`}
-                    onClick={() => deleteListModal.open(list.id)}
-                  >
-                    🗑
-                  </Button>
+                  {!list.is_system && (
+                    <Button
+                      variant="ghost"
+                      className={`${styles.iconButton} ${styles.deleteIcon}`}
+                      onClick={() => deleteListModal.open(list.id)}
+                    >
+                      🗑
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -226,7 +238,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                           }
                           title="Remover da lista"
                         >
-                          ✕
+                          X
                         </button>
                       </div>
                     ))}

@@ -9,6 +9,7 @@ from app.models.user_game import UserGame
 from app.models.user import User
 from app.models.game import Game
 
+from app.routers.custom_lists import get_or_create_favorites_list
 from app.schemas.game import UserGameCreate, UserGameResponse, UserGameUpdate, LibraryGameResponse
 from app.enums.game_status import GameStatus
 from app.database import get_db
@@ -139,6 +140,16 @@ def update_user_game(
     
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
+    
+    if 'favorite' in update_data:
+        fav_list = get_or_create_favorites_list(str(db_user_game.user_id), db)
+        game = db_user_game.game
+        if update_data['favorite']:
+            if game not in fav_list.games:
+                fav_list.games.append(game)
+        else:
+            if game in fav_list.games:
+                fav_list.games.remove(game)
 
     db.commit()
     db.refresh(db_user_game)

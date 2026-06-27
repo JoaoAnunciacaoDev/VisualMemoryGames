@@ -6,7 +6,7 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { useLibraryFilters } from '@/hooks/useLibraryFilters';
 import { useGameSearch } from '@/hooks/useGameSearch';
 import { addGameToLibrary } from '@/hooks/useAddGame';
-import { useConfirmModal } from '@/hooks/useConfirmModal';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 
 import LibraryCard from '@/components/LibraryCard/LibraryCard';
 import GameEditModal from '@/components/GameEditModal/GameEditModal';
@@ -43,8 +43,7 @@ export default function Library() {
   const [selectedSearchGame, setSelectedSearchGame] = useState<GameResult | null>(null);
   const [showManualModal, setShowManualModal] = useState(false);
 
-  const removeModal = useConfirmModal();
-  const [gameToRemove, setGameToRemove] = useState<number | null>(null);
+  const removeConfirm = useConfirmAction<number>();
 
   const addedGames = useMemo(() => {
     return new Map<number, string>(
@@ -76,9 +75,9 @@ export default function Library() {
   };
 
   const confirmRemove = async () => {
-    if (gameToRemove === null) return;
+    if (removeConfirm.target === null) return;
     try {
-      const userGameId = addedGames.get(gameToRemove);
+      const userGameId = addedGames.get(removeConfirm.target);
       if (!userGameId) return;
       await removeGame(userGameId);
       setSelectedSearchGame(null);
@@ -86,14 +85,8 @@ export default function Library() {
     } catch {
       showToast('Erro ao remover jogo.', 'error');
     } finally {
-      setGameToRemove(null);
-      removeModal.close();
+      removeConfirm.close();
     }
-  };
-
-  const requestRemove = (externalId: number) => {
-    setGameToRemove(externalId);
-    removeModal.open();
   };
 
   if (loading) return <p>Carregando biblioteca...</p>;
@@ -184,7 +177,7 @@ export default function Library() {
                 releaseYear={game.release_year}
                 isAdded={addedGames.has(game.external_id)}
                 onAdd={() => handleAddGame(game)}
-                onRemove={() => requestRemove(game.external_id)}
+                onRemove={() => removeConfirm.open(game.external_id)}
                 onClick={() => setSelectedSearchGame(game)}
               />
             ))}
@@ -199,6 +192,14 @@ export default function Library() {
 
       {activeTab === 'lists' && (
         <CustomListsTab userId={userId} libraryGames={games} />
+      )}
+
+      {activeTab === 'manual' && (
+        <div className={styles.manualSection}>
+          <Button variant="primary" onClick={() => setShowManualModal(true)}>
+            + Adicionar Jogo Manualmente
+          </Button>
+        </div>
       )}
 
       {selectedLibraryGame && (
@@ -218,14 +219,6 @@ export default function Library() {
         />
       )}
 
-      {activeTab === 'manual' && (
-        <div className={styles.manualSection}>
-          <Button variant="primary" onClick={() => setShowManualModal(true)}>
-            + Adicionar Jogo Manualmente
-          </Button>
-        </div>
-      )}
-
       <GameModal
         game={selectedSearchGame ? {
           title: selectedSearchGame.title,
@@ -237,18 +230,18 @@ export default function Library() {
         isAdded={selectedSearchGame ? addedGames.has(selectedSearchGame.external_id) : false}
         onClose={() => setSelectedSearchGame(null)}
         onAdd={() => selectedSearchGame && handleAddGame(selectedSearchGame)}
-        onRemove={() => selectedSearchGame && requestRemove(selectedSearchGame.external_id)}
+        onRemove={() => selectedSearchGame && removeConfirm.open(selectedSearchGame.external_id)}
       />
 
       <ConfirmModal
-        isOpen={removeModal.isOpen}
+        isOpen={removeConfirm.isOpen}
         title="Remover Jogo"
         message="Tem certeza que deseja remover este jogo da sua biblioteca? Você perderá todos os dados salvos sobre ele."
         confirmText="Sim, remover"
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={confirmRemove}
-        onCancel={removeModal.close}
+        onCancel={removeConfirm.close}
       />
 
       {showManualModal && (

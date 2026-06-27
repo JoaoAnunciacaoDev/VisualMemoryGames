@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/useToast';
-import { useConfirmModal } from '@/hooks/useConfirmModal';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import api from '@/services/api';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
@@ -38,10 +38,8 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   const [editingListName, setEditingListName] = useState('');
   const { showToast } = useToast();
 
-  const deleteListModal = useConfirmModal();
-  const removeGameModal = useConfirmModal();
-  const [listToDelete, setListToDelete] = useState<string | null>(null);
-  const [gameToRemove, setGameToRemove] = useState<{ listId: string; gameId: string } | null>(null);
+  const deleteListModal = useConfirmAction<string>();
+  const removeGameModal = useConfirmAction<{ listId: string; gameId: string }>();
 
   const loadLists = async () => {
     try {
@@ -69,15 +67,14 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   };
 
   const handleDeleteList = async () => {
-    if (!listToDelete) return;
+    if (!deleteListModal.target) return;
     try {
-      await api.delete(`/lists/${listToDelete}`);
+      await api.delete(`/lists/${deleteListModal.target}`);
       await loadLists();
       showToast('Lista removida.', 'info');
     } catch {
       showToast('Erro ao remover lista.', 'error');
     } finally {
-      setListToDelete(null);
       deleteListModal.close();
     }
   };
@@ -112,27 +109,18 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   };
 
   const handleRemoveGame = async () => {
-    if (!gameToRemove) return;
+    if (!removeGameModal.target) return;
     try {
-      await api.delete(`/lists/${gameToRemove.listId}/games/${gameToRemove.gameId}`);
+      await api.delete(
+        `/lists/${removeGameModal.target.listId}/games/${removeGameModal.target.gameId}`
+      );
       await loadLists();
       showToast('Jogo removido da lista.', 'info');
     } catch {
       showToast('Erro ao remover jogo.', 'error');
     } finally {
-      setGameToRemove(null);
       removeGameModal.close();
     }
-  };
-
-  const requestDeleteList = (listId: string) => {
-    setListToDelete(listId);
-    deleteListModal.open();
-  };
-
-  const requestRemoveGame = (listId: string, gameId: string) => {
-    setGameToRemove({ listId, gameId });
-    removeGameModal.open();
   };
 
   return (
@@ -151,7 +139,9 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
       </div>
 
       {lists.length === 0 ? (
-        <div className={styles.emptyState}>Nenhuma lista criada ainda. Crie uma acima!</div>
+        <div className={styles.emptyState}>
+          Nenhuma lista criada ainda. Crie uma acima!
+        </div>
       ) : (
         <div className={styles.lists}>
           {lists.map((list) => (
@@ -166,33 +156,43 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                       onBlur={() => handleRenameList(list.id)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleRenameList(list.id);
-                        if (e.key === 'Escape') { setEditingListId(null); setEditingListName(''); }
+                        if (e.key === 'Escape') {
+                          setEditingListId(null);
+                          setEditingListName('');
+                        }
                       }}
                       autoFocus
                     />
                   ) : (
                     <span
                       className={styles.listName}
-                      onDoubleClick={() => { setEditingListId(list.id); setEditingListName(list.name); }}
+                      onDoubleClick={() => {
+                        setEditingListId(list.id);
+                        setEditingListName(list.name);
+                      }}
                       title="Clique duplo para renomear"
                     >
                       {list.name}
                     </span>
                   )}
-                  <span className={styles.listCount}>{list.games.length} jogos</span>
+                  <span className={styles.listCount}>
+                    {list.games.length} jogos
+                  </span>
                 </div>
                 <div className={styles.listActions}>
                   <Button
                     variant="ghost"
                     className={styles.iconButton}
-                    onClick={() => setExpandedList(expandedList === list.id ? null : list.id)}
+                    onClick={() =>
+                      setExpandedList(expandedList === list.id ? null : list.id)
+                    }
                   >
                     {expandedList === list.id ? '▲' : '▼'}
                   </Button>
                   <Button
                     variant="ghost"
                     className={`${styles.iconButton} ${styles.deleteIcon}`}
-                    onClick={() => requestDeleteList(list.id)}
+                    onClick={() => deleteListModal.open(list.id)}
                   >
                     🗑
                   </Button>
@@ -205,14 +205,25 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                     {list.games.map((game) => (
                       <div key={game.id} className={styles.gameItem}>
                         {game.cover_url ? (
-                          <img src={getBestGameCover(game)} alt={game.title} className={styles.cover} />
+                          <img
+                            src={getBestGameCover(game)}
+                            alt={game.title}
+                            className={styles.cover}
+                          />
                         ) : (
-                          <div className={styles.noCover}>{game.title.substring(0, 2).toUpperCase()}</div>
+                          <div className={styles.noCover}>
+                            {game.title.substring(0, 2).toUpperCase()}
+                          </div>
                         )}
                         <span className={styles.gameTitle}>{game.title}</span>
                         <button
                           className={styles.removeGame}
-                          onClick={() => requestRemoveGame(list.id, game.id)}
+                          onClick={() =>
+                            removeGameModal.open({
+                              listId: list.id,
+                              gameId: game.id,
+                            })
+                          }
                           title="Remover da lista"
                         >
                           ✕
@@ -242,10 +253,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={handleDeleteList}
-        onCancel={() => {
-          setListToDelete(null);
-          deleteListModal.close();
-        }}
+        onCancel={deleteListModal.close}
       />
 
       <ConfirmModal
@@ -256,16 +264,19 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={handleRemoveGame}
-        onCancel={() => {
-          setGameToRemove(null);
-          removeGameModal.close();
-        }}
+        onCancel={removeGameModal.close}
       />
 
       {selectingForList && (
         <SelectGamesModal
           games={libraryGames}
-          alreadyInList={new Set(lists.find((l) => l.id === selectingForList)?.games.map((g) => g.id) ?? [])}
+          alreadyInList={
+            new Set(
+              lists
+                .find((l) => l.id === selectingForList)
+                ?.games.map((g) => g.id) ?? []
+            )
+          }
           onConfirm={(ids) => handleAddGames(selectingForList, ids)}
           onClose={() => setSelectingForList(null)}
         />

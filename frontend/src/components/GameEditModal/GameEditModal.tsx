@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import Modal from '@/components/Shared/Modal/Modal';
-import { useConfirmModal } from '@/hooks/useConfirmModal';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { resolveImageUrl } from '@/services/media';
 import styles from '@/components/GameEditModal/GameEditModal.module.css';
 import { LibraryGame } from '@/types/game';
@@ -49,8 +49,8 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
 
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
-  
-  const confirmRemoveModal = useConfirmModal();
+
+  const confirmRemoveModal = useConfirmAction();
 
   const canReview = form.status !== 'Quero Jogar';
 
@@ -337,7 +337,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
           <button
             type="button"
             className={styles.removeButton}
-            onClick={confirmRemoveModal.open}
+            onClick={() => confirmRemoveModal.open()}
             disabled={isSaving || isRemoving}
           >
             {isRemoving ? 'Removendo...' : 'Remover da Biblioteca'}

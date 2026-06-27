@@ -8,7 +8,7 @@ import Input from '@/components/Shared/Input/Input';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
-import { useConfirmModal } from '@/hooks/useConfirmModal';
+import { useConfirmAction } from '@/hooks/useConfirmAction';
 
 import api from '@/services/api';
 
@@ -35,8 +35,7 @@ export default function TierLists() {
   const [customLists, setCustomLists] = useState<CustomList[]>([]);
   const [libraryGames, setLibraryGames] = useState<LibraryGame[]>([]);
 
-  const deleteModal = useConfirmModal();
-  const [listToRemove, setListToRemove] = useState<string | null>(null);
+  const deleteModal = useConfirmAction<string>();
 
   const loadSources = async (uid: string) => {
     const [listsRes, libraryRes] = await Promise.all([
@@ -95,22 +94,16 @@ export default function TierLists() {
   };
 
   const confirmDeleteList = async () => {
-    if (!listToRemove) return;
+    if (!deleteModal.target) return;
     try {
-      await api.delete(`/tierlists/${listToRemove}`);
+      await api.delete(`/tierlists/${deleteModal.target}`);
       if (userId) await loadTierLists(userId);
       showToast('Tier list deletada.', 'info');
     } catch {
       showToast('Erro ao deletar tier list.', 'error');
     } finally {
-      setListToRemove(null);
       deleteModal.close();
     }
-  };
-
-  const requestDelete = (id: string) => {
-    setListToRemove(id);
-    deleteModal.open();
   };
 
   if (loading) return <p>Carregando tier lists...</p>;
@@ -215,7 +208,7 @@ export default function TierLists() {
               </div>
               <div className={styles.cardFooter}>
                 <span className={styles.cardTitle} onClick={() => navigate(`/tierlists/${tl.id}`)}>{tl.title}</span>
-                <button className={styles.deleteButton} onClick={() => requestDelete(tl.id)} title="Deletar">🗑</button>
+                <button className={styles.deleteButton} onClick={() => deleteModal.open(tl.id)} title="Deletar">🗑</button>
               </div>
             </div>
           ))}
@@ -230,10 +223,7 @@ export default function TierLists() {
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={confirmDeleteList}
-        onCancel={() => {
-          setListToRemove(null);
-          deleteModal.close();
-        }}
+        onCancel={deleteModal.close}
       />
     </div>
   );

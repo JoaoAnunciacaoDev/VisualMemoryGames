@@ -5,35 +5,16 @@ import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
-import Toast from '@/components/Toast/Toast';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 
-import { getAuthHeaders } from '@/services/auth';
 import api from '@/services/api';
 
+import type { TierListSummary, CustomList, LibraryGame } from '@/types';
+
 import styles from '@/pages/TierList/TierList.module.css';
-
-
-interface TierListSummary {
-  id: string;
-  title: string;
-  categories: { id: string; name: string; color: string; items: any[] }[];
-}
-
-interface CustomList {
-  id: string;
-  name: string;
-  games: { id: string; title: string; cover_url: string | null }[];
-}
-
-interface LibraryGame {
-  game_id: string;
-  title: string;
-  cover_url: string | null;
-  status: string;
-}
 
 type GameSource = 'empty' | 'all' | 'status' | 'list';
 
@@ -42,7 +23,7 @@ const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Quero Jogar', 'Abando
 export default function TierLists() {
   const navigate = useNavigate();
   const { userId, loading } = useAuth();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
 
   const [tierLists, setTierLists] = useState<TierListSummary[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -53,12 +34,14 @@ export default function TierLists() {
   const [selectedListId, setSelectedListId] = useState('');
   const [customLists, setCustomLists] = useState<CustomList[]>([]);
   const [libraryGames, setLibraryGames] = useState<LibraryGame[]>([]);
+
+  const deleteModal = useConfirmModal();
   const [listToRemove, setListToRemove] = useState<string | null>(null);
 
   const loadSources = async (uid: string) => {
     const [listsRes, libraryRes] = await Promise.all([
-      api.get(`/lists/user/${uid}`, { headers: getAuthHeaders() }),
-      api.get(`/user-games/user/${uid}`, { headers: getAuthHeaders() }),
+      api.get(`/lists/user/${uid}`),
+      api.get(`/user-games/user/${uid}`),
     ]);
     setCustomLists(listsRes.data);
     setLibraryGames(libraryRes.data);
@@ -67,7 +50,7 @@ export default function TierLists() {
   const loadTierLists = async (uid: string) => {
     try {
       const [tierlistsRes] = await Promise.all([
-        api.get(`/tierlists/user/${uid}`, { headers: getAuthHeaders() }),
+        api.get(`/tierlists/user/${uid}`),
         loadSources(uid),
       ]);
       setTierLists(tierlistsRes.data);
@@ -84,7 +67,7 @@ export default function TierLists() {
     if (!newTitle.trim()) return;
     setIsCreating(true);
     try {
-      const response = await api.post('/tierlists/', { title: newTitle.trim() }, { headers: getAuthHeaders() });
+      const response = await api.post('/tierlists/', { title: newTitle.trim() });
       const tierlistId = response.data.id;
 
       let gamesToAdd: { id: string; title: string; coverUrl: string | null }[] = [];
@@ -114,14 +97,20 @@ export default function TierLists() {
   const confirmDeleteList = async () => {
     if (!listToRemove) return;
     try {
-      await api.delete(`/tierlists/${listToRemove}`, { headers: getAuthHeaders() });
+      await api.delete(`/tierlists/${listToRemove}`);
       if (userId) await loadTierLists(userId);
       showToast('Tier list deletada.', 'info');
     } catch {
       showToast('Erro ao deletar tier list.', 'error');
     } finally {
       setListToRemove(null);
+      deleteModal.close();
     }
+  };
+
+  const requestDelete = (id: string) => {
+    setListToRemove(id);
+    deleteModal.open();
   };
 
   if (loading) return <p>Carregando tier lists...</p>;
@@ -134,7 +123,6 @@ export default function TierLists() {
         + Nova Tier List
       </Button>
 
-      {/* Modal de criação */}
       <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="460px" showCloseButton>
         <div className={styles.modalContent}>
           <h3 className={styles.modalTitle}>Nova Tier List</h3>
@@ -227,7 +215,7 @@ export default function TierLists() {
               </div>
               <div className={styles.cardFooter}>
                 <span className={styles.cardTitle} onClick={() => navigate(`/tierlists/${tl.id}`)}>{tl.title}</span>
-                <button className={styles.deleteButton} onClick={() => setListToRemove(tl.id)} title="Deletar">🗑</button>
+                <button className={styles.deleteButton} onClick={() => requestDelete(tl.id)} title="Deletar">🗑</button>
               </div>
             </div>
           ))}
@@ -235,17 +223,18 @@ export default function TierLists() {
       )}
 
       <ConfirmModal
-        isOpen={listToRemove !== null}
+        isOpen={deleteModal.isOpen}
         title="Deletar Tier List"
         message="Tem certeza que deseja deletar esta Tier List inteira? Esta ação não pode ser desfeita."
         confirmText="Sim, deletar"
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={confirmDeleteList}
-        onCancel={() => setListToRemove(null)}
+        onCancel={() => {
+          setListToRemove(null);
+          deleteModal.close();
+        }}
       />
-
-      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

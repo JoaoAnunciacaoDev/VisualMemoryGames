@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import AuthForm from '@/components/AuthForm/AuthForm';
-import Toast from '@/components/Toast/Toast';
 
 import { useToast } from '@/hooks/useToast';
 
@@ -12,7 +11,7 @@ import api from '@/services/api';
 export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -60,13 +59,6 @@ export default function Login() {
         onRegister={handleRegister}
         error={error}
       />
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
     </>
   );
 }

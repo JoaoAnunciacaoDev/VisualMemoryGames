@@ -5,20 +5,23 @@ import Login from './pages/Login/Login';
 import Library from './pages/Library/Library';
 import TierList from './pages/TierList/TierList';
 import TierListEditor from './pages/TierListEditor/TierListEditor';
+import { ToastProvider } from './providers/ToastProvider';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/library" element={<Library />} />
-          <Route path="/tierlists" element={<TierList />} />
-          <Route path="/tierlists/:id" element={<TierListEditor />} />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
+      <BrowserRouter>
+        <Layout>
+          <ToastProvider position="top-center">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/library" element={<Library />} />
+              <Route path="/tierlists" element={<TierList />} />
+              <Route path="/tierlists/:id" element={<TierListEditor />} />
+            </Routes>
+          </ToastProvider>
+        </Layout>
+      </BrowserRouter>
   );
 }
 

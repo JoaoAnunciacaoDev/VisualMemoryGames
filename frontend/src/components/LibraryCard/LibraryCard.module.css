@@ -80,6 +80,7 @@
   color: var(--muted);
 }
 
+/* Efeito de brilho sutil no hover */
 .libraryCard::before {
   content: "";
   position: absolute;
@@ -94,3 +95,10 @@
 .libraryCard:hover::before {
   opacity: 1;
 }
+
+.statusWantToPlay { background: var(--status-want-to-play); }
+.statusPlaying { background: var(--status-playing); }
+.statusCompleted { background: var(--status-completed); }
+.statusPlatinized { background: var(--status-platinized); }
+.statusAbandoned { background: var(--status-abandoned); }
+.statusOnHold { background: var(--status-on-hold); }

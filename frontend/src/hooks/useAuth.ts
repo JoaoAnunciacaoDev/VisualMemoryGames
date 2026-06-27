@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
-import { getAuthHeaders, clearToken } from '@/services/auth';
+import { clearToken } from '@/services/auth';
 
 export function useAuth() {
   const navigate = useNavigate();
@@ -15,7 +15,7 @@ export function useAuth() {
       return;
     }
 
-    api.get('/users/me', { headers: getAuthHeaders() })
+    api.get('/users/me')
       .then((res) => setUserId(res.data.id))
       .catch(() => navigate('/login'))
       .finally(() => setLoading(false));

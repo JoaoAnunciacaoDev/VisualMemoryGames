@@ -1,17 +1,10 @@
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
+import type { GameDisplay } from '@/types/game';
 import styles from '@/components/GameModal/GameModal.module.css';
 
-interface Game {
-  title: string;
-  coverUrl: string | null;
-  releaseYear: number | null;
-  platforms: string[];
-  genres: string[];
-}
-
 interface Props {
-  game: Game | null;
+  game: GameDisplay | null;
   isAdded?: boolean;
   onClose: () => void;
   onAdd?: () => void;

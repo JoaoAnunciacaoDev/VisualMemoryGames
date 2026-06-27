@@ -11,13 +11,13 @@ interface Props {
   onClick: () => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  'Quero Jogar': '#6c757d',
-  'Jogando': '#007BFF',
-  'Zerado': '#28a745',
-  'Platinado': '#a855f7',
-  'Abandonado': '#dc3545',
-  'Em Espera': '#fd7e14',
+const STATUS_CLASSES: Record<string, string> = {
+  'Quero Jogar': styles.statusWantToPlay,
+  'Jogando': styles.statusPlaying,
+  'Zerado': styles.statusCompleted,
+  'Platinado': styles.statusPlatinized,
+  'Abandonado': styles.statusAbandoned,
+  'Em Espera': styles.statusOnHold,
 };
 
 export default function LibraryCard({
@@ -43,10 +43,7 @@ export default function LibraryCard({
         ) : (
           <div className={styles.coverFallback}>Sem Imagem</div>
         )}
-        <span
-          className={styles.statusTag}
-          style={{ backgroundColor: STATUS_COLORS[status] ?? '#6c757d' }}
-        >
+        <span className={`${styles.statusTag} ${STATUS_CLASSES[status] ?? styles.statusWantToPlay}`}>
           {status}
         </span>
       </div>

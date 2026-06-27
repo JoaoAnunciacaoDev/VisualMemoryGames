@@ -4,12 +4,7 @@ import Modal from '@/components/Shared/Modal/Modal';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 import styles from '@/components/SelectGamesModal/SelectGamesModal.module.css';
-
-interface LibraryGame {
-  game_id: string;
-  title: string;
-  cover_url: string | null;
-}
+import type { LibraryGame } from '@/types';
 
 interface Props {
   games: LibraryGame[];

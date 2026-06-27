@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { getAuthHeaders } from '@/services/auth';
 import api from '@/services/api';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
@@ -60,15 +59,13 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
         formData.append('cover_url', coverUrl);
       }
 
-      const headers = getAuthHeaders();
       const gameResponse = await api.post('/games/manual', formData, {
         headers: {
-          ...headers,
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      await api.post('/user-games/', { game_id: gameResponse.data.id }, { headers });
+      await api.post('/user-games/', { game_id: gameResponse.data.id });
 
       onSuccess();
       onClose();

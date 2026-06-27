@@ -26,3 +26,11 @@ export interface LibraryGame {
   favorite: boolean;
   notes: string | null;
 }
+
+export interface GameDisplay {
+  title: string;
+  coverUrl: string | null;
+  releaseYear: number | null;
+  platforms: string[];
+  genres: string[];
+}

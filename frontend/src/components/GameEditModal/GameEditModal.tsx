@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import Modal from '@/components/Shared/Modal/Modal';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import { resolveImageUrl } from '@/services/media';
 import styles from '@/components/GameEditModal/GameEditModal.module.css';
 import { LibraryGame } from '@/types/game';
@@ -47,8 +48,9 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  
+  const confirmRemoveModal = useConfirmModal();
 
   const canReview = form.status !== 'Quero Jogar';
 
@@ -105,7 +107,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
       custom_cover_url: form.custom_cover_url || null,
       notes: canReview ? (form.notes || null) : null,
       hours_played: form.hours_played,
-      custom_cover_file: coverFile, 
+      custom_cover_file: coverFile,
     };
 
     try {
@@ -121,19 +123,19 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
       await onRemove();
     } finally {
       setIsRemoving(false);
-      setShowConfirm(false);
+      confirmRemoveModal.close();
     }
   };
 
-  const displayCover = coverPreview 
-    || (form.custom_cover_url ? resolveImageUrl(form.custom_cover_url) : null)
-    || (game.custom_cover_url ? resolveImageUrl(game.custom_cover_url) : null)
-    || (game.cover_url ? resolveImageUrl(game.cover_url) : null);
+  const displayCover =
+    coverPreview ||
+    (form.custom_cover_url ? resolveImageUrl(form.custom_cover_url) : null) ||
+    (game.custom_cover_url ? resolveImageUrl(game.custom_cover_url) : null) ||
+    (game.cover_url ? resolveImageUrl(game.cover_url) : null);
 
- return (
+  return (
     <Modal open onClose={onClose} maxWidth="720px" showCloseButton>
       <div className={styles.modalContent}>
-        
         <div className={styles.gameInfo}>
           {displayCover && (
             <img src={displayCover} alt={game.title} className={styles.cover} />
@@ -141,7 +143,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
           <h2 className={styles.title}>{game.title}</h2>
         </div>
 
-         <div className={`${styles.fields} scrollbar-gamelog`}>
+        <div className={`${styles.fields} scrollbar-gamelog`}>
           <div className={styles.dateRow}>
             <label className={styles.label}>
               Status
@@ -335,7 +337,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
           <button
             type="button"
             className={styles.removeButton}
-            onClick={() => setShowConfirm(true)}
+            onClick={confirmRemoveModal.open}
             disabled={isSaving || isRemoving}
           >
             {isRemoving ? 'Removendo...' : 'Remover da Biblioteca'}
@@ -344,14 +346,14 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
       </div>
 
       <ConfirmModal
-        isOpen={showConfirm}
+        isOpen={confirmRemoveModal.isOpen}
         title="Remover Jogo"
         message={`Tem certeza que deseja remover "${game.title}" da sua biblioteca? Esta ação não pode ser desfeita.`}
         confirmText="Sim, remover"
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={handleConfirmRemove}
-        onCancel={() => setShowConfirm(false)}
+        onCancel={confirmRemoveModal.close}
       />
     </Modal>
   );

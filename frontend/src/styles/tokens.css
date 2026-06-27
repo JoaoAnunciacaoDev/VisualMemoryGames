@@ -10,6 +10,14 @@
   --success: #93c2b1;
   --danger: #ff4d4d;
 
+  /* STATUS COLORS */
+  --status-want-to-play: #6c757d;
+  --status-playing: #007BFF;
+  --status-completed: #28a745;
+  --status-platinized: #a855f7;
+  --status-abandoned: #dc3545;
+  --status-on-hold: #fd7e14;
+
   /* BORDERS */
   --border: rgba(255, 234, 204, 0.12);
 

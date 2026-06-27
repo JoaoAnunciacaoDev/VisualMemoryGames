@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import api from '@/services/api';
-import { getAuthHeaders } from '@/services/auth';
 import { LibraryGame } from '@/types/game';
 import { UpdateLibraryGame } from '@/types/updateGame';
 
@@ -13,9 +12,7 @@ export function useLibrary(userId: string) {
     if (!userId) return;
     setLoadingLibrary(true);
     try {
-      const response = await api.get(`/user-games/user/${userId}`, {
-        headers: getAuthHeaders()
-      });
+      const response = await api.get(`/user-games/user/${userId}`);
       setGames(response.data);
     } catch {
       console.error('Erro ao carregar biblioteca');
@@ -32,16 +29,12 @@ export function useLibrary(userId: string) {
       id: string,
       data: Partial<UpdateLibraryGame>
   ) => {
-    await api.put(`/user-games/${id}`, data, {
-      headers: getAuthHeaders()
-    });
+    await api.put(`/user-games/${id}`, data);
     await loadLibrary();
   };
 
   const removeGame = async (id: string) => {
-    await api.delete(`/user-games/${id}`, {
-      headers: getAuthHeaders()
-    });
+    await api.delete(`/user-games/${id}`);
     await loadLibrary();
   };
 

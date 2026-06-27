@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/useToast';
-import { getAuthHeaders } from '@/services/auth';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 import api from '@/services/api';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
-import Toast from '@/components/Toast/Toast';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/CustomListTab/CustomListTab.module.css';
 import { LibraryGame } from '@/types/game';
 import { getBestGameCover } from '@/services/media';
-
 
 interface GameInList {
   id: string;
@@ -31,7 +29,6 @@ interface Props {
   libraryGames: LibraryGame[];
 }
 
-
 export default function CustomListsTab({ userId, libraryGames }: Props) {
   const [lists, setLists] = useState<CustomList[]>([]);
   const [newListName, setNewListName] = useState('');
@@ -39,13 +36,16 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   const [selectingForList, setSelectingForList] = useState<string | null>(null);
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [editingListName, setEditingListName] = useState('');
+  const { showToast } = useToast();
+
+  const deleteListModal = useConfirmModal();
+  const removeGameModal = useConfirmModal();
   const [listToDelete, setListToDelete] = useState<string | null>(null);
   const [gameToRemove, setGameToRemove] = useState<{ listId: string; gameId: string } | null>(null);
-  const { toast, showToast, hideToast } = useToast();
 
   const loadLists = async () => {
     try {
-      const response = await api.get(`/lists/user/${userId}`, { headers: getAuthHeaders() });
+      const response = await api.get(`/lists/user/${userId}`);
       setLists(response.data);
     } catch {
       showToast('Erro ao carregar listas.', 'error');
@@ -59,7 +59,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
     try {
-      await api.post('/lists/', { name: newListName.trim() }, { headers: getAuthHeaders() });
+      await api.post('/lists/', { name: newListName.trim() });
       setNewListName('');
       await loadLists();
       showToast('Lista criada!', 'success');
@@ -71,20 +71,21 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   const handleDeleteList = async () => {
     if (!listToDelete) return;
     try {
-      await api.delete(`/lists/${listToDelete}`, { headers: getAuthHeaders() });
+      await api.delete(`/lists/${listToDelete}`);
       await loadLists();
       showToast('Lista removida.', 'info');
     } catch {
       showToast('Erro ao remover lista.', 'error');
     } finally {
       setListToDelete(null);
+      deleteListModal.close();
     }
   };
 
   const handleRenameList = async (listId: string) => {
     if (!editingListName.trim()) return;
     try {
-      await api.put(`/lists/${listId}`, { name: editingListName.trim() }, { headers: getAuthHeaders() });
+      await api.put(`/lists/${listId}`, { name: editingListName.trim() });
       await loadLists();
       showToast('Lista renomeada!', 'success');
     } catch {
@@ -99,7 +100,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
     try {
       await Promise.all(
         gameIds.map((gameId) =>
-          api.post(`/lists/${listId}/games/${gameId}`, {}, { headers: getAuthHeaders() })
+          api.post(`/lists/${listId}/games/${gameId}`, {})
         )
       );
       await loadLists();
@@ -113,14 +114,25 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
   const handleRemoveGame = async () => {
     if (!gameToRemove) return;
     try {
-      await api.delete(`/lists/${gameToRemove.listId}/games/${gameToRemove.gameId}`, { headers: getAuthHeaders() });
+      await api.delete(`/lists/${gameToRemove.listId}/games/${gameToRemove.gameId}`);
       await loadLists();
       showToast('Jogo removido da lista.', 'info');
     } catch {
       showToast('Erro ao remover jogo.', 'error');
     } finally {
       setGameToRemove(null);
+      removeGameModal.close();
     }
+  };
+
+  const requestDeleteList = (listId: string) => {
+    setListToDelete(listId);
+    deleteListModal.open();
+  };
+
+  const requestRemoveGame = (listId: string, gameId: string) => {
+    setGameToRemove({ listId, gameId });
+    removeGameModal.open();
   };
 
   return (
@@ -180,7 +192,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                   <Button
                     variant="ghost"
                     className={`${styles.iconButton} ${styles.deleteIcon}`}
-                    onClick={() => setListToDelete(list.id)}
+                    onClick={() => requestDeleteList(list.id)}
                   >
                     🗑
                   </Button>
@@ -200,7 +212,7 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
                         <span className={styles.gameTitle}>{game.title}</span>
                         <button
                           className={styles.removeGame}
-                          onClick={() => setGameToRemove({ listId: list.id, gameId: game.id })}
+                          onClick={() => requestRemoveGame(list.id, game.id)}
                           title="Remover da lista"
                         >
                           ✕
@@ -223,25 +235,31 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
       )}
 
       <ConfirmModal
-        isOpen={listToDelete !== null}
+        isOpen={deleteListModal.isOpen}
         title="Deletar Lista"
         message="Tem certeza que deseja deletar esta lista? Os jogos não serão removidos da biblioteca."
         confirmText="Sim, deletar"
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={handleDeleteList}
-        onCancel={() => setListToDelete(null)}
+        onCancel={() => {
+          setListToDelete(null);
+          deleteListModal.close();
+        }}
       />
 
       <ConfirmModal
-        isOpen={gameToRemove !== null}
+        isOpen={removeGameModal.isOpen}
         title="Remover Jogo"
         message="Tem certeza que deseja remover este jogo da lista?"
         confirmText="Sim, remover"
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={handleRemoveGame}
-        onCancel={() => setGameToRemove(null)}
+        onCancel={() => {
+          setGameToRemove(null);
+          removeGameModal.close();
+        }}
       />
 
       {selectingForList && (
@@ -252,8 +270,6 @@ export default function CustomListsTab({ userId, libraryGames }: Props) {
           onClose={() => setSelectingForList(null)}
         />
       )}
-
-      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

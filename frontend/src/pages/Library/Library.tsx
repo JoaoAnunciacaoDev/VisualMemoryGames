@@ -6,25 +6,23 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { useLibraryFilters } from '@/hooks/useLibraryFilters';
 import { useGameSearch } from '@/hooks/useGameSearch';
 import { addGameToLibrary } from '@/hooks/useAddGame';
+import { useConfirmModal } from '@/hooks/useConfirmModal';
 
 import LibraryCard from '@/components/LibraryCard/LibraryCard';
 import GameEditModal from '@/components/GameEditModal/GameEditModal';
 import CustomListsTab from '@/components/CustomListTab/CustomListTab';
-import Toast from '@/components/Toast/Toast';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import GameCard from '@/components/GameCard/GameCard';
 import GameGrid from '@/components/GameGrid/GameGrid';
 import GameModal from '@/components/GameModal/GameModal';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
-
-import { LibraryGame, GameResult } from '@/types/game';
-
-import styles from '@/pages/Library/Library.module.css';
 import ManualGameModal from '@/components/ManualGameModal/ManualGameModal';
-import { getBestGameCover } from '@/services/media';
-
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
+
+import { LibraryGame, GameResult } from '@/types/game';
+import { getBestGameCover } from '@/services/media';
+import styles from '@/pages/Library/Library.module.css';
 
 const STATUS_OPTIONS = [
   'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
@@ -38,13 +36,15 @@ export default function Library() {
   const { games, loadLibrary, updateGame, removeGame } = useLibrary(userId);
   const { filtered, search, setSearch, statusFilter, setStatusFilter, sortBy, setSortBy, sortOrder, setSortOrder } = useLibraryFilters(games);
   const { searchResults, isSearching, searchGames } = useGameSearch();
-  const { toast, showToast, hideToast } = useToast();
+  const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<Tab>('library');
   const [selectedLibraryGame, setSelectedLibraryGame] = useState<LibraryGame | null>(null);
   const [selectedSearchGame, setSelectedSearchGame] = useState<GameResult | null>(null);
-  const [gameToRemove, setGameToRemove] = useState<number | null>(null);
   const [showManualModal, setShowManualModal] = useState(false);
+
+  const removeModal = useConfirmModal();
+  const [gameToRemove, setGameToRemove] = useState<number | null>(null);
 
   const addedGames = useMemo(() => {
     return new Map<number, string>(
@@ -54,11 +54,8 @@ export default function Library() {
     );
   }, [games]);
 
-  const handleSaveLibraryGame = async (
-    data: Partial<LibraryGame>
-  ) => {
+  const handleSaveLibraryGame = async (data: Partial<LibraryGame>) => {
     if (!selectedLibraryGame) return;
-
     try {
       await updateGame(selectedLibraryGame.id, data);
       setSelectedLibraryGame(null);
@@ -90,7 +87,13 @@ export default function Library() {
       showToast('Erro ao remover jogo.', 'error');
     } finally {
       setGameToRemove(null);
+      removeModal.close();
     }
+  };
+
+  const requestRemove = (externalId: number) => {
+    setGameToRemove(externalId);
+    removeModal.open();
   };
 
   if (loading) return <p>Carregando biblioteca...</p>;
@@ -119,7 +122,7 @@ export default function Library() {
       {activeTab === 'library' && (
         <>
           <div className={styles.controls}>
-             <Input
+            <Input
               type="text"
               placeholder="Pesquisar na biblioteca..."
               value={search}
@@ -181,7 +184,7 @@ export default function Library() {
                 releaseYear={game.release_year}
                 isAdded={addedGames.has(game.external_id)}
                 onAdd={() => handleAddGame(game)}
-                onRemove={() => setGameToRemove(game.external_id)}
+                onRemove={() => requestRemove(game.external_id)}
                 onClick={() => setSelectedSearchGame(game)}
               />
             ))}
@@ -200,18 +203,18 @@ export default function Library() {
 
       {selectedLibraryGame && (
         <GameEditModal
-            game={selectedLibraryGame}
-            onSave={handleSaveLibraryGame}
-            onRemove={async () => {
-                try {
-                    await removeGame(selectedLibraryGame.id);
-                    setSelectedLibraryGame(null);
-                    showToast('Jogo removido da biblioteca.', 'info');
-                } catch {
-                    showToast('Erro ao remover jogo.', 'error');
-                }
-            }}
-            onClose={() => setSelectedLibraryGame(null)}
+          game={selectedLibraryGame}
+          onSave={handleSaveLibraryGame}
+          onRemove={async () => {
+            try {
+              await removeGame(selectedLibraryGame.id);
+              setSelectedLibraryGame(null);
+              showToast('Jogo removido da biblioteca.', 'info');
+            } catch {
+              showToast('Erro ao remover jogo.', 'error');
+            }
+          }}
+          onClose={() => setSelectedLibraryGame(null)}
         />
       )}
 
@@ -234,18 +237,18 @@ export default function Library() {
         isAdded={selectedSearchGame ? addedGames.has(selectedSearchGame.external_id) : false}
         onClose={() => setSelectedSearchGame(null)}
         onAdd={() => selectedSearchGame && handleAddGame(selectedSearchGame)}
-        onRemove={() => selectedSearchGame && setGameToRemove(selectedSearchGame.external_id)}
+        onRemove={() => selectedSearchGame && requestRemove(selectedSearchGame.external_id)}
       />
 
       <ConfirmModal
-        isOpen={gameToRemove !== null}
+        isOpen={removeModal.isOpen}
         title="Remover Jogo"
         message="Tem certeza que deseja remover este jogo da sua biblioteca? Você perderá todos os dados salvos sobre ele."
         confirmText="Sim, remover"
         cancelText="Cancelar"
         isDestructive={true}
         onConfirm={confirmRemove}
-        onCancel={() => setGameToRemove(null)}
+        onCancel={removeModal.close}
       />
 
       {showManualModal && (
@@ -257,8 +260,6 @@ export default function Library() {
           onClose={() => setShowManualModal(false)}
         />
       )}
-
-      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} />}
     </div>
   );
 }

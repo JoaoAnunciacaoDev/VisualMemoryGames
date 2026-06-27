@@ -1,17 +1,11 @@
 import { useState } from 'react';
 import api from '@/services/api';
 import { getBestGameCover } from '@/services/media';
-import { getAuthHeaders } from '@/services/auth';
 import Modal from '@/components/Shared/Modal/Modal';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 import styles from '@/components/GameSearchModal/GameSearchModal.module.css';
-
-interface GameResult {
-  external_id: number;
-  title: string;
-  cover_url: string | null;
-}
+import { GameResult } from '@/types';
 
 interface Props {
   onSelect: (game: { id: string; title: string; coverUrl: string | null }) => void;
@@ -39,7 +33,6 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
 
   const handleSelect = async (game: GameResult) => {
     try {
-      const headers = getAuthHeaders();
       let gameId: string;
 
       try {
@@ -50,14 +43,14 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
           release_year: null,
           platforms: [],
           genres: [],
-        }, { headers });
+        });
         gameId = response.data.id;
       } catch (err: any) {
-        if (err.response?.status === 400) {
-          const allGames = await api.get('/games/', { headers });
-          const existing = allGames.data.find((g: any) => g.external_id === game.external_id);
-          gameId = existing.id;
-        } else throw err;
+        if (err.response?.status !== 400) throw err;
+        const allGames = await api.get('/games/');
+        const existing = allGames.data.find((g: any) => g.external_id === game.external_id);
+        if (!existing) throw err;
+        gameId = existing.id;
       }
 
       onSelect({ id: gameId, title: game.title, coverUrl: game.cover_url });

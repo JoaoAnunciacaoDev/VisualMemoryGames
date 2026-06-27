@@ -25,7 +25,7 @@ export default function Toast({
     <div className={`${styles.toast} ${styles[type]} ${styles[position]}`}>
       <span className={styles.message}>{message}</span>
       <button className={styles.closeButton} onClick={onClose}>
-        ✕
+        X
       </button>
     </div>
   );

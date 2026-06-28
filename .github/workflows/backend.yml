@@ -1,0 +1,33 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.py'
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar Poetry
+        run: pipx install poetry
+
+      - name: Instalar dependências
+        run: poetry install
+
+      - name: Executar testes
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: poetry run pytest app/tests -v

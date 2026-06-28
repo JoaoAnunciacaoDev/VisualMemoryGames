@@ -1,5 +1,4 @@
 import pytest
-from datetime import datetime
 
 MOCK_GAME = {
     "external_id": 9999,
@@ -54,15 +53,14 @@ def test_invalid_rating(client, auth_headers, setup_game):
     assert response.status_code == 422
 
 
-def test_invalid_played_year(client, auth_headers, setup_game):
-    """Testa se a API bloqueia um ano de jogo no futuro."""
+def test_invalid_hours_played(client, auth_headers, setup_game):
+    """Testa se a API bloqueia horas jogadas negativas."""
     ug_response = client.post("/user-games/", json={"game_id": setup_game}, headers=auth_headers)
     ug_id = ug_response.json()["id"]
     
-    future_year = datetime.now().year + 5
     response = client.put(
         f"/user-games/{ug_id}", 
-        json={"played_year": future_year}, 
+        json={"hours_played": -5}, 
         headers=auth_headers
     )
     

@@ -1,3 +1,8 @@
+import os
+
+os.environ["SECRET_KEY"] = "test-secret-key-with-exactly-32-bytes-long"
+os.environ["ENVIRONMENT"] = "development"
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -16,6 +21,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(scope="function")
 def db_session():
     Base.metadata.create_all(bind=engine)
@@ -26,6 +32,7 @@ def db_session():
         db.close()
         Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(scope="function")
 def client(db_session):
     def override_get_db():
@@ -34,9 +41,12 @@ def client(db_session):
         finally:
             pass
     app.dependency_overrides[get_db] = override_get_db
+    app.state.limiter.reset()
+    
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
 
 @pytest.fixture
 def auth_headers(client):
@@ -54,6 +64,7 @@ def auth_headers(client):
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
+
 @pytest.fixture
 def second_user_headers(client):
     """Cria um segundo usuário para testar regras de segurança/permissão."""
@@ -69,3 +80,29 @@ def second_user_headers(client):
     })
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def created_game(client, auth_headers):
+    """Cria um jogo no catálogo (manual) e retorna os dados."""
+    response = client.post("/games/manual", data={
+        "title": "Test Game",
+        "platforms": "[]",
+        "genres": "[]"
+    }, headers=auth_headers)
+    assert response.status_code == 201
+    return response.json()
+
+
+@pytest.fixture
+def user_game(client, auth_headers):
+    """Cria um jogo manual e adiciona-o à biblioteca do utilizador."""
+    game_resp = client.post("/games/manual", data={
+        "title": "Test Game",
+        "platforms": "[]",
+        "genres": "[]"
+    }, headers=auth_headers)
+    game_id = game_resp.json()["id"]
+    
+    ug_resp = client.post("/user-games/", json={"game_id": game_id}, headers=auth_headers)
+    return ug_resp.json()

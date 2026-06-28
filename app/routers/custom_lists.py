@@ -100,7 +100,13 @@ def get_or_create_favorites_list(user_id: str, db: Session) -> CustomList:
 
 
 @router.get("/user/{user_id}", response_model=List[CustomListResponse])
-def get_user_lists(user_id: str, db: Session = Depends(get_db)):
+def get_user_lists(
+    user_id: str, db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+    ):
+    
+    if str(user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão para ver estas listas.")
     get_or_create_favorites_list(user_id, db)
     return db.query(CustomList).filter(CustomList.user_id == user_id).all()
 

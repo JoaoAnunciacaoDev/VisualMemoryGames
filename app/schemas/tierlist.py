@@ -1,9 +1,17 @@
+import re
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TierItemBase(BaseModel):
     game_id: str
+    
+    @field_validator("game_id")
+    @classmethod
+    def validate_game_id(cls, value):
+        if not value.strip():
+            raise ValueError("O ID do jogo não pode estar vazio")
+        return value
 
 
 class TierItemCreate(TierItemBase):
@@ -40,6 +48,13 @@ class TierCategoryBase(BaseModel):
         if not value:
             raise ValueError("O nome da categoria não pode estar vazio")
         return value
+    
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value):
+        if not re.match(r'^#[0-9a-fA-F]{6}$', value):
+            raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
+        return value
 
 
 class TierCategoryCreate(TierCategoryBase):
@@ -58,6 +73,14 @@ class TierCategoryUpdate(BaseModel):
             value = value.strip()
             if not value:
                 raise ValueError("O nome da categoria não pode estar vazio")
+        return value
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, value):
+        if value is not None:
+            if not re.match(r'^#[0-9a-fA-F]{6}$', value):
+                raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
         return value
 
 

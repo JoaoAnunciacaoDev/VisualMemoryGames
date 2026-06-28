@@ -62,67 +62,15 @@ def create_tierlist(
     return new_tierlist
 
 
-@router.delete("/{tierlist_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_tierlist(
-    tierlist_id: str, 
+@router.get("/user/{user_id}", response_model=List[TierListResponse])
+def get_user_tierlists(
+    user_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    db_tierlist = db.query(TierList).filter(TierList.id == tierlist_id).first()
-    
-    if not db_tierlist:
-        raise HTTPException(status_code=404, detail="Tier List não encontrada.")
-
-    if str(db_tierlist.user_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Você não tem permissão para deletar esta Tier List.")
-        
-    db.delete(db_tierlist)
-    db.commit()
-    
-    return None
-
-
-@router.post("/category/{category_id}/items", response_model=TierItemResponse, status_code=status.HTTP_201_CREATED)
-def add_item_to_category(category_id: str, item: TierItemCreate, db: Session = Depends(get_db)):
-    category = db.query(TierCategory).filter(TierCategory.id == category_id).first()
-    if not category:
-        raise HTTPException(status_code=404, detail="Categoria não encontrada.")
-
-    game = db.query(Game).filter(Game.id == item.game_id).first()
-    if not game:
-        raise HTTPException(status_code=404, detail="Jogo não encontrado no catálogo.")
-
-    existing = (
-        db.query(TierItem)
-        .join(TierCategory, TierCategory.id == TierItem.category_id)
-        .filter(
-            TierCategory.tierlist_id == category.tierlist_id,
-            TierItem.game_id == item.game_id
-        )
-        .first()
-    )
-    if existing:
-        raise HTTPException(status_code=400, detail="Este jogo já está na tier list.")
-
-    max_order = db.query(func.max(TierItem.order_index)).filter(
-        TierItem.category_id == category_id
-    ).scalar() or -1
-
-    new_item = TierItem(
-        category_id=category_id,
-        game_id=item.game_id,
-        order_index=max_order + 1
-    )
-    
-    db.add(new_item)
-    db.commit()
-    db.refresh(new_item)
-    return new_item
-
-
-@router.get("/user/{user_id}", response_model=List[TierListResponse])
-def get_user_tierlists(user_id: str, db: Session = Depends(get_db)):
-    """Busca todas as Tier Lists de um usuário, trazendo a árvore completa de dados."""
+    """Busca todas as Tier Lists de um usuário. Apenas o próprio dono pode ver."""
+    if str(user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão para ver estas tier lists.")
     
     tierlists = db.query(TierList).filter(TierList.user_id == user_id).all()
     return tierlists
@@ -147,6 +95,9 @@ def get_tierlist(
     
     if not tierlist:
         raise HTTPException(status_code=404, detail="Tier List não encontrada.")
+    
+    if str(tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão para ver esta tier list.")
     
     user_games = db.query(UserGame).filter(UserGame.user_id == tierlist.user_id).all()
     
@@ -181,6 +132,26 @@ def update_tierlist(
     db.commit()
     db.refresh(tierlist)
     return tierlist
+
+
+@router.delete("/{tierlist_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tierlist(
+    tierlist_id: str, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_tierlist = db.query(TierList).filter(TierList.id == tierlist_id).first()
+    
+    if not db_tierlist:
+        raise HTTPException(status_code=404, detail="Tier List não encontrada.")
+
+    if str(db_tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para deletar esta Tier List.")
+        
+    db.delete(db_tierlist)
+    db.commit()
+    
+    return None
 
 
 @router.post("/{tierlist_id}/categories", response_model=TierCategoryResponse, status_code=status.HTTP_201_CREATED)
@@ -255,61 +226,10 @@ def delete_category(
     return None
 
 
-@router.delete("/category/{category_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_item_from_category(
-    category_id: str,
-    item_id: str,
-    db: Session = Depends(get_db)
-):
-    item = db.query(TierItem).filter(
-        TierItem.id == item_id,
-        TierItem.category_id == category_id
-    ).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item não encontrado.")
-    db.delete(item)
-    db.commit()
-    return None
-
-
-class MoveItemRequest(BaseModel):
-    target_category_id: str
-
-@router.put("/category/{category_id}/items/{item_id}/move")
-def move_item(
-    category_id: str,
-    item_id: str,
-    data: MoveItemRequest,
-    db: Session = Depends(get_db)
-):
-    item = db.query(TierItem).filter(TierItem.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Item não encontrado.")
-    setattr(item, 'category_id', data.target_category_id)
-    db.commit()
-    return {"ok": True}
-
-
-class ReorderItemsRequest(BaseModel):
-    item_ids: list[str]
-
-@router.put("/category/{category_id}/reorder")
-def reorder_items(
-    category_id: str,
-    data: ReorderItemsRequest,
-    db: Session = Depends(get_db)
-):
-    for index, item_id in enumerate(data.item_ids):
-        item = db.query(TierItem).filter(TierItem.id == item_id).first()
-        if item:
-            setattr(item, 'order_index', index)
-    db.commit()
-
-    return {"ok": True}
-
 
 class ReorderCategoriesRequest(BaseModel):
     category_ids: list[str]
+
 
 @router.put("/{tierlist_id}/categories/reorder")
 def reorder_categories(
@@ -331,5 +251,135 @@ def reorder_categories(
         ).first()
         if category:
             setattr(category, 'order_index', index)
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/category/{category_id}/items", response_model=TierItemResponse, status_code=status.HTTP_201_CREATED)
+def add_item_to_category(
+    category_id: str, 
+    item: TierItemCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    category = db.query(TierCategory).filter(TierCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada.")
+
+    tierlist = db.query(TierList).filter(TierList.id == category.tierlist_id).first()
+    if not tierlist or str(tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão.")
+
+    game = db.query(Game).filter(Game.id == item.game_id).first()
+    if not game:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado no catálogo.")
+
+    existing = (
+        db.query(TierItem)
+        .join(TierCategory, TierCategory.id == TierItem.category_id)
+        .filter(
+            TierCategory.tierlist_id == category.tierlist_id,
+            TierItem.game_id == item.game_id
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Este jogo já está na tier list.")
+
+    max_order = db.query(func.max(TierItem.order_index)).filter(
+        TierItem.category_id == category_id
+    ).scalar() or -1
+
+    new_item = TierItem(
+        category_id=category_id,
+        game_id=item.game_id,
+        order_index=max_order + 1
+    )
+    
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    return new_item
+
+
+class MoveItemRequest(BaseModel):
+    target_category_id: str
+
+
+@router.put("/category/{category_id}/items/{item_id}/move")
+def move_item(
+    category_id: str,
+    item_id: str,
+    data: MoveItemRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    item = db.query(TierItem).filter(TierItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado.")
+    
+    category = db.query(TierCategory).filter(TierCategory.id == item.category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada.")
+    
+    tierlist = db.query(TierList).filter(TierList.id == category.tierlist_id).first()
+    if not tierlist or str(tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão.")
+    
+    setattr(item, 'category_id', data.target_category_id)
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/category/{category_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_item_from_category(
+    category_id: str,
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    category = db.query(TierCategory).filter(TierCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada.")
+    
+    tierlist = db.query(TierList).filter(TierList.id == category.tierlist_id).first()
+    if not tierlist or str(tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão.")
+
+    item = db.query(TierItem).filter(
+        TierItem.id == item_id,
+        TierItem.category_id == category_id
+    ).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado.")
+    
+    db.delete(item)
+    db.commit()
+    return None
+
+
+class ReorderItemsRequest(BaseModel):
+    item_ids: list[str]
+
+
+@router.put("/category/{category_id}/reorder")
+def reorder_items(
+    category_id: str,
+    data: ReorderItemsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    category = db.query(TierCategory).filter(TierCategory.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada.")
+    
+    tierlist = db.query(TierList).filter(TierList.id == category.tierlist_id).first()
+    if not tierlist or str(tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão.")
+
+    for index, item_id in enumerate(data.item_ids):
+        item = db.query(TierItem).filter(TierItem.id == item_id).first()
+        if item:
+            setattr(item, 'order_index', index)
     db.commit()
     return {"ok": True}

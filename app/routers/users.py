@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.security import get_current_user
 from app.database import get_db
 
@@ -46,7 +46,12 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[UserResponse])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_users(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     users = db.query(User).offset(skip).limit(limit).all()
     return users
 
@@ -57,15 +62,43 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: str, db: Session = Depends(get_db)):
-    """Deleta a conta do usuário e todos os dados associados a ele."""
-    
+def delete_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     db_user = db.query(User).filter(User.id == user_id).first()
-    
     if not db_user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
-        
+
+    if str(db_user.id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Não tem permissão para deletar esta conta.")
+
     db.delete(db_user)
     db.commit()
-    
     return None
+
+
+@router.put("/me", response_model=UserResponse)
+def update_me(
+    user_update: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    update_data = user_update.model_dump(exclude_unset=True)
+
+    if "username" in update_data:
+        existing = db.query(User).filter(User.username == update_data["username"]).first()
+        if existing and str(existing.id) != str(current_user.id):
+            raise HTTPException(status_code=400, detail="Username já está em uso.")
+        current_user.username = update_data["username"]
+
+    if "email" in update_data:
+        existing = db.query(User).filter(User.email == update_data["email"]).first()
+        if existing and str(existing.id) != str(current_user.id):
+            raise HTTPException(status_code=400, detail="Email já está em uso.")
+        current_user.email = update_data["email"]
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user

@@ -7,9 +7,13 @@ from pathlib import Path
 from app.models import custom_lists, user, game, user_game, tierlist  # noqa: F401
 from app.routers import auth, users, games, user_games, tierlists, custom_lists  # noqa: F811
 
+from app.limiter import limiter
+
+
 load_dotenv()
 
 app = FastAPI(title="GameLog API")
+app.state.limiter = limiter
 
 origins = [
     "http://localhost:5173",

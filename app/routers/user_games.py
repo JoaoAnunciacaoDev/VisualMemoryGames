@@ -20,6 +20,7 @@ from app.security import get_current_user
 
 UPLOAD_DIR = "uploads/covers"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 router = APIRouter(prefix="/user-games", tags=["User Games"])
@@ -60,7 +61,14 @@ def add_game_to_library(
 
 
 @router.get("/user/{user_id}", response_model=List[LibraryGameResponse])
-def get_user_library(user_id: str, db: Session = Depends(get_db)):
+def get_user_library(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if str(user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão para ver esta biblioteca.")
+    
     library = (
         db.query(UserGame, Game)
         .join(Game, Game.id == UserGame.game_id)
@@ -189,6 +197,9 @@ async def update_custom_cover(
         raise HTTPException(status_code=404, detail="Registro não encontrado.")
     if str(db_user_game.user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão.")
+    
+    if cover_file.size and cover_file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="A imagem deve ter no máximo 5 MB.")
 
     if cover_file.filename and '.' in cover_file.filename:
         extension = cover_file.filename.rsplit('.', 1)[-1].lower()

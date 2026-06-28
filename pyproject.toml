@@ -5,7 +5,7 @@ description = ""
 authors = [
     {name = "João Anunciação",email = "js5283283@gmail.com"}
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "fastapi[standard] (>=0.138.0,<0.139.0)",
     "sqlalchemy (>=2.0.51,<3.0.0)",
@@ -16,6 +16,7 @@ dependencies = [
     "pyjwt (>=2.13.0,<3.0.0)",
     "alembic (>=1.18.4,<2.0.0)",
     "pytest (>=9.1.1,<10.0.0)",
+    "slowapi (>=0.1.10,<0.2.0)",
 ]
 
 [tool.poetry]

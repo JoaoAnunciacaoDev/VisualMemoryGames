@@ -1,8 +1,9 @@
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.limiter import limiter
 from app.database import get_db
 from app.models.user import User
 from app.security import create_access_token
@@ -12,7 +13,6 @@ router = APIRouter(tags=["Auth"])
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifica se a senha em texto puro bate com o hash salvo no banco."""
     return bcrypt.checkpw(
         plain_password.encode('utf-8'), 
         hashed_password.encode('utf-8')
@@ -20,7 +20,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
     """Rota para autenticar o usuário e gerar o Token JWT."""
     
     user = db.query(User).filter(
@@ -35,5 +40,4 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         )
 
     access_token = create_access_token(data={"sub": str(user.id)})
-
     return {"access_token": access_token, "token_type": "bearer"}

@@ -2,6 +2,7 @@ import json
 import shutil
 import uuid
 from pathlib import Path
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -24,7 +25,6 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @router.get("/search", response_model=List[GameBase])
 def search_external_games(q: str):
     """Busca jogos na API externa da RAWG pelo nome."""
-    
     if not q or len(q) < 3:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -34,7 +34,11 @@ def search_external_games(q: str):
 
 
 @router.post("/", response_model=GameResponse, status_code=status.HTTP_201_CREATED)
-def create_game(game: GameCreate, db: Session = Depends(get_db)):
+def create_game(
+    game: GameCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     if game.external_id:
         existing_game = db.query(Game).filter(Game.external_id == game.external_id).first()
         if existing_game:
@@ -59,6 +63,18 @@ def create_game(game: GameCreate, db: Session = Depends(get_db)):
     return new_game
 
 
+@router.get("/", response_model=List[GameResponse])
+def read_games(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Lista todos os jogos do catálogo (apenas autenticados)."""
+    games = db.query(Game).offset(skip).limit(limit).all()
+    return games
+
+
 @router.post("/manual", response_model=GameResponse, status_code=status.HTTP_201_CREATED)
 async def create_manual_game(
     title: str = Form(...),
@@ -72,6 +88,13 @@ async def create_manual_game(
 ):
     """Cria um jogo manualmente sem vínculo com a RAWG."""
 
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="O título do jogo não pode estar vazio")
+    if release_year is not None:
+        current_year = date.today().year
+        if release_year > current_year + 2:
+            raise HTTPException(status_code=400, detail=f"Ano de lançamento não pode ser superior a {current_year + 2}")
+
     final_cover_url = cover_url
 
     if cover_file and cover_file.filename:
@@ -84,7 +107,7 @@ async def create_manual_game(
 
     new_game = Game(
         external_id=None,
-        title=title,
+        title=title.strip(),
         cover_url=final_cover_url,
         release_year=release_year,
         platforms=platforms,
@@ -100,8 +123,14 @@ async def create_manual_game(
 
 
 @router.get("/manual/user/{user_id}", response_model=List[GameResponse])
-def get_user_manual_games(user_id: str, db: Session = Depends(get_db)):
-    """Retorna os jogos criados manualmente por um usuário."""
+def get_user_manual_games(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retorna os jogos criados manualmente por um usuário. Apenas o próprio dono."""
+    if str(user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão para ver estes jogos.")
     games = db.query(Game).filter(
         Game.is_manual,
         Game.created_by == user_id
@@ -126,6 +155,15 @@ async def update_manual_game(
         raise HTTPException(status_code=404, detail="Jogo não encontrado.")
     if str(game.created_by) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão.")
+    if not bool(game.is_manual):
+        raise HTTPException(status_code=400, detail="Este jogo não é manual e não pode ser editado aqui.")
+
+    if not title.strip():
+        raise HTTPException(status_code=400, detail="O título do jogo não pode estar vazio")
+    if release_year is not None:
+        current_year = date.today().year
+        if release_year > current_year + 2:
+            raise HTTPException(status_code=400, detail=f"Ano de lançamento não pode ser superior a {current_year + 2}")
 
     final_cover_url = cover_url
     if cover_file and cover_file.filename:
@@ -136,7 +174,7 @@ async def update_manual_game(
             shutil.copyfileobj(cover_file.file, f)
         final_cover_url = f"/uploads/covers/{filename}"
 
-    setattr(game, 'title', title)
+    setattr(game, 'title', title.strip())
     setattr(game, 'release_year', release_year)
     setattr(game, 'platforms', platforms)
     setattr(game, 'genres', genres)
@@ -159,12 +197,9 @@ def delete_manual_game(
         raise HTTPException(status_code=404, detail="Jogo não encontrado.")
     if str(game.created_by) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão.")
+    if not bool(game.is_manual):
+        raise HTTPException(status_code=400, detail="Este jogo não é manual e não pode ser eliminado aqui.")
+
     db.delete(game)
     db.commit()
     return None
-
-
-@router.get("/", response_model=List[GameResponse])
-def read_games(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    games = db.query(Game).offset(skip).limit(limit).all()
-    return games

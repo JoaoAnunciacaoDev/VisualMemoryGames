@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class GameInList(BaseModel):
@@ -13,6 +13,13 @@ class GameInList(BaseModel):
 
 class CustomListCreate(BaseModel):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v):
+        if not v.strip():
+            raise ValueError("O nome da lista não pode estar vazio")
+        return v.strip()
 
 
 class CustomListResponse(BaseModel):

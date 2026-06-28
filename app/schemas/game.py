@@ -14,6 +14,27 @@ class GameBase(BaseModel):
     platforms: list[str]
     genres: list[str]
 
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, v):
+        if not v.strip():
+            raise ValueError("O título do jogo não pode estar vazio")
+        return v.strip()
+
+    @field_validator("release_year")
+    @classmethod
+    def validate_release_year(cls, v):
+        if v is not None:
+            current_year = date.today().year
+            if v > current_year + 2:
+                raise ValueError(f"Ano de lançamento não pode ser superior a {current_year + 2}")
+        return v
+
+    @field_validator("platforms", "genres")
+    @classmethod
+    def validate_no_empty_strings(cls, v):
+        return [item.strip() for item in v if item.strip()]
+
 
 class GameCreate(GameBase):
     pass
@@ -25,6 +46,22 @@ class GameManualCreate(BaseModel):
     release_year: Optional[int] = None
     platforms: list[str] = []
     genres: list[str] = []
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, v):
+        if not v.strip():
+            raise ValueError("O título do jogo não pode estar vazio")
+        return v.strip()
+    
+    @field_validator("release_year")
+    @classmethod
+    def validate_release_year(cls, v):
+        if v is not None:
+            current_year = date.today().year
+            if v > current_year + 2:
+                raise ValueError(f"Ano de lançamento não pode ser superior a {current_year + 2}")
+        return v
 
 
 class GameResponse(GameBase):
@@ -61,20 +98,38 @@ class UserGameBase(BaseModel):
     
     @model_validator(mode="after")
     def validate_dates(self):
-        if (
-            self.platinum_at is not None
-            and self.finished_at is not None
-            and self.platinum_at < self.finished_at
-        ):
-            raise ValueError(
-                "A data de platina não pode ser anterior à data de conclusão."
-            )
+        if self.started_at and self.finished_at and self.started_at > self.finished_at:
+            raise ValueError("A data de início não pode ser posterior à data de conclusão.")
+        
+        if self.platinum_at and self.acquired_at and self.platinum_at < self.acquired_at:
+            raise ValueError("A data de platina não pode ser anterior à data de aquisição.")
+        
+        if self.platinum_at and self.started_at and self.platinum_at < self.started_at:
+            raise ValueError("A data de platina não pode ser anterior à data de início.")
+        
+        if self.finished_at and self.started_at and self.finished_at < self.started_at:
+            raise ValueError("A data de conclusão não pode ser anterior à data de início.")
+        
 
         return self
+
+    @field_validator("notes")
+    @classmethod
+    def validate_notes_length(cls, v):
+        if v and len(v) > 2000:
+            raise ValueError("As notas não podem exceder 2000 caracteres")
+        return v
 
 
 class UserGameCreate(UserGameBase):
     game_id: str
+
+    @field_validator("game_id")
+    @classmethod
+    def validate_game_id(cls, v):
+        if not v.strip():
+            raise ValueError("O ID do jogo não pode estar vazio")
+        return v
 
 
 class UserGameUpdate(BaseModel):
@@ -96,6 +151,13 @@ class UserGameUpdate(BaseModel):
     favorite: Optional[bool] = None
 
     notes: Optional[str] = None
+    
+    @field_validator("notes")
+    @classmethod
+    def validate_notes_length(cls, v):
+        if v is not None and len(v) > 2000:
+            raise ValueError("As notas não podem exceder 2000 caracteres")
+        return v
 
 
 class UserGameResponse(UserGameBase):

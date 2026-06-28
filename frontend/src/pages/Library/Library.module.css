@@ -18,10 +18,26 @@
 
 /* ===== Filtros e controlos ===== */
 .controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--gap-md);
-  flex-wrap: wrap;
   margin-bottom: var(--gap-xl);
+}
+
+.controls > .searchInput {
+  grid-column: 1 / -1;
+}
+
+.filterPair {
+  display: flex;
+  gap: var(--gap-sm);
+  align-items: center;
+}
+
+.filterPair select,
+.filterPair input {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Selects */

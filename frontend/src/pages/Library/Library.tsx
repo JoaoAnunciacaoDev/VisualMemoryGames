@@ -22,6 +22,7 @@ import Button from '@/components/Shared/Button/Button';
 
 import { LibraryGame, GameResult } from '@/types/game';
 import { getBestGameCover } from '@/services/media';
+
 import { groupBy } from '@/services/groupBy';
 import styles from '@/pages/Library/Library.module.css';
 
@@ -31,11 +32,18 @@ const STATUS_OPTIONS = [
 
 type Tab = 'library' | 'lists' | 'search' | 'manual';
 type SortBy = 'rating' | 'started_at' | 'finished_at' | null;
+type YearField = 'started_at' | 'finished_at' | 'platinum_at';
 
 export default function Library() {
   const { userId, loading } = useAuth();
   const { games, loadLibrary, removeGame } = useLibrary(userId);
-  const { filtered, search, setSearch, statusFilter, setStatusFilter, sortBy, setSortBy, sortOrder, setSortOrder } = useLibraryFilters(games);
+  const {
+    filtered, search, setSearch,
+    statusFilter, setStatusFilter,
+    sortBy, setSortBy, sortOrder, setSortOrder,
+    yearField, setYearField, yearValue, setYearValue,
+    hoursOperator, setHoursOperator, hoursValue, setHoursValue,
+  } = useLibraryFilters(games);
   const { searchResults, isSearching, searchGames } = useGameSearch();
   const { showToast } = useToast();
 
@@ -46,7 +54,6 @@ export default function Library() {
 
   const removeConfirm = useConfirmAction<number>();
 
-  // Estado para controlar quais seções de status estão colapsadas
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
 
   const toggleStatusCollapse = (status: string) => {
@@ -129,31 +136,77 @@ export default function Library() {
 
       {activeTab === 'library' && (
         <>
-          <div className={styles.controls}>
-            <Input
-              type="text"
-              placeholder="Pesquisar na biblioteca..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={styles.select}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select
-              value={sortBy ?? ''}
-              onChange={(e) => setSortBy(e.target.value === '' ? null : (e.target.value as Exclude<SortBy, null>))}
-              className={styles.select}
-            >
-              <option value="">Ordenar por</option>
-              <option value="rating">Nota</option>
-              <option value="started_at">Data de início</option>
-              <option value="finished_at">Data de término</option>
-            </select>
-            <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')} className={styles.select}>
-              <option value="desc">Decrescente</option>
-              <option value="asc">Crescente</option>
-            </select>
-          </div>
+            <div className={styles.controls}>
+              <Input
+                className={styles.searchInput}
+                type="text"
+                placeholder="Pesquisar na biblioteca..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={styles.select}>
+                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value={sortBy ?? ''}
+                onChange={(e) => setSortBy(e.target.value === '' ? null : (e.target.value as Exclude<SortBy, null>))}
+                className={styles.select}
+              >
+                <option value="">Ordenar por</option>
+                <option value="rating">Nota</option>
+                <option value="started_at">Data de início</option>
+                <option value="finished_at">Data de término</option>
+              </select>
+              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')} className={styles.select}>
+                <option value="desc">Decrescente</option>
+                <option value="asc">Crescente</option>
+              </select>
+
+              {/* Par Ano */}
+              <div className={styles.filterPair}>
+                <select
+                  value={yearField}
+                  onChange={(e) => setYearField(e.target.value as YearField | '')}
+                  className={styles.select}
+                >
+                  <option value="">Ano de...</option>
+                  <option value="started_at">Início</option>
+                  <option value="finished_at">Conclusão</option>
+                  <option value="platinum_at">Platina</option>
+                </select>
+                <Input
+                  type="number"
+                  placeholder="Ano"
+                  value={yearValue}
+                  onChange={(e) => setYearValue(e.target.value === '' ? '' : Number(e.target.value))}
+                  disabled={!yearField}
+                  min={1970}
+                  max={new Date().getFullYear()}
+                />
+              </div>
+
+              {/* Par Horas */}
+              <div className={styles.filterPair}>
+                <select
+                  value={hoursOperator}
+                  onChange={(e) => setHoursOperator(e.target.value as 'gt' | 'lt' | '')}
+                  className={styles.select}
+                >
+                  <option value="">Horas jogadas</option>
+                  <option value="gt">Maior que</option>
+                  <option value="lt">Menor que</option>
+                </select>
+                <Input
+                  type="number"
+                  placeholder="Horas"
+                  value={hoursValue}
+                  onChange={(e) => setHoursValue(e.target.value === '' ? '' : Number(e.target.value))}
+                  disabled={!hoursOperator}
+                  min={0}
+                  step={0.1}
+                />
+              </div>
+            </div>
 
           {filtered.length === 0 ? (
             <div className={styles.emptyState}>

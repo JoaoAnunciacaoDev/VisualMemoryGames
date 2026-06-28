@@ -304,4 +304,5 @@ def reorder_items(
         if item:
             setattr(item, 'order_index', index)
     db.commit()
+
     return {"ok": True}

@@ -156,3 +156,8 @@
   border-bottom-color: var(--primary);
   background: rgba(222, 29, 106, 0.08);
 }
+
+.groupToggle {
+  justify-self: start;
+  white-space: nowrap;
+}

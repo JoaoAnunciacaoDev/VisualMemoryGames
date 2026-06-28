@@ -8,7 +8,7 @@ import { POOL_ID } from '@/hooks/useTierListEditor';
 interface Props {
   games: Record<string, GameItem[]>;
   setGames: React.Dispatch<React.SetStateAction<Record<string, GameItem[]>>>;
-  moveGame: (gameId: string, from: string, to: string, overIndex: number) => Promise<void>;
+  moveGame: (gameId: string, from: string, to: string) => Promise<void>;
   reorderTier: (tierId: string, itemIds: string[]) => void;
 }
 
@@ -63,8 +63,7 @@ export function useDragHandlers({ games, setGames, moveGame, reorderTier }: Prop
         }
       }
     } else {
-      const overIndex = games[overContainer]?.findIndex((g) => g.id === over.id) ?? games[overContainer]?.length ?? 0;
-      await moveGame(active.id as string, activeContainer, overContainer, overIndex);
+      await moveGame(active.id as string, activeContainer, overContainer);
     }
     setActiveContainer(null);
   }, [games, setGames, activeContainer, moveGame, reorderTier]);

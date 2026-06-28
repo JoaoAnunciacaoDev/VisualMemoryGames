@@ -211,17 +211,9 @@ export function useTierListEditor() {
     gameId: string,
     fromContainer: string,
     toContainer: string,
-    overIndex: number
   ) => {
-    const game = games[fromContainer]?.find((g) => g.id === gameId);
+    const game = Object.values(games).flat().find((g) => g.id === gameId);
     if (!game) return;
-
-    setGames((prev) => {
-      const fromItems = prev[fromContainer].filter((g) => g.id !== gameId);
-      const toItems = [...(prev[toContainer] ?? [])];
-      toItems.splice(overIndex, 0, game);
-      return { ...prev, [fromContainer]: fromItems, [toContainer]: toItems };
-    });
 
     if (toContainer !== POOL_ID) {
       try {
@@ -237,6 +229,19 @@ export function useTierListEditor() {
             [toContainer]: prev[toContainer].map((g) => (g.id === gameId ? { ...g, itemId: res.data.id } : g)),
           }));
         }
+
+        setTimeout(async () => {
+          setGames((prev) => {
+            const itemIds = prev[toContainer]
+              .filter((g) => g.itemId)
+              .map((g) => g.itemId!);
+            if (itemIds.length > 0) {
+              api.put(`/tierlists/category/${toContainer}/reorder`, { item_ids: itemIds });
+            }
+            return prev;
+          });
+        }, 0);
+
       } catch {
         showToast('Erro ao mover jogo.', 'error');
         loadTierList();

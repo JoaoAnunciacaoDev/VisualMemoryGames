@@ -6,10 +6,23 @@
   color: var(--text);
 }
 
+@media (max-width: 600px) {
+  .page {
+    padding: var(--gap-md);
+  }
+}
+
 .heading {
   font-size: var(--font-size-xxl);
   margin-bottom: var(--gap-lg);
   color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .heading {
+    font-size: var(--font-size-xl);
+    text-align: center;
+  }
 }
 
 /* ===== Botão criar (ajuste de margem) ===== */
@@ -17,11 +30,25 @@
   margin-bottom: var(--gap-lg);
 }
 
+@media (max-width: 600px) {
+  .createButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* ===== Grid ===== */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: var(--gap-lg);
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--gap-md);
+  }
 }
 
 /* ===== Card ===== */
@@ -43,7 +70,6 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--gap-sm) var(--gap-md);
-  /* a cor de fundo é inline via style */
 }
 
 .previewLabel {
@@ -64,6 +90,7 @@
   align-items: center;
   padding: var(--gap-md);
   border-top: 1px solid var(--border);
+  gap: var(--gap-sm);
 }
 
 .cardTitle {
@@ -71,6 +98,14 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   color: var(--text);
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cardTitle:hover {
@@ -85,6 +120,8 @@
   color: var(--secondary);
   opacity: 0.7;
   transition: opacity var(--transition-fast);
+  padding: var(--gap-xs);
+  flex-shrink: 0;
 }
 
 .deleteButton:hover {
@@ -95,6 +132,13 @@
   text-align: center;
   padding: 60px 20px;
   color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .emptyState {
+    padding: 40px var(--gap-md);
+    font-size: var(--font-size-sm);
+  }
 }
 
 /* ===== Modal de criação ===== */
@@ -142,4 +186,13 @@
   justify-content: flex-end;
   gap: var(--gap-sm);
   margin-top: var(--gap-sm);
+}
+
+@media (max-width: 600px) {
+  .modalActions {
+    flex-direction: column;
+  }
+  .modalActions button {
+    width: 100%;
+  }
 }

@@ -21,20 +21,20 @@
   flex: 1;
 }
 
-/* Variantes de cor */
+/* Variantes de cor – agora com os teus tokens */
 .success {
-  background: rgba(147, 194, 177, 0.15);
-  border-color: rgba(147, 194, 177, 0.35);
+  background: rgba(var(--success-rgb), 0.15);
+  border-color: rgba(var(--success-rgb), 0.35);
 }
 
 .error {
-  background: rgba(255, 153, 94, 0.15);
-  border-color: rgba(255, 153, 94, 0.35);
+  background: rgba(var(--danger-rgb), 0.15);
+  border-color: rgba(var(--danger-rgb), 0.35);
 }
 
 .info {
-  background: rgba(222, 29, 106, 0.15);
-  border-color: rgba(222, 29, 106, 0.35);
+  background: rgba(var(--primary-rgb), 0.15);
+  border-color: rgba(var(--primary-rgb), 0.35);
 }
 
 /* Posições */
@@ -87,5 +87,26 @@
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 600px) {
+  .toast {
+    left: var(--gap-md);
+    right: var(--gap-md);
+    bottom: var(--gap-md);
+    width: auto; 
+    max-width: none;
+    padding: var(--gap-sm) var(--gap-md);
+    font-size: var(--font-size-sm);
+  }
+
+  .top-center {
+    top: var(--gap-md);
+    bottom: auto;
+    left: var(--gap-md);
+    right: var(--gap-md);
+    transform: none;
+    width: auto;
   }
 }

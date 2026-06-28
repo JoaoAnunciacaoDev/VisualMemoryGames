@@ -10,6 +10,10 @@
   --success: #93c2b1;
   --danger: #ff4d4d;
 
+  --success-rgb: 147, 194, 177;
+  --danger-rgb: 255, 77, 77;
+  --primary-rgb: 222, 29, 106;
+
   /* STATUS COLORS */
   --status-want-to-play: #6c757d;
   --status-playing: #007BFF;

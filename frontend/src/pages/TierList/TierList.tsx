@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
-import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
-import Input from '@/components/Shared/Input/Input';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,8 +14,8 @@ import api from '@/services/api';
 import type { TierListSummary, CustomList, LibraryGame } from '@/types';
 
 import styles from '@/pages/TierList/TierList.module.css';
-
-type GameSource = 'empty' | 'all' | 'status' | 'list';
+import TierListCreateModal, { type TierListCreateValues } from '@/pages/TierList/TierListCreateModal';
+import TierListGrid from '@/pages/TierList/TierListGrid';
 
 const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Quero Jogar', 'Abandonado', 'Em Espera'];
 
@@ -29,25 +27,21 @@ export default function TierLists() {
   const [tierLists, setTierLists] = useState<TierListSummary[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [gameSource, setGameSource] = useState<GameSource>('empty');
-  const [selectedStatus, setSelectedStatus] = useState('Zerado');
-  const [selectedListId, setSelectedListId] = useState('');
   const [customLists, setCustomLists] = useState<CustomList[]>([]);
   const [libraryGames, setLibraryGames] = useState<LibraryGame[]>([]);
 
   const deleteModal = useConfirmAction<string>();
 
-  const loadSources = async (uid: string) => {
+  const loadSources = useCallback(async (uid: string) => {
     const [listsRes, libraryRes] = await Promise.all([
       api.get(`/lists/user/${uid}`),
       api.get(`/user-games/user/${uid}`),
     ]);
     setCustomLists(listsRes.data);
     setLibraryGames(libraryRes.data);
-  };
+  }, []);
 
-  const loadTierLists = async (uid: string) => {
+  const loadTierLists = useCallback(async (uid: string) => {
     try {
       const [tierlistsRes] = await Promise.all([
         api.get(`/tierlists/user/${uid}`),
@@ -57,17 +51,22 @@ export default function TierLists() {
     } catch {
       showToast('Erro ao carregar tier lists.', 'error');
     }
-  };
+  }, [loadSources, showToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (userId) loadTierLists(userId);
-  }, [userId]);
+  }, [userId, loadTierLists]);
 
-  const handleCreate = async () => {
-    if (!newTitle.trim()) return;
+  const handleCreate = async ({
+    title,
+    gameSource,
+    selectedStatus,
+    selectedListId,
+  }: TierListCreateValues) => {
     setIsCreating(true);
     try {
-      const response = await api.post('/tierlists/', { title: newTitle.trim() });
+      const response = await api.post('/tierlists/', { title });
       const tierlistId = response.data.id;
 
       let gamesToAdd: { id: string; title: string; coverUrl: string | null }[] = [];
@@ -108,8 +107,6 @@ export default function TierLists() {
       }
 
       setShowCreateModal(false);
-      setNewTitle('');
-      setGameSource('empty');
       navigate(`/tierlists/${tierlistId}`, { state: { initialPool: gamesToAdd } });
     } catch {
       showToast('Erro ao criar tier list.', 'error');
@@ -141,103 +138,23 @@ export default function TierLists() {
         + Nova Tier List
       </Button>
 
-      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} maxWidth="460px" showCloseButton>
-        <div className={styles.modalContent}>
-          <h3 className={styles.modalTitle}>Nova Tier List</h3>
-
-          <label className={styles.label}>
-            Nome
-            <Input
-              type="text"
-              placeholder="Ex: Meus Jogos de 2024"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              autoFocus
-            />
-          </label>
-
-          <label className={styles.label}>
-            Fonte dos jogos
-            <select
-              value={gameSource}
-              onChange={(e) => setGameSource(e.target.value as GameSource)}
-              className={styles.select}
-            >
-              <option value="empty">Vazia (adicionar manualmente)</option>
-              <option value="all">Toda a biblioteca</option>
-              <option value="status">Por status</option>
-              <option value="list">Lista personalizada</option>
-            </select>
-          </label>
-
-          {gameSource === 'status' && (
-            <label className={styles.label}>
-              Status
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className={styles.select}
-              >
-                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
-          )}
-
-          {gameSource === 'list' && (
-            <label className={styles.label}>
-              Lista
-              <select
-                value={selectedListId}
-                onChange={(e) => setSelectedListId(e.target.value)}
-                className={styles.select}
-              >
-                <option value="">Selecione uma lista...</option>
-                {customLists.map((l) => (
-                  <option key={l.id} value={l.id}>{l.name} ({l.games.length} jogos)</option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <div className={styles.modalActions}>
-            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleCreate}
-              disabled={isCreating || !newTitle.trim() || (gameSource === 'list' && !selectedListId)}
-            >
-              {isCreating ? 'Criando...' : 'Criar'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <TierListCreateModal
+        open={showCreateModal}
+        isCreating={isCreating}
+        customLists={customLists}
+        statusOptions={STATUS_OPTIONS}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreate}
+      />
 
       {tierLists.length === 0 ? (
         <div className={styles.emptyState}>Você ainda não tem tier lists. Crie uma acima!</div>
       ) : (
-        <div className={styles.grid}>
-          {tierLists.map((tl) => (
-            <div key={tl.id} className={styles.card}>
-              <div className={styles.cardPreview} onClick={() => navigate(`/tierlists/${tl.id}`)}>
-                {tl.categories
-                  .filter((cat) => cat.name !== '__pool__')
-                  .slice(0, 5)
-                  .map((cat) => (
-                    <div key={cat.id} className={styles.previewTier} style={{ backgroundColor: cat.color }}>
-                      <span className={styles.previewLabel}>{cat.name}</span>
-                      <span className={styles.previewCount}>{cat.items.length} jogos</span>
-                    </div>
-                  ))}
-              </div>
-              <div className={styles.cardFooter}>
-                <span className={styles.cardTitle} onClick={() => navigate(`/tierlists/${tl.id}`)}>{tl.title}</span>
-                <button className={styles.deleteButton} onClick={() => deleteModal.open(tl.id)} title="Deletar">🗑</button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <TierListGrid
+          tierLists={tierLists}
+          onOpen={(id) => navigate(`/tierlists/${id}`)}
+          onDelete={(id) => deleteModal.open(id)}
+        />
       )}
 
       <ConfirmModal

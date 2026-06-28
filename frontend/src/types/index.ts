@@ -39,14 +39,10 @@ export interface Tier {
   color: string;
 }
 
-export interface CustomList {
-  id: string;
-  name: string;
-  games: { id: string; title: string; cover_url: string | null }[];
-}
-
-export interface TierListSummary {
-  id: string;
-  title: string;
-  categories: { id: string; name: string; color: string; items: any[] }[];
-}
+export type {
+  CustomList,
+  CustomListGame,
+  TierListCategorySummary,
+  TierListCategorySummaryItem,
+  TierListSummary,
+} from './lists';

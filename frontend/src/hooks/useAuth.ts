@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
-import { clearToken } from '@/services/auth';
+import { clearToken, getToken } from '@/services/auth';
 
 export function useAuth() {
   const navigate = useNavigate();
@@ -9,8 +9,9 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
     if (!token) {
+      setLoading(false);
       navigate('/login');
       return;
     }

@@ -1,21 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Shared/Button/Button';
+import { clearToken, hasToken } from '@/services/auth';
 import styles from '@/components/Header/Header.module.css';
 
 export default function Header() {
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const token = hasToken();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    clearToken();
     navigate('/login');
   };
 
   return (
     <header className={styles.header}>
-      <span className={styles.logo} onClick={() => navigate('/')}>
+      <button type="button" className={styles.logo} onClick={() => navigate('/')}>
         GameLog
-      </span>
+      </button>
       <nav className={styles.nav}>
         <Button variant="ghost" onClick={() => navigate('/library')}>
           Biblioteca

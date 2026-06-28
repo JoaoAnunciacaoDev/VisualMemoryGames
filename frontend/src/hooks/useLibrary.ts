@@ -6,23 +6,31 @@ import { UpdateLibraryGame } from '@/types/updateGame';
 
 export function useLibrary(userId: string) {
   const [games, setGames] = useState<LibraryGame[]>([]);
-  const [loadingLibrary, setLoadingLibrary] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadLibrary = useCallback(async () => {
     if (!userId) return;
-    setLoadingLibrary(true);
+    setLoading(true);
+    setError(null);
     try {
       const response = await api.get(`/user-games/user/${userId}`);
       setGames(response.data);
     } catch {
-      console.error('Erro ao carregar biblioteca');
+      setError('Erro ao carregar biblioteca.');
     } finally {
-      setLoadingLibrary(false);
+      setLoading(false);
     }
   }, [userId]);
 
   useEffect(() => {
-    if (userId) loadLibrary();
+    if (!userId) return;
+
+    const timeout = window.setTimeout(() => {
+      void loadLibrary();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [userId, loadLibrary]);
 
   const updateGame = async (
@@ -38,5 +46,5 @@ export function useLibrary(userId: string) {
     await loadLibrary();
   };
 
-  return { games, loadingLibrary, loadLibrary, updateGame, removeGame };
+  return { games, loading, error, loadLibrary, updateGame, removeGame };
 }

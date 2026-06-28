@@ -8,35 +8,30 @@ import { useGameSearch } from '@/hooks/useGameSearch';
 import { addGameToLibrary } from '@/hooks/useAddGame';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 
-import LibraryCard from '@/components/LibraryCard/LibraryCard';
 import GameEditModal from '@/components/GameEditModal/GameEditModal';
 import CustomListsTab from '@/components/CustomListTab/CustomListTab';
-import SearchBar from '@/components/SearchBar/SearchBar';
-import GameCard from '@/components/GameCard/GameCard';
-import GameGrid from '@/components/GameGrid/GameGrid';
 import GameModal from '@/components/GameModal/GameModal';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import ManualGameModal from '@/components/ManualGameModal/ManualGameModal';
-import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 
 import { LibraryGame, GameResult } from '@/types/game';
-import { getBestGameCover } from '@/services/media';
 
-import { groupBy } from '@/services/groupBy';
+import LibraryTabs from '@/pages/Library/LibraryTabs';
+import LibraryFilters from '@/pages/Library/LibraryFilters';
+import LibraryGamesView from '@/pages/Library/LibraryGamesView';
+import LibrarySearchView from '@/pages/Library/LibrarySearchView';
+import type { LibraryTab } from '@/pages/Library/Library.types';
+
 import styles from '@/pages/Library/Library.module.css';
 
 const STATUS_OPTIONS = [
   'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
 ];
 
-type Tab = 'library' | 'lists' | 'search' | 'manual';
-type SortBy = 'rating' | 'started_at' | 'finished_at' | null;
-type YearField = 'started_at' | 'finished_at' | 'platinum_at';
-
 export default function Library() {
-  const { userId, loading } = useAuth();
-  const { games, loadLibrary, removeGame } = useLibrary(userId);
+  const { userId, loading: authLoading } = useAuth();
+  const { games, loadLibrary, removeGame, loading: libraryLoading, error: libraryError } = useLibrary(userId);
   const {
     filtered, search, setSearch,
     statusFilter, setStatusFilter,
@@ -47,7 +42,7 @@ export default function Library() {
   const { searchResults, isSearching, searchGames } = useGameSearch();
   const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<Tab>('library');
+  const [activeTab, setActiveTab] = useState<LibraryTab>('library');
   const [selectedLibraryGame, setSelectedLibraryGame] = useState<LibraryGame | null>(null);
   const [selectedSearchGame, setSelectedSearchGame] = useState<GameResult | null>(null);
   const [showManualModal, setShowManualModal] = useState(false);
@@ -112,201 +107,70 @@ export default function Library() {
     }
   };
 
-  if (loading) return <p>Carregando biblioteca...</p>;
+  if (authLoading || libraryLoading) return <p>Carregando biblioteca...</p>;
 
   return (
     <div className={styles.page}>
+      {libraryError && (
+        <div className={styles.emptyState} role="alert">
+          <p>{libraryError}</p>
+          <Button variant="ghost" onClick={loadLibrary}>
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+
       <header className={styles.header}>
         <h2 className={styles.heading}>Minha Biblioteca</h2>
       </header>
 
-      <div className={styles.tabs}>
-        <button className={`${styles.tab} ${activeTab === 'library' ? styles.activeTab : ''}`} onClick={() => setActiveTab('library')}>
-          Meus Jogos
-        </button>
-        <button className={`${styles.tab} ${activeTab === 'search' ? styles.activeTab : ''}`} onClick={() => setActiveTab('search')}>
-          Pesquisar / Adicionar
-        </button>
-        <button className={`${styles.tab} ${activeTab === 'lists' ? styles.activeTab : ''}`} onClick={() => setActiveTab('lists')}>
-          Minhas Listas
-        </button>
-        <button className={`${styles.tab} ${activeTab === 'manual' ? styles.activeTab : ''}`} onClick={() => setActiveTab('manual')}>
-          Adicionar Manualmente
-        </button>
-      </div>
+      <LibraryTabs activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'library' && (
         <>
-            <div className={styles.controls}>
-              <Input
-                className={styles.searchInput}
-                type="text"
-                placeholder="Pesquisar na biblioteca..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={styles.select}>
-                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select
-                value={sortBy ?? ''}
-                onChange={(e) => setSortBy(e.target.value === '' ? null : (e.target.value as Exclude<SortBy, null>))}
-                className={styles.select}
-              >
-                <option value="">Ordenar por</option>
-                <option value="rating">Nota</option>
-                <option value="started_at">Data de início</option>
-                <option value="finished_at">Data de término</option>
-              </select>
-              <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')} className={styles.select}>
-                <option value="desc">Decrescente</option>
-                <option value="asc">Crescente</option>
-              </select>
+          <LibraryFilters
+            search={search}
+            onSearchChange={setSearch}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            sortBy={sortBy}
+            onSortByChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+            yearField={yearField}
+            onYearFieldChange={setYearField}
+            yearValue={yearValue}
+            onYearValueChange={setYearValue}
+            hoursOperator={hoursOperator}
+            onHoursOperatorChange={setHoursOperator}
+            hoursValue={hoursValue}
+            onHoursValueChange={setHoursValue}
+            groupByStatus={groupByStatus}
+            onToggleGroupByStatus={() => setGroupByStatus((prev) => !prev)}
+            statusOptions={STATUS_OPTIONS}
+          />
 
-              {/* Par Ano */}
-              <div className={styles.filterPair}>
-                <select
-                  value={yearField}
-                  onChange={(e) => setYearField(e.target.value as YearField | '')}
-                  className={styles.select}
-                >
-                  <option value="">Ano de...</option>
-                  <option value="started_at">Início</option>
-                  <option value="finished_at">Conclusão</option>
-                  <option value="platinum_at">Platina</option>
-                </select>
-                <Input
-                  type="number"
-                  placeholder="Ano"
-                  value={yearValue}
-                  onChange={(e) => setYearValue(e.target.value === '' ? '' : Number(e.target.value))}
-                  disabled={!yearField}
-                  min={1970}
-                  max={new Date().getFullYear()}
-                />
-              </div>
-
-              {/* Par Horas */}
-              <div className={styles.filterPair}>
-                <select
-                  value={hoursOperator}
-                  onChange={(e) => setHoursOperator(e.target.value as 'gt' | 'lt' | '')}
-                  className={styles.select}
-                >
-                  <option value="">Horas jogadas</option>
-                  <option value="gt">Maior que</option>
-                  <option value="lt">Menor que</option>
-                </select>
-                <Input
-                  type="number"
-                  placeholder="Horas"
-                  value={hoursValue}
-                  onChange={(e) => setHoursValue(e.target.value === '' ? '' : Number(e.target.value))}
-                  disabled={!hoursOperator}
-                  min={0}
-                  step={0.1}
-                />
-              </div>
-
-              <Button
-                variant={groupByStatus ? 'primary' : 'ghost'}
-                onClick={() => setGroupByStatus((prev) => !prev)}
-                className={styles.groupToggle}
-              >
-                Agrupar por Status
-              </Button>
-
-            </div>
-
-          {filtered.length === 0 ? (
-            <div className={styles.emptyState}>
-              {games.length === 0
-                ? 'Sua biblioteca está vazia. Vá na aba "Pesquisar / Adicionar" para buscar jogos!'
-                : 'Nenhum jogo encontrado com os filtros aplicados.'}
-            </div>
-          ) : groupByStatus ? (
-            // Visualização agrupada
-            (() => {
-              const STATUS_ORDER = ['Jogando', 'Zerado', 'Platinado', 'Em Espera', 'Abandonado', 'Quero Jogar'];
-              const grouped = groupBy(filtered, 'status');
-              return (
-                <div className={styles.groupedContainer}>
-                  {STATUS_ORDER.filter((s) => grouped[s]?.length > 0).map((status) => {
-                    const isCollapsed = collapsedStatuses.has(status);
-                    return (
-                      <div key={status} className={styles.statusGroup}>
-                        <h3
-                          className={`${styles.statusGroupTitle} ${!isCollapsed ? styles.statusGroupTitleExpanded : ''}`}
-                          onClick={() => toggleStatusCollapse(status)}
-                          title="Clique para expandir/recolher"
-                        >
-                          {isCollapsed ? '▶' : '▼'} {status}
-                        </h3>
-                        {!isCollapsed && (
-                          <div className={styles.grid}>
-                            {grouped[status].map((game) => (
-                              <LibraryCard
-                                key={game.id}
-                                title={game.title}
-                                coverUrl={getBestGameCover(game)}
-                                status={game.status}
-                                rating={game.rating}
-                                startedAt={game.started_at}
-                                finishedAt={game.finished_at}
-                                onClick={() => setSelectedLibraryGame(game)}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()
-          ) : (
-            // Visualização em grid única
-            <div className={styles.grid}>
-              {filtered.map((game) => (
-                <LibraryCard
-                  key={game.id}
-                  title={game.title}
-                  coverUrl={getBestGameCover(game)}
-                  status={game.status}
-                  rating={game.rating}
-                  startedAt={game.started_at}
-                  finishedAt={game.finished_at}
-                  onClick={() => setSelectedLibraryGame(game)}
-                />
-              ))}
-            </div>
-          )}
+          <LibraryGamesView
+            games={games}
+            filteredGames={filtered}
+            groupByStatus={groupByStatus}
+            collapsedStatuses={collapsedStatuses}
+            onToggleStatusCollapse={toggleStatusCollapse}
+            onSelectGame={setSelectedLibraryGame}
+          />
         </>
       )}
 
       {activeTab === 'search' && (
-        <>
-          <SearchBar onSearch={searchGames} isSearching={isSearching} />
-          <GameGrid>
-            {searchResults.map((game) => (
-              <GameCard
-                key={game.external_id}
-                title={game.title}
-                coverUrl={game.cover_url}
-                releaseYear={game.release_year}
-                isAdded={addedGames.has(game.external_id)}
-                onAdd={() => handleAddGame(game)}
-                onRemove={() => removeConfirm.open(game.external_id)}
-                onClick={() => setSelectedSearchGame(game)}
-              />
-            ))}
-          </GameGrid>
-          {searchResults.length === 0 && !isSearching && (
-            <div className={styles.emptyState}>
-              Pesquise por um título para adicionar à sua coleção.
-            </div>
-          )}
-        </>
+        <LibrarySearchView
+          searchGames={searchGames}
+          isSearching={isSearching}
+          searchResults={searchResults}
+          addedGames={addedGames}
+          onAddGame={handleAddGame}
+          onRemoveGame={(externalId) => removeConfirm.open(externalId)}
+          onOpenGame={setSelectedSearchGame}
+        />
       )}
 
       {activeTab === 'lists' && (

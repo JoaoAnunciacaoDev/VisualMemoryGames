@@ -1,30 +1,68 @@
-import { useState } from 'react';
-import {
-  DndContext, DragOverlay, PointerSensor, KeyboardSensor,
-  useSensor, useSensors, rectIntersection,
-} from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 
-import TierRow from '@/components/TierListMaker/TierRow';
-import SortableGame from '@/components/TierListMaker/SortableGame';
-import GameSearchModal from '@/components/GameSearchModal/GameSearchModal';
-import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import Button from '@/components/Shared/Button/Button';
-import Input from '@/components/Shared/Input/Input';
 
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
 import { useDragHandlers } from '@/hooks/useDragHandlers';
+import {
+  loadTierListEditorData,
+  type TierListEditorData,
+  type TierListEditorInitialGame,
+} from '@/services/tierlistEditor';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
+import TierListEditorHeader from '@/pages/TierListEditor/TierListEditorHeader';
+import TierListEditorBoard from '@/pages/TierListEditor/TierListEditorBoard';
+import TierListEditorDialogs from '@/pages/TierListEditor/TierListEditorDialogs';
+
+interface TierListEditorLocationState {
+  initialPool?: TierListEditorInitialGame[];
+}
 
 export default function TierListEditor() {
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const [editorData, setEditorData] = useState<TierListEditorData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadEditor = useCallback(async () => {
+    if (!id) {
+      setError('Tier list não encontrada.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const state = location.state as TierListEditorLocationState | null;
+      const data = await loadTierListEditorData(id, state?.initialPool ?? []);
+      setEditorData(data);
+    } catch {
+      setError('Erro ao carregar tier list.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, location.state]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void loadEditor();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [loadEditor]);
+
   const {
-    title, setTitle, tiers, games, setGames, loading,
+    title, setTitle, tiers, games, setGames,
     existingGameIds, saveTitle, addTier, removeTier,
     updateTierLabel, updateTierColor, addGameToPool,
     removeGame, moveGame, reorderTier,
-  } = useTierListEditor();
+  } = useTierListEditor(id, editorData, { onReload: loadEditor });
 
   const { activeGame, handleDragStart, handleDragOver, handleDragEnd } = useDragHandlers({
     games, setGames, moveGame, reorderTier,
@@ -38,11 +76,6 @@ export default function TierListEditor() {
 
   const removeGameConfirm = useConfirmAction<string>();
   const removeTierConfirm = useConfirmAction<string>();
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
 
   const handleTitleSave = () => {
     if (title.trim()) {
@@ -60,132 +93,67 @@ export default function TierListEditor() {
 
   if (loading) return <p>Carregando...</p>;
 
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.emptyState} role="alert">
+          <p>{error}</p>
+          <Button variant="primary" onClick={loadEditor}>
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page} onClick={() => setSelectedGameId(null)}>
-      <div className={styles.header}>
-        {editingTitle ? (
-          <Input
-            className={styles.titleInput}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleTitleSave}
-            onKeyDown={(e) => e.key === 'Enter' && handleTitleSave()}
-            autoFocus
-          />
-        ) : (
-          <h2 className={styles.title} onDoubleClick={() => setEditingTitle(true)}>
-            {title}
-          </h2>
-        )}
-        <Button
-          variant="primary"
-          className={styles.addGameButton}
-          onClick={(e) => { e.stopPropagation(); setShowSearchModal(true); }}
-        >
-          + Adicionar Jogo
-        </Button>
-      </div>
+      <TierListEditorHeader
+        title={title}
+        editingTitle={editingTitle}
+        onEditTitle={() => setEditingTitle(true)}
+        onTitleChange={setTitle}
+        onTitleSave={handleTitleSave}
+        onAddGame={() => setShowSearchModal(true)}
+      />
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={rectIntersection}
+      <TierListEditorBoard
+        tiers={tiers}
+        games={games}
+        poolGames={games[POOL_ID] ?? []}
+        selectedGameId={selectedGameId}
+        newTierLabel={newTierLabel}
+        newTierColor={newTierColor}
+        activeGame={activeGame}
+        onSelectedGameChange={setSelectedGameId}
+        onNewTierLabelChange={setNewTierLabel}
+        onNewTierColorChange={setNewTierColor}
+        onAddTier={handleAddTier}
+        onRemoveGame={removeGameConfirm.open}
+        onRemoveTier={removeTierConfirm.open}
+        onUpdateTierLabel={updateTierLabel}
+        onUpdateTierColor={updateTierColor}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
-      >
-        <div className={styles.board}>
-          {tiers.map((tier) => (
-            <TierRow
-              key={tier.id}
-              id={tier.id}
-              label={tier.label}
-              color={tier.color}
-              games={games[tier.id] ?? []}
-              onLabelChange={(label) => updateTierLabel(tier.id, label)}
-              onColorChange={(color) => updateTierColor(tier.id, color)}
-              onDelete={() => removeTierConfirm.open(tier.id)}
-              onRemoveGame={(gameId) => removeGameConfirm.open(gameId)}
-              selectedGameId={selectedGameId}
-              onSelectGame={setSelectedGameId}
-            />
-          ))}
-        </div>
-
-        <div className={styles.addTierRow}>
-          <Input
-            type="text"
-            placeholder="Nome do novo tier..."
-            value={newTierLabel}
-            onChange={(e) => setNewTierLabel(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddTier()}
-            className={styles.addTierInput}
-          />
-          <input
-            type="color"
-            value={newTierColor}
-            onChange={(e) => setNewTierColor(e.target.value)}
-            className={styles.colorPicker}
-          />
-          <Button variant="primary" className={styles.addTierButton} onClick={handleAddTier}>
-            + Adicionar Tier
-          </Button>
-        </div>
-
-        <div className={styles.poolArea}>
-          <h3>Jogos não classificados</h3>
-          <TierRow
-            id={POOL_ID}
-            games={games[POOL_ID] ?? []}
-            onRemoveGame={(gameId) => removeGameConfirm.open(gameId)}
-            selectedGameId={selectedGameId}
-            onSelectGame={setSelectedGameId}
-          />
-        </div>
-
-        <DragOverlay>
-          {activeGame && (
-            <SortableGame id={activeGame.id} title={activeGame.title} coverUrl={activeGame.coverUrl} />
-          )}
-        </DragOverlay>
-      </DndContext>
-
-      {showSearchModal && (
-        <GameSearchModal
-          onSelect={(game) => {
-            addGameToPool(game);
-            setShowSearchModal(false);
-          }}
-          onClose={() => setShowSearchModal(false)}
-          existingGameIds={existingGameIds}
-        />
-      )}
-
-      <ConfirmModal
-        isOpen={removeGameConfirm.isOpen}
-        title="Remover Jogo"
-        message="Tem certeza que deseja remover este jogo da tier list?"
-        confirmText="Sim, remover"
-        cancelText="Cancelar"
-        isDestructive={true}
-        onConfirm={async () => {
-          if (removeGameConfirm.target) await removeGame(removeGameConfirm.target);
-          removeGameConfirm.close();
-        }}
-        onCancel={removeGameConfirm.close}
       />
 
-      <ConfirmModal
-        isOpen={removeTierConfirm.isOpen}
-        title="Remover Tier"
-        message="Tem certeza que deseja remover este tier? Os jogos nele voltarão para a área de não classificados."
-        confirmText="Sim, remover"
-        cancelText="Cancelar"
-        isDestructive={true}
-        onConfirm={async () => {
-          if (removeTierConfirm.target) await removeTier(removeTierConfirm.target);
-          removeTierConfirm.close();
+      <TierListEditorDialogs
+        showSearchModal={showSearchModal}
+        existingGameIds={existingGameIds}
+        removeGameConfirm={removeGameConfirm}
+        removeTierConfirm={removeTierConfirm}
+        onAddGame={async (game) => {
+          await addGameToPool(game);
+          setShowSearchModal(false);
         }}
-        onCancel={removeTierConfirm.close}
+        onCloseSearchModal={() => setShowSearchModal(false)}
+        onRemoveGame={async (gameId) => {
+          await removeGame(gameId);
+        }}
+        onRemoveTier={async (tierId) => {
+          await removeTier(tierId);
+        }}
       />
     </div>
   );

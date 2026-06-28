@@ -6,6 +6,7 @@ import AuthForm from '@/components/AuthForm/AuthForm';
 import { useToast } from '@/hooks/useToast';
 
 import api from '@/services/api';
+import { getToken, setToken } from '@/services/auth';
 
 
 export default function Login() {
@@ -14,8 +15,7 @@ export default function Login() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (getToken()) {
       navigate('/library', { replace: true });
     }
   }, [navigate]);
@@ -35,7 +35,7 @@ export default function Login() {
       params.append('username', username);
       params.append('password', password);
       const response = await api.post('/login', params);
-      localStorage.setItem('token', response.data.access_token);
+      setToken(response.data.access_token);
       navigate('/library');
     } catch (err: any) {
       setError(parseError(err));

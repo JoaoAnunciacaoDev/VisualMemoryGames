@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react';
 import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/LibraryCard/LibraryCard.module.css';
 
@@ -35,8 +36,22 @@ export default function LibraryCard({
     ? new Date(startedAt).getFullYear()
     : null;
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <Card className={styles.libraryCard} onClick={onClick}>
+    <Card
+      className={styles.libraryCard}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir detalhes de ${title}`}
+    >
       <div className={styles.imageWrapper}>
         {coverUrl ? (
           <img src={coverUrl} alt={title} className={styles.cover} />

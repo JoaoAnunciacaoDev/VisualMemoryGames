@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { findContainer } from '@/services/tierlist';
-import { GameItem } from '@/types/index';
+import { GameItem } from '@/types';
 import { POOL_ID } from '@/hooks/useTierListEditor';
 
 interface Props {

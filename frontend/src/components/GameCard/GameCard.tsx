@@ -1,4 +1,4 @@
-import { useState, MouseEvent } from 'react';
+import { useState, type MouseEvent, type KeyboardEvent } from 'react';
 import Card from '@/components/Shared/Card/Card';
 import Button from '@/components/Shared/Button/Button';
 import styles from '@/components/GameCard/GameCard.module.css';
@@ -45,8 +45,22 @@ export default function GameCard({
       : '✓ Adicionado'
     : 'Adicionar à Biblioteca';
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <Card className={styles.gameCard} onClick={onClick}>
+    <Card
+      className={styles.gameCard}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`Ver detalhes de ${title}`}
+    >
       <div className={styles.imageWrapper}>
         {coverUrl ? (
           <img src={coverUrl} alt={title} className={styles.cover} />

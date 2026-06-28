@@ -1,8 +1,11 @@
 import {
   DndContext, DragOverlay, PointerSensor, KeyboardSensor,
-  useSensor, useSensors, rectIntersection, type DragStartEvent, type DragOverEvent, type DragEndEvent,
+  useSensor, useSensors, rectIntersection,
+  type DragStartEvent, type DragOverEvent, type DragEndEvent,
 } from '@dnd-kit/core';
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import {
+  sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
@@ -30,6 +33,9 @@ interface Props {
   onDragStart: (event: DragStartEvent) => void;
   onDragOver: (event: DragOverEvent) => void;
   onDragEnd: (event: DragEndEvent) => Promise<void>;
+  onTierDragStart: (event: DragStartEvent) => void;
+  onTierDragOver: (event: DragOverEvent) => void;
+  onTierDragEnd: (event: DragEndEvent) => void;
 }
 
 export default function TierListEditorBoard({
@@ -51,37 +57,71 @@ export default function TierListEditorBoard({
   onDragStart,
   onDragOver,
   onDragEnd,
+  onTierDragStart,
+  onTierDragOver,
+  onTierDragEnd,
 }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  // Unifica os handlers conforme o tipo de arrasto (tier vs jogo)
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === 'tier') {
+      onTierDragStart(event);
+    } else {
+      onDragStart(event);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === 'tier') {
+      onTierDragOver(event);
+    } else {
+      onDragOver(event);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === 'tier') {
+      onTierDragEnd(event);
+    } else {
+      await onDragEnd(event);
+    }
+  };
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={rectIntersection}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
     >
-      <div className={styles.board}>
-        {tiers.map((tier) => (
-          <TierRow
-            key={tier.id}
-            id={tier.id}
-            label={tier.label}
-            color={tier.color}
-            games={games[tier.id] ?? []}
-            onLabelChange={(label) => onUpdateTierLabel(tier.id, label)}
-            onColorChange={(color) => onUpdateTierColor(tier.id, color)}
-            onDelete={() => onRemoveTier(tier.id)}
-            onRemoveGame={onRemoveGame}
-            selectedGameId={selectedGameId}
-            onSelectGame={onSelectedGameChange}
-          />
-        ))}
-      </div>
+      <SortableContext items={tiers.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <div className={styles.board}>
+          {tiers.map((tier) => (
+            <TierRow
+              key={tier.id}
+              id={tier.id}
+              label={tier.label}
+              color={tier.color}
+              games={games[tier.id] ?? []}
+              onLabelChange={(label) => onUpdateTierLabel(tier.id, label)}
+              onColorChange={(color) => onUpdateTierColor(tier.id, color)}
+              onDelete={() => onRemoveTier(tier.id)}
+              onRemoveGame={onRemoveGame}
+              selectedGameId={selectedGameId}
+              onSelectGame={onSelectedGameChange}
+              isTierDraggable={true}
+            />
+          ))}
+        </div>
+      </SortableContext>
 
       <div className={styles.addTierRow}>
         <Input

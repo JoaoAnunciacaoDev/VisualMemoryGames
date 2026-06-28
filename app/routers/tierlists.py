@@ -306,3 +306,30 @@ def reorder_items(
     db.commit()
 
     return {"ok": True}
+
+
+class ReorderCategoriesRequest(BaseModel):
+    category_ids: list[str]
+
+@router.put("/{tierlist_id}/categories/reorder")
+def reorder_categories(
+    tierlist_id: str,
+    data: ReorderCategoriesRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    tierlist = db.query(TierList).filter(TierList.id == tierlist_id).first()
+    if not tierlist:
+        raise HTTPException(status_code=404, detail="Tier List não encontrada.")
+    if str(tierlist.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Sem permissão.")
+
+    for index, category_id in enumerate(data.category_ids):
+        category = db.query(TierCategory).filter(
+            TierCategory.id == category_id,
+            TierCategory.tierlist_id == tierlist_id
+        ).first()
+        if category:
+            setattr(category, 'order_index', index)
+    db.commit()
+    return {"ok": True}

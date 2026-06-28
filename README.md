@@ -1,4 +1,6 @@
-<h1># 🎮 GameLog</h1>
+<h1 align="center">
+  🎮 GameLog
+</h1>
 
 <p align="center">
   <em>Plataforma para gestão de bibliotecas de videojogos e criação de tier lists personalizadas.</em>

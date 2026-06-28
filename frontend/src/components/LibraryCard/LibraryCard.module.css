@@ -5,10 +5,20 @@
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 
-.libraryCard:hover {
-  transform: translateY(-5px);
-  border-color: rgba(222, 29, 106, 0.35);
-  box-shadow: var(--shadow-md);
+@media (hover: hover) {
+  .libraryCard:hover {
+    transform: translateY(-5px);
+    border-color: rgba(222, 29, 106, 0.35);
+    box-shadow: var(--shadow-md);
+  }
+
+  .libraryCard:hover .cover {
+    transform: scale(1.05);
+  }
+
+  .libraryCard:hover::before {
+    opacity: 1;
+  }
 }
 
 .imageWrapper {
@@ -25,10 +35,6 @@
   object-fit: cover;
   display: block;
   transition: transform 0.3s ease;
-}
-
-.libraryCard:hover .cover {
-  transform: scale(1.05);
 }
 
 .coverFallback {
@@ -80,7 +86,6 @@
   color: var(--muted);
 }
 
-/* Efeito de brilho sutil no hover */
 .libraryCard::before {
   content: "";
   position: absolute;
@@ -92,13 +97,19 @@
   z-index: 1;
 }
 
-.libraryCard:hover::before {
-  opacity: 1;
-}
-
 .statusWantToPlay { background: var(--status-want-to-play); }
 .statusPlaying { background: var(--status-playing); }
 .statusCompleted { background: var(--status-completed); }
 .statusPlatinized { background: var(--status-platinized); }
 .statusAbandoned { background: var(--status-abandoned); }
 .statusOnHold { background: var(--status-on-hold); }
+
+@media (max-width: 600px) {
+  .imageWrapper {
+    height: 120px;
+  }
+
+  .info {
+    padding: var(--gap-sm);
+  }
+}

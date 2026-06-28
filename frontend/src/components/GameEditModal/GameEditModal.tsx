@@ -6,7 +6,7 @@ import Modal from '@/components/Shared/Modal/Modal';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useGameEditForm } from '@/hooks/useGameEditForm';
 import styles from '@/components/GameEditModal/GameEditModal.module.css';
-import { LibraryGame } from '@/types/game';
+import { LibraryGame } from '@/types';
 import { STORE_OPTIONS } from '@/types/enums';
 import { EditGamePayload } from '@/hooks/useGameEditForm';
 import RatingStars from '@/components/RatingStars/RatingStars';

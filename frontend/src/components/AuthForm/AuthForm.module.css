@@ -16,3 +16,10 @@
   text-decoration: underline;
   width: 100%;
 }
+
+@media (max-width: 600px) {
+  .authCard {
+    padding: var(--gap-lg);
+    margin-top: 0;
+  }
+}

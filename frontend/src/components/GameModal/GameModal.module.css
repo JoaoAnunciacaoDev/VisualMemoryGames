@@ -40,3 +40,21 @@
   opacity: 0.8;
   background: none;
 }
+
+@media (max-width: 600px) {
+  .cover {
+    height: 160px;
+  }
+
+  .content {
+    padding: var(--gap-md);
+  }
+
+  .title {
+    font-size: var(--font-size-md);
+  }
+
+  .actions {
+    gap: var(--gap-sm);
+  }
+}

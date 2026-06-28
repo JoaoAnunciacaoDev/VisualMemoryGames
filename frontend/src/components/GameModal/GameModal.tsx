@@ -1,6 +1,6 @@
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
-import type { GameDisplay } from '@/types/game';
+import type { GameDisplay } from '@/types';
 import styles from '@/components/GameModal/GameModal.module.css';
 
 interface Props {

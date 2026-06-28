@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import api from '@/services/api';
-import { LibraryGame } from '@/types/game';
+import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
 
 

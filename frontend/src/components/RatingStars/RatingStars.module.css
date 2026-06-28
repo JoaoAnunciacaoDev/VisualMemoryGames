@@ -7,7 +7,7 @@
 }
 
 .starWrapper {
-  position: relative;
+  position: relative;          /* útil se usares em algum contexto */
 }
 
 .star {
@@ -50,4 +50,19 @@
   min-width: 3rem;
   color: var(--text);
   font-size: var(--font-size-sm);
+}
+
+@media (max-width: 600px) {
+  .star {
+    font-size: 1.8rem;
+  }
+
+  .stars {
+    gap: 0.15rem;
+  }
+
+  .value {
+    font-size: var(--font-size-xs);
+    margin-left: 0.5rem;
+  }
 }

@@ -1,5 +1,12 @@
 .form {
   display: flex;
   gap: var(--gap-sm);
-  margin-bottom: var(--gap-xl); /* 30px ≈ 32px, mas podes ajustar para --gap-xl */
+  margin-bottom: var(--gap-xl);
+}
+
+@media (max-width: 600px) {
+  .form {
+    flex-direction: column;
+    gap: var(--gap-sm);
+  }
 }

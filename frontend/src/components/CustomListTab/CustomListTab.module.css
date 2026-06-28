@@ -175,3 +175,31 @@
   background: rgba(222, 29, 106, 0.15);
   border-radius: var(--radius-sm);
 }
+
+@media (max-width: 600px) {
+  .createRow {
+    flex-direction: column;
+  }
+
+  .listHeader {
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+  }
+
+  .listInfo {
+    flex: 1 1 auto;
+  }
+
+  .listActions {
+    margin-left: auto;
+  }
+
+  .editInput {
+    width: 100%;
+  }
+
+  .addGameButton {
+    align-self: stretch;
+    justify-content: center;
+  }
+}

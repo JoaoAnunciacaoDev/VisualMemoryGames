@@ -9,3 +9,10 @@
   transition: transform var(--transition-fast), opacity var(--transition-fast);
   will-change: transform;
 }
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--gap-sm);
+  }
+}

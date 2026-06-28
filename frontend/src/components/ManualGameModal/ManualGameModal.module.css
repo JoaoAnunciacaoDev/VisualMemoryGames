@@ -116,3 +116,23 @@
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+@media (max-width: 600px) {
+  .header {
+    padding: var(--gap-md);
+  }
+
+  .body {
+    padding: var(--gap-md);
+  }
+
+  .coverSection {
+    flex-direction: column;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--gap-md);
+  }
+}

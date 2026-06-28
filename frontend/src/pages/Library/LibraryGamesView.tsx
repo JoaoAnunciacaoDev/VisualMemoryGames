@@ -2,7 +2,7 @@ import LibraryCard from '@/components/LibraryCard/LibraryCard';
 import styles from '@/pages/Library/Library.module.css';
 import { groupBy } from '@/services/groupBy';
 import { getBestGameCover } from '@/services/media';
-import type { LibraryGame } from '@/types/game';
+import type { LibraryGame } from '@/types';
 
 interface Props {
   games: LibraryGame[];

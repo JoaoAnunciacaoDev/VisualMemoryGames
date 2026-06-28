@@ -2,7 +2,7 @@ import GameCard from '@/components/GameCard/GameCard';
 import GameGrid from '@/components/GameGrid/GameGrid';
 import SearchBar from '@/components/SearchBar/SearchBar';
 import styles from '@/pages/Library/Library.module.css';
-import type { GameResult } from '@/types/game';
+import type { GameResult } from '@/types';
 
 interface Props {
   searchGames: (query: string) => void;

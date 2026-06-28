@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import api from '@/services/api';
@@ -143,6 +143,21 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
     setExpandedList((prev) => (prev === listId ? null : listId));
   };
 
+  const handleListHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>, listId: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggleExpand(listId);
+      setSelectedGameId(null);
+    }
+  };
+
+  const handleGameItemKeyDown = (event: KeyboardEvent<HTMLDivElement>, gameId: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setSelectedGameId((prev) => (prev === gameId ? null : gameId));
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.createRow}>
@@ -172,6 +187,11 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
                   toggleExpand(list.id);
                   setSelectedGameId(null);
                 }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => handleListHeaderKeyDown(event, list.id)}
+                aria-expanded={expandedList === list.id}
+                aria-label={`${expandedList === list.id ? 'Recolher' : 'Expandir'} lista ${list.name}`}
               >
                 <div className={styles.listInfo}>
                   {list.is_system ? (
@@ -219,6 +239,7 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
                   </span>
                   {!list.is_system && (
                     <Button
+                      type="button"
                       variant="ghost"
                       className={`${styles.iconButton} ${styles.deleteIcon}`}
                       onClick={(e) => {
@@ -243,6 +264,11 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
                           e.stopPropagation();
                           setSelectedGameId(selectedGameId === game.id ? null : game.id);
                         }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => handleGameItemKeyDown(event, game.id)}
+                        aria-pressed={selectedGameId === game.id}
+                        aria-label={`${selectedGameId === game.id ? 'Desselecionar' : 'Selecionar'} jogo ${game.title}`}
                       >
                         {game.cover_url ? (
                           <img
@@ -258,6 +284,7 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
                         <span className={styles.gameTitle}>{game.title}</span>
                         {selectedGameId === game.id && (
                           <button
+                            type="button"
                             className={styles.removeGame}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -276,6 +303,7 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
                   </div>
                   {!list.is_system && (
                     <Button
+                      type="button"
                       variant="primary"
                       className={styles.addGameButton}
                       onClick={() => setSelectingForList(list.id)}

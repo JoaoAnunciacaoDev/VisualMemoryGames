@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useId } from 'react';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import styles from '@/components/Shared/ConfirmModal/ConfirmModal.module.css';
@@ -24,25 +24,28 @@ export default function ConfirmModal({
   onCancel,
   isDestructive = false,
 }: Props) {
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onCancel();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onCancel]);
+  const reactId = useId();
+  const titleId = `confirm-modal-title-${reactId}`;
+  const messageId = `confirm-modal-message-${reactId}`;
 
   return (
-    <Modal open={isOpen} onClose={onCancel} maxWidth="400px">
+    <Modal
+      open={isOpen}
+      onClose={onCancel}
+      maxWidth="400px"
+      titleId={titleId}
+      descriptionId={messageId}
+    >
       <div className={styles.body}>
-        <h3 className={styles.title}>{title}</h3>
-        <p className={styles.message}>{message}</p>
+        <h3 className={styles.title} id={titleId}>{title}</h3>
+        <p className={styles.message} id={messageId}>{message}</p>
 
         <div className={styles.actions}>
-          <Button variant="ghost" onClick={onCancel}>
+          <Button type="button" variant="ghost" onClick={onCancel}>
             {cancelText}
           </Button>
           <Button
+            type="button"
             variant={isDestructive ? 'danger' : 'primary'}
             onClick={onConfirm}
           >

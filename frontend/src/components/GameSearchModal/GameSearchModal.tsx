@@ -68,6 +68,7 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
       <div className={styles.searchRow}>
         <Input
           type="text"
+          aria-label="Pesquisar jogo para adicionar"
           placeholder="Pesquisar jogo..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -88,10 +89,14 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
         {results.map((game) => {
           const alreadyAdded = existingGameIds.has(String(game.external_id));
           return (
-            <div
+            <button
+              type="button"
               key={game.external_id}
               className={`${styles.resultItem} ${alreadyAdded ? styles.alreadyAdded : ''}`}
               onClick={() => !alreadyAdded && handleSelect(game)}
+              disabled={alreadyAdded}
+              aria-pressed={alreadyAdded}
+              aria-label={alreadyAdded ? `${game.title} já está adicionado` : `Adicionar ${game.title}`}
             >
               {game.cover_url ? (
                 <img src={getBestGameCover(game)} alt={game.title} className={styles.cover} />
@@ -100,7 +105,7 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
               )}
               <span className={styles.resultTitle}>{game.title}</span>
               {alreadyAdded && <span className={styles.addedBadge}>Adicionado</span>}
-            </div>
+            </button>
           );
         })}
       </div>

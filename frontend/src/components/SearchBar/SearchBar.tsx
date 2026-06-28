@@ -19,6 +19,7 @@ export default function SearchBar({ onSearch, isSearching }: Props) {
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <Input
+        aria-label="Pesquisar jogo online"
         placeholder="Busque um jogo Online..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}

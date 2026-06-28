@@ -40,6 +40,7 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
             )}
             {onDelete && (
                <button
+                type="button"
                 className={styles.deleteTierButton}
                 onClick={onDelete}
                 title="Deletar tier"
@@ -53,6 +54,16 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
             className={styles.tierLabel}
             style={{ backgroundColor: color }}
             onDoubleClick={() => onLabelChange && setEditingLabel(true)}
+            role={onLabelChange ? 'button' : undefined}
+            tabIndex={onLabelChange ? 0 : undefined}
+            onKeyDown={(e) => {
+              if (!onLabelChange) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setEditingLabel(true);
+              }
+            }}
+            aria-label={onLabelChange ? `Editar tier ${label}` : undefined}
           >
             {editingLabel ? (
               <input

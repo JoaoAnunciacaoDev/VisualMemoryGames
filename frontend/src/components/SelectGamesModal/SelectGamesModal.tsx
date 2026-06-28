@@ -40,6 +40,7 @@ export default function SelectGamesModal({ games, alreadyInList, onConfirm, onCl
       <div className={styles.searchWrapper}>
         <Input
           type="text"
+          aria-label="Pesquisar jogo na biblioteca"
           placeholder="Pesquisar jogo..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -62,10 +63,13 @@ export default function SelectGamesModal({ games, alreadyInList, onConfirm, onCl
           filtered.map((game) => {
             const isSelected = selected.has(game.game_id);
             return (
-              <div
+              <button
+                type="button"
                 key={game.game_id}
                 className={`${styles.gameItem} ${isSelected ? styles.gameSelected : ''}`}
                 onClick={() => toggleSelect(game.game_id)}
+                aria-pressed={isSelected}
+                aria-label={`${isSelected ? 'Desselecionar' : 'Selecionar'} ${game.title}`}
               >
                 {game.cover_url ? (
                   <img src={resolveImageUrl(game.cover_url) ?? ''} alt={game.title} className={styles.cover} />
@@ -78,7 +82,7 @@ export default function SelectGamesModal({ games, alreadyInList, onConfirm, onCl
                 <div className={`${styles.checkbox} ${isSelected ? styles.checked : ''}`}>
                   {isSelected && '✓'}
                 </div>
-              </div>
+              </button>
             );
           })
         )}

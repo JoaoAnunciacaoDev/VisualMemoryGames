@@ -21,10 +21,18 @@ export default function Toast({
     return () => clearTimeout(timer);
   }, [onClose, duration]);
 
+  const ariaLive = type === 'error' ? 'assertive' : 'polite';
+  const role = type === 'error' ? 'alert' : 'status';
+
   return (
-    <div className={`${styles.toast} ${styles[type]} ${styles[position]}`}>
+    <div
+      className={`${styles.toast} ${styles[type]} ${styles[position]}`}
+      role={role}
+      aria-live={ariaLive}
+      aria-atomic="true"
+    >
       <span className={styles.message}>{message}</span>
-      <button className={styles.closeButton} onClick={onClose}>
+      <button type="button" className={styles.closeButton} onClick={onClose} aria-label="Fechar notificação">
         X
       </button>
     </div>

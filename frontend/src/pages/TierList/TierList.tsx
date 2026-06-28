@@ -220,7 +220,19 @@ export default function TierLists() {
         <div className={styles.grid}>
           {tierLists.map((tl) => (
             <div key={tl.id} className={styles.card}>
-              <div className={styles.cardPreview} onClick={() => navigate(`/tierlists/${tl.id}`)}>
+              <div
+                className={styles.cardPreview}
+                onClick={() => navigate(`/tierlists/${tl.id}`)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    navigate(`/tierlists/${tl.id}`);
+                  }
+                }}
+                aria-label={`Abrir tier list ${tl.title}`}
+              >
                 {tl.categories
                   .filter((cat) => cat.name !== '__pool__')
                   .slice(0, 5)
@@ -232,8 +244,14 @@ export default function TierLists() {
                   ))}
               </div>
               <div className={styles.cardFooter}>
-                <span className={styles.cardTitle} onClick={() => navigate(`/tierlists/${tl.id}`)}>{tl.title}</span>
-                <button className={styles.deleteButton} onClick={() => deleteModal.open(tl.id)} title="Deletar">🗑</button>
+                <button
+                  type="button"
+                  className={styles.cardTitle}
+                  onClick={() => navigate(`/tierlists/${tl.id}`)}
+                >
+                  {tl.title}
+                </button>
+                <button type="button" className={styles.deleteButton} onClick={() => deleteModal.open(tl.id)} title="Deletar">🗑</button>
               </div>
             </div>
           ))}

@@ -13,9 +13,9 @@ export default function Header() {
 
   return (
     <header className={styles.header}>
-      <span className={styles.logo} onClick={() => navigate('/')}>
+      <button type="button" className={styles.logo} onClick={() => navigate('/')}>
         GameLog
-      </span>
+      </button>
       <nav className={styles.nav}>
         <Button variant="ghost" onClick={() => navigate('/library')}>
           Biblioteca

@@ -307,6 +307,7 @@ def reorder_items(
 
     return {"ok": True}
 
+
 class ReorderCategoriesRequest(BaseModel):
     category_ids: list[str]
 

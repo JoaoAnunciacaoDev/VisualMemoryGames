@@ -1,8 +1,7 @@
 import uuid
-from sqlalchemy import Boolean, Column, Enum, Float, String, Text, Date, ForeignKey
+from sqlalchemy import Boolean, Column, Float, String, Text, Date, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
-from app.enums.game_stores import Store
 
 
 class UserGame(Base):
@@ -19,7 +18,7 @@ class UserGame(Base):
     acquired_at = Column(Date, nullable=True)
     platinum_at = Column(Date, nullable=True)
     hours_played = Column(Float, nullable=True)
-    store = Column(Enum(Store), nullable=True)
+    store = Column(String, nullable=True)
     custom_cover_url = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
     favorite = Column(Boolean, default=False)

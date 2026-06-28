@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
@@ -38,16 +38,16 @@ export default function TierLists() {
 
   const deleteModal = useConfirmAction<string>();
 
-  const loadSources = async (uid: string) => {
+  const loadSources = useCallback(async (uid: string) => {
     const [listsRes, libraryRes] = await Promise.all([
       api.get(`/lists/user/${uid}`),
       api.get(`/user-games/user/${uid}`),
     ]);
     setCustomLists(listsRes.data);
     setLibraryGames(libraryRes.data);
-  };
+  }, []);
 
-  const loadTierLists = async (uid: string) => {
+  const loadTierLists = useCallback(async (uid: string) => {
     try {
       const [tierlistsRes] = await Promise.all([
         api.get(`/tierlists/user/${uid}`),
@@ -57,11 +57,12 @@ export default function TierLists() {
     } catch {
       showToast('Erro ao carregar tier lists.', 'error');
     }
-  };
+  }, [loadSources, showToast]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (userId) loadTierLists(userId);
-  }, [userId]);
+  }, [userId, loadTierLists]);
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;

@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import api from '@/services/api';
@@ -46,7 +46,7 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
-  const loadLists = async () => {
+  const loadLists = useCallback(async () => {
     try {
       const response = await api.get(`/lists/user/${userId}`);
       const priority: Record<string, number> = {
@@ -64,11 +64,12 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
     } catch {
       showToast('Erro ao carregar listas.', 'error');
     }
-  };
+  }, [showToast, userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (userId) loadLists();
-  }, [userId]);
+  }, [userId, loadLists]);
 
   const handleCreateList = async () => {
     if (!newListName.trim()) return;

@@ -45,10 +45,11 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
           genres: [],
         });
         gameId = response.data.id;
-      } catch (err: any) {
-        if (err.response?.status !== 400) throw err;
-        const allGames = await api.get('/games/');
-        const existing = allGames.data.find((g: any) => g.external_id === game.external_id);
+      } catch (error: unknown) {
+        const err = error as { response?: { status?: number } };
+        if (err.response?.status !== 400) throw error;
+        const allGames = await api.get<Array<{ id: string; external_id: number }>>('/games/');
+        const existing = allGames.data.find((g) => g.external_id === game.external_id);
         if (!existing) throw err;
         gameId = existing.id;
       }

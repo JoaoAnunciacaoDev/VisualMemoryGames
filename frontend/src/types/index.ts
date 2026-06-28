@@ -49,10 +49,29 @@ export interface CustomList {
   games: { id: string; title: string; cover_url: string | null }[];
 }
 
+export interface TierItem {
+  id: string;
+  game_id: string;
+  order_index: number;
+  game?: {
+    id: string;
+    title: string;
+    cover_url: string | null;
+    custom_cover_url?: string | null;
+  };
+}
+
+export interface TierCategory {
+  id: string;
+  name: string;
+  color: string;
+  items: TierItem[];
+}
+
 export interface TierListSummary {
   id: string;
   title: string;
-  categories: { id: string; name: string; color: string; items: any[] }[];
+  categories: TierCategory[];
 }
 
 export interface GameInList {

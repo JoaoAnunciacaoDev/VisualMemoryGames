@@ -72,7 +72,7 @@ O projeto utiliza:
 Clone o repositório:
 
 ```bash
-git clone <URL_DO_REPOSITORIO>
+git clone [(https://github.com/JoaoAnunciacaoDev/GameLog)](https://github.com/JoaoAnunciacaoDev/GameLog.git)
 cd GameLog
 ```
 

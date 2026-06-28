@@ -55,6 +55,7 @@ export default function Library() {
   const removeConfirm = useConfirmAction<number>();
 
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
+  const [groupByStatus, setGroupByStatus] = useState(true);
 
   const toggleStatusCollapse = (status: string) => {
     setCollapsedStatuses((prev) => {
@@ -206,6 +207,15 @@ export default function Library() {
                   step={0.1}
                 />
               </div>
+
+              <Button
+                variant={groupByStatus ? 'primary' : 'ghost'}
+                onClick={() => setGroupByStatus((prev) => !prev)}
+                className={styles.groupToggle}
+              >
+                Agrupar por Status
+              </Button>
+
             </div>
 
           {filtered.length === 0 ? (
@@ -214,7 +224,8 @@ export default function Library() {
                 ? 'Sua biblioteca está vazia. Vá na aba "Pesquisar / Adicionar" para buscar jogos!'
                 : 'Nenhum jogo encontrado com os filtros aplicados.'}
             </div>
-          ) : (
+          ) : groupByStatus ? (
+            // Visualização agrupada
             (() => {
               const STATUS_ORDER = ['Jogando', 'Zerado', 'Platinado', 'Em Espera', 'Abandonado', 'Quero Jogar'];
               const grouped = groupBy(filtered, 'status');
@@ -253,6 +264,22 @@ export default function Library() {
                 </div>
               );
             })()
+          ) : (
+            // Visualização em grid única
+            <div className={styles.grid}>
+              {filtered.map((game) => (
+                <LibraryCard
+                  key={game.id}
+                  title={game.title}
+                  coverUrl={getBestGameCover(game)}
+                  status={game.status}
+                  rating={game.rating}
+                  startedAt={game.started_at}
+                  finishedAt={game.finished_at}
+                  onClick={() => setSelectedLibraryGame(game)}
+                />
+              ))}
+            </div>
           )}
         </>
       )}

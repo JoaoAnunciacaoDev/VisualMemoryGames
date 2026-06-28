@@ -1,7 +1,7 @@
 import { useState } from 'react';
-
 import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { GameItem } from '@/hooks/useTierListEditor';
 
 import SortableGame from '@/components/TierListMaker/SortableGame';
@@ -18,16 +18,55 @@ interface Props {
   onRemoveGame?: (gameId: string) => void;
   selectedGameId?: string | null;
   onSelectGame?: (gameId: string | null) => void;
+  isTierDraggable?: boolean;   // <-- nova prop
 }
 
-export default function TierRow({ id, label, games, color, onLabelChange, onColorChange, onDelete, onRemoveGame, selectedGameId, onSelectGame }: Props) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+export default function TierRow({
+  id, label, games, color, onLabelChange, onColorChange, onDelete,
+  onRemoveGame, selectedGameId, onSelectGame, isTierDraggable = false,
+}: Props) {
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
   const [editingLabel, setEditingLabel] = useState(false);
 
+  // ---- useSortable apenas quando arrastável ----
+  const {
+  attributes: sortableAttributes,
+  listeners: sortableListeners,
+  setNodeRef: setSortableRef,
+  transform: sortableTransform,
+  transition: sortableTransition,
+  isDragging: isTierDragging,
+  } = useSortable({
+    id,
+    data: { type: 'tier' },
+    disabled: !isTierDraggable,
+  });
+
+  const setRefs = (node: HTMLDivElement | null) => {
+    setDroppableRef(node);
+    setSortableRef(node);
+  };
+
+  const style: React.CSSProperties = isTierDraggable
+  ? {
+      transform: CSS.Transform.toString(sortableTransform) || undefined,
+      transition: sortableTransition ?? undefined,
+      opacity: isTierDragging ? 0.5 : 1,
+    }
+  : {};
+
   return (
-    <div className={`${styles.tierRow} ${isOver ? styles.tierRowOver : ''}`}>
+    <div
+      ref={setRefs}
+      className={`${styles.tierRow} ${isOver ? styles.tierRowOver : ''} ${isTierDragging ? styles.tierRowDragging : ''}`}
+    >
       {label !== undefined && (
-        <div className={styles.tierLabelWrapper}>
+        <div
+          ref={setSortableRef}
+          className={styles.tierLabelWrapper}
+          style={style}
+          {...(isTierDraggable ? { ...sortableListeners, ...sortableAttributes } : {})}
+        >
           <div className={styles.tierControls}>
             {onColorChange && (
               <input
@@ -39,7 +78,7 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
               />
             )}
             {onDelete && (
-               <button
+              <button
                 type="button"
                 className={styles.deleteTierButton}
                 onClick={onDelete}
@@ -90,7 +129,7 @@ export default function TierRow({ id, label, games, color, onLabelChange, onColo
         </div>
       )}
 
-      <div ref={setNodeRef} className={styles.tierContent}>
+      <div className={styles.tierContent}>
         <SortableContext
           items={games.map((g) => g.id)}
           strategy={horizontalListSortingStrategy}

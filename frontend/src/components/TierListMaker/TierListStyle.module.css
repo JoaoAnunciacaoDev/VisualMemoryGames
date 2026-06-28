@@ -41,6 +41,7 @@
   gap: var(--gap-sm);
   padding: var(--gap-xs);
   min-width: 90px;
+  touch-action: none;
 }
 
 .tierLabel {
@@ -146,6 +147,7 @@
   overflow: visible;
   cursor: grab;
   flex-shrink: 0;
+  touch-action: none;
 }
 
 .dragHandle {
@@ -250,4 +252,8 @@
 
 .addTierButton:hover {
   transform: translateY(-2px);
+}
+
+.tierRowDragging {
+  touch-action: none;
 }

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
+import { arrayMove } from '@dnd-kit/sortable';
+import type { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
 
 import Button from '@/components/Shared/Button/Button';
 
@@ -11,6 +13,7 @@ import {
   type TierListEditorData,
   type TierListEditorInitialGame,
 } from '@/services/tierlistEditor';
+import api from '@/services/api';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 import TierListEditorHeader from '@/pages/TierListEditor/TierListEditorHeader';
@@ -58,7 +61,7 @@ export default function TierListEditor() {
   }, [loadEditor]);
 
   const {
-    title, setTitle, tiers, games, setGames,
+    title, setTitle, tiers, setTiers, games, setGames,
     existingGameIds, saveTitle, addTier, removeTier,
     updateTierLabel, updateTierColor, addGameToPool,
     removeGame, moveGame, reorderTier,
@@ -76,6 +79,40 @@ export default function TierListEditor() {
 
   const removeGameConfirm = useConfirmAction<string>();
   const removeTierConfirm = useConfirmAction<string>();
+
+  // --- Handlers de arrasto de tiers ---
+  const handleTierDragStart = useCallback((_event: DragStartEvent) => {
+    // Pode ser usado para feedback visual futuro
+  }, []);
+
+  const handleTierDragOver = useCallback((_event: DragOverEvent) => {
+    // A animação visual é gerida automaticamente pelo SortableContext
+  }, []);
+
+  const handleTierDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = tiers.findIndex((t) => t.id === active.id);
+    const newIndex = tiers.findIndex((t) => t.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Atualização otimista da UI
+    const reordered = arrayMove(tiers, oldIndex, newIndex);
+    setTiers(reordered);
+
+    // Persistir no backend
+    const newOrderIds = reordered.map((t) => t.id);
+    try {
+      await api.put(`/tierlists/${id}/categories/reorder`, { category_ids: newOrderIds });
+    } catch {
+      // Em caso de erro, recarrega os dados originais
+      loadEditor();
+    }
+  }, [tiers, id, loadEditor, setTiers]);
+  // Fim dos handlers de tiers
 
   const handleTitleSave = () => {
     if (title.trim()) {
@@ -136,6 +173,9 @@ export default function TierListEditor() {
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onTierDragStart={handleTierDragStart}
+        onTierDragOver={handleTierDragOver}
+        onTierDragEnd={handleTierDragEnd}
       />
 
       <TierListEditorDialogs

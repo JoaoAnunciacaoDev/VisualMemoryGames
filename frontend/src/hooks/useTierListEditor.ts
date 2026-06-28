@@ -239,6 +239,7 @@ export function useTierListEditor(
     title,
     setTitle,
     tiers,
+    setTiers,
     games,
     setGames,
     poolCategoryId,

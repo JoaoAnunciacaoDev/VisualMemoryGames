@@ -9,11 +9,25 @@
   color: var(--text);
 }
 
+/* Reduzir padding em ecrãs pequenos */
+@media (max-width: 600px) {
+  .page {
+    padding: var(--gap-md) var(--gap-md);
+  }
+}
+
 /* ===== Cabeçalho ===== */
 .heading {
   font-size: var(--font-size-xxl);
   margin-bottom: var(--gap-lg);
   color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .heading {
+    font-size: var(--font-size-xl);
+    text-align: center;
+  }
 }
 
 /* ===== Filtros e controlos ===== */
@@ -40,6 +54,23 @@
   min-width: 0;
 }
 
+/* Em ecrãs médios, 2 colunas; em pequenos, empilha tudo */
+@media (max-width: 900px) {
+  .controls {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .controls {
+    grid-template-columns: 1fr;
+  }
+  .filterPair {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 /* Selects */
 .select {
   flex: 1;
@@ -60,12 +91,21 @@
   box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
 }
 
+/* Em telemóvel, remover largura mínima fixa */
+@media (max-width: 600px) {
+  .select {
+    min-width: 0;
+  }
+}
+
 /* ===== Tabs ===== */
 .tabs {
   display: flex;
   gap: var(--gap-xs);
   margin-bottom: var(--gap-lg);
   border-bottom: 1px solid rgba(255, 234, 204, 0.15);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tab {
@@ -79,6 +119,7 @@
   margin-bottom: -1px;
   transition: color var(--transition-fast), border-color var(--transition-fast);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tab:hover {
@@ -98,6 +139,14 @@
   gap: var(--gap-lg);
 }
 
+/* Cards mais pequenos em telemóvel */
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--gap-sm);
+  }
+}
+
 /* ===== Estados vazios ===== */
 .emptyState {
   text-align: center;
@@ -115,11 +164,25 @@
   text-align: center;
 }
 
+@media (max-width: 600px) {
+  .emptyState,
+  .manualSection {
+    padding: 40px var(--gap-md);
+    font-size: var(--font-size-sm);
+  }
+}
+
 /* ===== Agrupamento por status ===== */
 .groupedContainer {
   display: flex;
   flex-direction: column;
   gap: var(--gap-xl);
+}
+
+@media (max-width: 600px) {
+  .groupedContainer {
+    gap: var(--gap-md);
+  }
 }
 
 .statusGroup {
@@ -160,4 +223,10 @@
 .groupToggle {
   justify-self: start;
   white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .groupToggle {
+    justify-self: stretch;
+  }
 }

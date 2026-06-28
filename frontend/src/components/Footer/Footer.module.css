@@ -6,15 +6,19 @@
   background-color: var(--surface);
   border-top: 1px solid var(--bg);
   color: var(--text);
+  gap: var(--gap-md);
+  flex-wrap: wrap;
 }
 
 .text {
   margin: 0;
   font-size: var(--font-size-sm);
+  text-align: center;
 }
 
 .socials {
   display: flex;
+  align-items: center;
   gap: var(--gap-md);
 }
 
@@ -25,4 +29,18 @@
 
 .link:hover {
   color: var(--text);
+}
+
+@media (max-width: 600px) {
+  .footer {
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--gap-md);
+    gap: var(--gap-sm);
+  }
+
+  .socials {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }

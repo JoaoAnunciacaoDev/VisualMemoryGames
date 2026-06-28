@@ -61,3 +61,17 @@
   from { transform: translateY(10px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+@media (max-width: 400px) {
+  .overlay {
+    padding: 8px;
+  }
+
+  .closeButton {
+    width: 28px;
+    height: 28px;
+    font-size: var(--font-size-sm);
+    top: var(--gap-sm);
+    right: var(--gap-sm);
+  }
+}

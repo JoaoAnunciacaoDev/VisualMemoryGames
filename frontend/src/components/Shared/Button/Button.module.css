@@ -65,3 +65,10 @@
 .success:hover:not(:disabled) {
   opacity: 0.85;
 }
+
+@media (max-width: 600px) {
+  .button {
+    padding: 12px 28px;
+    font-size: var(--font-size-md);
+  }
+}

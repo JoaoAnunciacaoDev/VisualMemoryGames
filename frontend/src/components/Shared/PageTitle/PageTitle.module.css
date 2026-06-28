@@ -1,6 +1,7 @@
 .title {
   color: var(--text);
   margin-bottom: var(--gap-lg);
+  word-break: break-word;
 }
 
 .h1 {
@@ -11,4 +12,13 @@
 .h2 {
   font-size: var(--font-size-xl);
   text-align: left;
+}
+
+@media (max-width: 600px) {
+  .h1 {
+    font-size: var(--font-size-xl);
+  }
+  .h2 {
+    font-size: var(--font-size-lg);
+  }
 }

@@ -1,18 +1,11 @@
 def test_create_tierlist_without_token(client):
-    response = client.post(
-        "/tierlists/",
-        json={"title": "Melhores JRPGs"}
-    )
-    
+    response = client.post("/tierlists/", json={"title": "Melhores JRPGs"})
+
     assert response.status_code == 401
 
 
 def test_create_tierlist(client, auth_headers):
-    response = client.post(
-        "/tierlists/",
-        json={"title": "Melhores JRPGs"},
-        headers=auth_headers
-    )
+    response = client.post("/tierlists/", json={"title": "Melhores JRPGs"}, headers=auth_headers)
 
     assert response.status_code == 201
     data = response.json()
@@ -27,7 +20,7 @@ def test_get_my_tierlists(auth_headers, client):
 
     me = client.get("/users/me", headers=auth_headers)
     user_id = me.json()["id"]
-    
+
     response = client.get(f"/tierlists/user/{user_id}", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
@@ -53,7 +46,9 @@ def test_update_tierlist(auth_headers, client):
     create_resp = client.post("/tierlists/", json={"title": "Titulo Antigo"}, headers=auth_headers)
     tierlist_id = create_resp.json()["id"]
 
-    update_resp = client.put(f"/tierlists/{tierlist_id}", json={"title": "Titulo Novo"}, headers=auth_headers)
+    update_resp = client.put(
+        f"/tierlists/{tierlist_id}", json={"title": "Titulo Novo"}, headers=auth_headers
+    )
     assert update_resp.status_code == 200
     assert update_resp.json()["title"] == "Titulo Novo"
 

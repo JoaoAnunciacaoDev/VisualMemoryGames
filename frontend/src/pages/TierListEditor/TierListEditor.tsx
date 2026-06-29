@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
 
 import Button from '@/components/Shared/Button/Button';
 
@@ -81,11 +81,11 @@ export default function TierListEditor() {
   const removeTierConfirm = useConfirmAction<string>();
 
   // --- Handlers de arrasto de tiers ---
-  const handleTierDragStart = useCallback((_event: DragStartEvent) => {
+  const handleTierDragStart = useCallback(() => {
     // Pode ser usado para feedback visual futuro
   }, []);
 
-  const handleTierDragOver = useCallback((_event: DragOverEvent) => {
+  const handleTierDragOver = useCallback(() => {
     // A animação visual é gerida automaticamente pelo SortableContext
   }, []);
 

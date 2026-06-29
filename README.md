@@ -194,6 +194,10 @@ npm run test
 mise run back.lint
 ```
 
+```bash
+mise run back.formatter
+```
+
 ## Frontend
 
 ```bash

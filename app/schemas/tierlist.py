@@ -1,11 +1,12 @@
 import re
-from typing import Optional, List
+from typing import List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TierItemBase(BaseModel):
     game_id: str
-    
+
     @field_validator("game_id")
     @classmethod
     def validate_game_id(cls, value):
@@ -39,7 +40,7 @@ class TierItemResponse(TierItemBase):
 class TierCategoryBase(BaseModel):
     name: str = Field(min_length=1, max_length=50)
     order_index: int = Field(ge=-1)
-    color: str = '#cccccc'
+    color: str = "#cccccc"
 
     @field_validator("name")
     @classmethod
@@ -48,11 +49,11 @@ class TierCategoryBase(BaseModel):
         if not value:
             raise ValueError("O nome da categoria não pode estar vazio")
         return value
-    
+
     @field_validator("color")
     @classmethod
     def validate_color(cls, value):
-        if not re.match(r'^#[0-9a-fA-F]{6}$', value):
+        if not re.match(r"^#[0-9a-fA-F]{6}$", value):
             raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
         return value
 
@@ -79,7 +80,7 @@ class TierCategoryUpdate(BaseModel):
     @classmethod
     def validate_color(cls, value):
         if value is not None:
-            if not re.match(r'^#[0-9a-fA-F]{6}$', value):
+            if not re.match(r"^#[0-9a-fA-F]{6}$", value):
                 raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
         return value
 
@@ -87,7 +88,7 @@ class TierCategoryUpdate(BaseModel):
 class TierCategoryResponse(TierCategoryBase):
     id: str
     tierlist_id: str
-    
+
     items: List[TierItemResponse] = []
     model_config = ConfigDict(from_attributes=True)
 
@@ -124,8 +125,6 @@ class TierListUpdate(BaseModel):
 class TierListResponse(TierListBase):
     id: str
     user_id: str
-    
-    categories: List[TierCategoryResponse] = [] 
+
+    categories: List[TierCategoryResponse] = []
     model_config = ConfigDict(from_attributes=True)
-
-

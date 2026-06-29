@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ChangeEvent, useState } from 'react';
 import api from '@/services/api';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
@@ -21,7 +21,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setCoverFile(file);
@@ -29,7 +29,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
     setCoverUrl('');
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
     setCoverUrl(e.target.value);
     setCoverFile(null);
     setCoverPreview(e.target.value || null);

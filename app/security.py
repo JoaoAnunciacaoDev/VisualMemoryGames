@@ -1,21 +1,20 @@
 import os
-import jwt
-
 from datetime import datetime, timedelta, timezone
+
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "chave_insegura_remover")
 if not SECRET_KEY:
     if os.getenv("ENVIRONMENT") == "development":
         SECRET_KEY = "dev-secret-key-for-development-only"
     else:
-        raise RuntimeError(
-            "SECRET_KEY não definida. Configure a variável de ambiente SECRET_KEY."
-        )
+        raise RuntimeError("SECRET_KEY não definida. Configure a variável de ambiente SECRET_KEY.")
 
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_DAYS = int(os.getenv("ACCESS_TOKEN_EXPIRE_DAYS", 3))

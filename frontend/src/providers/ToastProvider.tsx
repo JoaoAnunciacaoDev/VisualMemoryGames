@@ -1,14 +1,8 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { useState, useCallback, ReactNode } from 'react';
 import Toast from '@/components/Toast/Toast';
+import { ToastContext, ToastType } from '@/hooks/useToast';
 
-type ToastType = 'success' | 'error' | 'info';
 type ToastPosition = 'bottom-right' | 'top-center';
-
-interface ToastContextType {
-  showToast: (message: string, type?: ToastType) => void;
-}
-
-const ToastContext = createContext<ToastContextType>({ showToast: () => {} });
 
 export function ToastProvider({
   children,
@@ -39,5 +33,3 @@ export function ToastProvider({
     </ToastContext.Provider>
   );
 }
-
-export const useToast = () => useContext(ToastContext);

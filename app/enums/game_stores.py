@@ -1,7 +1,8 @@
 from enum import Enum
 
+
 class Store(str, Enum):
-    STEAM = "Steam"
+    STEAM = "STEAM"
     EPIC = "Epic Games"
     GOG = "GOG"
     ITCH = "Itch.io"

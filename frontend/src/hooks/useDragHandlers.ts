@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, Dispatch, SetStateAction } from 'react';
 import { DragStartEvent, DragOverEvent, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { findContainer } from '@/services/tierlist';
@@ -7,7 +7,7 @@ import { POOL_ID } from '@/hooks/useTierListEditor';
 
 interface Props {
   games: Record<string, GameItem[]>;
-  setGames: React.Dispatch<React.SetStateAction<Record<string, GameItem[]>>>;
+  setGames: Dispatch<SetStateAction<Record<string, GameItem[]>>>;
   moveGame: (gameId: string, from: string, to: string) => Promise<void>;
   reorderTier: (tierId: string, itemIds: string[]) => void;
 }

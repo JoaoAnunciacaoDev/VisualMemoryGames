@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { CSSProperties, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -18,7 +18,7 @@ interface Props {
   onRemoveGame?: (gameId: string) => void;
   selectedGameId?: string | null;
   onSelectGame?: (gameId: string | null) => void;
-  isTierDraggable?: boolean;   // <-- nova prop
+  isTierDraggable?: boolean;
 }
 
 export default function TierRow({
@@ -28,7 +28,6 @@ export default function TierRow({
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
   const [editingLabel, setEditingLabel] = useState(false);
 
-  // ---- useSortable apenas quando arrastável ----
   const {
   attributes: sortableAttributes,
   listeners: sortableListeners,
@@ -47,7 +46,7 @@ export default function TierRow({
     setSortableRef(node);
   };
 
-  const style: React.CSSProperties = isTierDraggable
+  const style: CSSProperties = isTierDraggable
   ? {
       transform: CSS.Transform.toString(sortableTransform) || undefined,
       transition: sortableTransition ?? undefined,

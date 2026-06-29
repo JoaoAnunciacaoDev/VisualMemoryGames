@@ -1,14 +1,13 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
-
-from app.models import custom_lists, user, game, user_game, tierlist  # noqa: F401
-from app.routers import auth, users, games, user_games, tierlists, custom_lists  # noqa: F811
 
 from app.limiter import limiter
-
+from app.models import custom_lists, game, tierlist, user, user_game  # noqa: F401
+from app.routers import auth, custom_lists, games, tierlists, user_games, users  # noqa: F811
 
 load_dotenv()
 

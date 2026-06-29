@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ChangeEvent, useState } from 'react';
 import api from '@/services/api';
 import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
@@ -54,7 +54,7 @@ export function useGameEditForm(game: LibraryGame) {
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setCoverFile(file);
@@ -62,7 +62,7 @@ export function useGameEditForm(game: LibraryGame) {
     updateField('custom_cover_url', '');
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateField('custom_cover_url', e.target.value);
     setCoverFile(null);
     setCoverPreview(null);

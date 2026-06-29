@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 import {
   addTierListCategoryItem,
@@ -33,25 +33,20 @@ export function useTierListEditor(
   const { showToast } = useToast();
   const onReload = options?.onReload;
 
-  const [title, setTitle] = useState('');
-  const [tiers, setTiers] = useState<Tier[]>([]);
-  const [games, setGames] = useState<Record<string, GameItem[]>>({});
-  const [poolCategoryId, setPoolCategoryId] = useState<string | null>(null);
+  const [title, setTitle] = useState(initialData?.title ?? '');
+  const [tiers, setTiers] = useState<Tier[]>(initialData?.tiers ?? []);
+  const [games, setGames] = useState<Record<string, GameItem[]>>(initialData?.games ?? {});
+  const [poolCategoryId, setPoolCategoryId] = useState<string | null>(initialData?.poolCategoryId ?? null);
 
-  useEffect(() => {
-    if (!initialData) {
-      setTitle('');
-      setTiers([]);
-      setGames({});
-      setPoolCategoryId(null);
-      return;
-    }
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
 
-    setTitle(initialData.title);
-    setTiers(initialData.tiers);
-    setGames(initialData.games);
-    setPoolCategoryId(initialData.poolCategoryId);
-  }, [initialData]);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    setTitle(initialData?.title ?? '');
+    setTiers(initialData?.tiers ?? []);
+    setGames(initialData?.games ?? {});
+    setPoolCategoryId(initialData?.poolCategoryId ?? null);
+  }
 
   const reload = useCallback(async () => {
     await onReload?.();

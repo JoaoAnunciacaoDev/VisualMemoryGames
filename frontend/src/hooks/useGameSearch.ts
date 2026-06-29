@@ -43,12 +43,13 @@ export function useGameSearch() {
           genres: game.genres,
         });
         gameId = gameResponse.data.id;
-      } catch (err: any) {
-        if (err.response?.status === 400) {
+      } catch (err) {
+        const error = err as { response?: { status: number } };
+        if (error.response?.status === 400) {
           // Já existe, procura o ID
           const gamesResponse = await api.get('/games/');
           const existing = gamesResponse.data.find(
-            (g: any) => g.external_id === game.external_id
+            (g: { external_id: number; id: string }) => g.external_id === game.external_id
           );
           if (!existing) throw err;
           gameId = existing.id;

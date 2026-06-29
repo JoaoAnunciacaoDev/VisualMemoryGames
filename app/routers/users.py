@@ -1,42 +1,38 @@
+from typing import List
+
 import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
 
+from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.security import get_current_user
-from app.database import get_db
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 def get_password_hash(password: str) -> str:
-    pwd_bytes = password.encode('utf-8')
+    pwd_bytes = password.encode("utf-8")
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed_password.decode('utf-8')
+    return hashed_password.decode("utf-8")
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(
-        (User.email == user.email) | (User.username == user.username)
-    ).first()
-    
+    existing_user = (
+        db.query(User).filter((User.email == user.email) | (User.username == user.username)).first()
+    )
+
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="E-mail ou username já cadastrado."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="E-mail ou username já cadastrado."
         )
 
     hashed_password = get_password_hash(user.password)
 
-    new_user = User(
-        username=user.username,
-        email=user.email,
-        password_hash=hashed_password
-    )
+    new_user = User(username=user.username, email=user.email, password_hash=hashed_password)
 
     db.add(new_user)
     db.commit()
@@ -50,7 +46,7 @@ def read_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     users = db.query(User).offset(skip).limit(limit).all()
     return users
@@ -63,9 +59,7 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
-    user_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
@@ -83,7 +77,7 @@ def delete_user(
 def update_me(
     user_update: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     update_data = user_update.model_dump(exclude_unset=True)
 

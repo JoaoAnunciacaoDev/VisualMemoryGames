@@ -20,11 +20,58 @@ export default function Login() {
     }
   }, [navigate]);
 
-  const parseError = (err: any): string => {
-    const detail = err.response?.data?.detail;
+  interface BackendError {
+    response?: {
+      data?: {
+        detail?: string | Array<{
+          msg: string;
+          loc?: Array<string | number>;
+          type?: string;
+        }>;
+      };
+    };
+  }
+
+  const parseError = (err: unknown): string => {
+    const error = err as BackendError;
+    const detail = error.response?.data?.detail;
+    
     if (!detail) return 'Ocorreu um erro no servidor.';
     if (typeof detail === 'string') return detail;
-    if (Array.isArray(detail)) return detail.map((d: any) => d.msg).join(', ');
+    if (Array.isArray(detail)) {
+      return detail.map((d) => {
+        const msg = d.msg;
+        const loc = d.loc || [];
+        const isPassword = loc.includes('password');
+        const isUsername = loc.includes('username');
+        const isEmail = loc.includes('email');
+
+        if (msg.includes('should have at least')) {
+          const match = msg.match(/\d+/);
+          const num = match ? match[0] : '';
+          if (isPassword) {
+            return `A senha deve ter pelo menos ${num} caracteres.`;
+          }
+          if (isUsername) {
+            return `O nome de usuário deve ter pelo menos ${num} caracteres.`;
+          }
+          return `O campo deve ter pelo menos ${num} caracteres.`;
+        }
+        
+        if (msg.includes('value is not a valid email')) {
+          return 'E-mail inválido.';
+        }
+
+        if (msg.includes('Field required')) {
+          if (isPassword) return 'A senha é obrigatória.';
+          if (isUsername) return 'O nome de usuário é obrigatório.';
+          if (isEmail) return 'O e-mail é obrigatório.';
+          return 'Campo obrigatório.';
+        }
+
+        return msg.replace(/^Value error,\s*/i, '');
+      }).join('\n');
+    }
     return 'Ocorreu um erro no servidor.';
   };
 
@@ -37,7 +84,7 @@ export default function Login() {
       const response = await api.post('/login', params);
       setToken(response.data.access_token);
       navigate('/library');
-    } catch (err: any) {
+    } catch (err) {
       setError(parseError(err));
     }
   };
@@ -47,7 +94,7 @@ export default function Login() {
     try {
       await api.post('/users/', { username, email, password });
       showToast('Conta criada com sucesso! Faça o login agora.', 'success');
-    } catch (err: any) {
+    } catch (err) {
       setError(parseError(err));
     }
   };

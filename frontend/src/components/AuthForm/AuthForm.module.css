@@ -9,6 +9,7 @@
   text-align: center;
   margin-bottom: var(--gap-sm);
   font-size: var(--font-size-sm);
+  white-space: pre-line;
 }
 
 .toggleButton {

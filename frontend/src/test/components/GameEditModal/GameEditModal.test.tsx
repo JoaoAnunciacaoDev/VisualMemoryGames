@@ -9,7 +9,7 @@ vi.mock('@/hooks/useConfirmAction', () => ({
   useConfirmAction: () => ({ isOpen: false, open: vi.fn(), close: vi.fn() }),
 }));
 vi.mock('@/components/RatingStars/RatingStars', () => ({
-  default: ({ value }: any) => <div data-testid="rating-stars">Rating: {value}</div>,
+  default: ({ value }: { value: number | null }) => <div data-testid="rating-stars">Rating: {value}</div>,
 }));
 
 const mockGame: LibraryGame = {

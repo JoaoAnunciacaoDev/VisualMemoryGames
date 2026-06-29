@@ -1,7 +1,9 @@
 import json
-from typing import Optional
 from datetime import date
+from typing import Optional
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
 from app.enums.game_status import GameStatus
 from app.enums.game_stores import Store
 
@@ -53,7 +55,7 @@ class GameManualCreate(BaseModel):
         if not v.strip():
             raise ValueError("O título do jogo não pode estar vazio")
         return v.strip()
-    
+
     @field_validator("release_year")
     @classmethod
     def validate_release_year(cls, v):
@@ -66,15 +68,15 @@ class GameManualCreate(BaseModel):
 
 class GameResponse(GameBase):
     id: str
-    
+
     model_config = ConfigDict(from_attributes=True)
-    
-    @field_validator('platforms', 'genres', mode='before')
+
+    @field_validator("platforms", "genres", mode="before")
     @classmethod
     def parse_json_list(cls, v):
         if isinstance(v, str):
             return json.loads(v)
-        return v or []  
+        return v or []
 
 
 class UserGameBase(BaseModel):
@@ -95,21 +97,20 @@ class UserGameBase(BaseModel):
     favorite: bool = False
 
     notes: Optional[str] = None
-    
+
     @model_validator(mode="after")
     def validate_dates(self):
         if self.started_at and self.finished_at and self.started_at > self.finished_at:
             raise ValueError("A data de início não pode ser posterior à data de conclusão.")
-        
+
         if self.platinum_at and self.acquired_at and self.platinum_at < self.acquired_at:
             raise ValueError("A data de platina não pode ser anterior à data de aquisição.")
-        
+
         if self.platinum_at and self.started_at and self.platinum_at < self.started_at:
             raise ValueError("A data de platina não pode ser anterior à data de início.")
-        
+
         if self.finished_at and self.started_at and self.finished_at < self.started_at:
             raise ValueError("A data de conclusão não pode ser anterior à data de início.")
-        
 
         return self
 
@@ -151,7 +152,7 @@ class UserGameUpdate(BaseModel):
     favorite: Optional[bool] = None
 
     notes: Optional[str] = None
-    
+
     @field_validator("notes")
     @classmethod
     def validate_notes_length(cls, v):
@@ -164,7 +165,7 @@ class UserGameResponse(UserGameBase):
     id: str
     user_id: str
     game_id: str
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -197,7 +198,7 @@ class LibraryGameResponse(BaseModel):
     favorite: bool = False
 
     notes: Optional[str] = None
-    
+
     is_manual: bool = False
     platforms: list[str] = []
     genres: list[str] = []

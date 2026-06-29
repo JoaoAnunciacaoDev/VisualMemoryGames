@@ -22,7 +22,7 @@ vi.mock('@/services/api', () => ({
 }));
 
 vi.mock('@/services/media', () => ({
-  getBestGameCover: vi.fn((game: any) => game.custom_cover_url || game.cover_url || undefined),
+  getBestGameCover: vi.fn((game: { custom_cover_url?: string | null; cover_url?: string | null }) => game.custom_cover_url || game.cover_url || undefined),
 }));
 
 vi.mock('@/services/tierlistEditor', () => ({

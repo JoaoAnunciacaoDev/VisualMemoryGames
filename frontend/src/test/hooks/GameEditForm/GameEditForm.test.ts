@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import { useGameEditForm } from '@/hooks/useGameEditForm';
 import api from '@/services/api';
 import type { LibraryGame } from '@/types';
+import { ChangeEvent } from 'react';
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -90,7 +91,7 @@ describe('useGameEditForm', () => {
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleFileChange(event);
@@ -104,7 +105,7 @@ describe('useGameEditForm', () => {
     const { result } = renderHook(() => useGameEditForm(mockGame));
 
     act(() => {
-      result.current.handleUrlChange({ target: { value: 'https://new-cover.jpg' } } as React.ChangeEvent<HTMLInputElement>);
+      result.current.handleUrlChange({ target: { value: 'https://new-cover.jpg' } } as ChangeEvent<HTMLInputElement>);
     });
 
     expect(result.current.form.custom_cover_url).toBe('https://new-cover.jpg');
@@ -116,7 +117,7 @@ describe('useGameEditForm', () => {
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleFileChange(event);
@@ -133,7 +134,7 @@ describe('useGameEditForm', () => {
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleFileChange(event);
@@ -182,7 +183,7 @@ describe('useGameEditForm', () => {
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
+    } as unknown as ChangeEvent<HTMLInputElement>;
 
     act(() => {
       result.current.handleFileChange(event);

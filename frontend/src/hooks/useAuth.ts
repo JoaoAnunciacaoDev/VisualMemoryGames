@@ -6,13 +6,13 @@ import { clearToken, getToken } from '@/services/auth';
 
 export function useAuth() {
   const navigate = useNavigate();
+  const token = getToken();
+  
   const [userId, setUserId] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!token);
 
   useEffect(() => {
-    const token = getToken();
     if (!token) {
-      setLoading(false);
       navigate('/login');
       return;
     }
@@ -21,7 +21,7 @@ export function useAuth() {
       .then((res) => setUserId(res.data.id))
       .catch(() => navigate('/login'))
       .finally(() => setLoading(false));
-  }, [navigate]);
+  }, [navigate, token]);
 
   const logout = () => {
     clearToken();

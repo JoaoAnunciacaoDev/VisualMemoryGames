@@ -1,14 +1,22 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey, Table, Boolean
+
+from sqlalchemy import Boolean, Column, ForeignKey, String, Table
 from sqlalchemy.orm import relationship
+
 from app.database import Base
 
 custom_list_games = Table(
     "custom_list_games",
     Base.metadata,
-    Column("custom_list_id", String, ForeignKey("custom_lists.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "custom_list_id",
+        String,
+        ForeignKey("custom_lists.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
     Column("game_id", String, ForeignKey("games.id", ondelete="CASCADE"), primary_key=True),
 )
+
 
 class CustomList(Base):
     __tablename__ = "custom_lists"

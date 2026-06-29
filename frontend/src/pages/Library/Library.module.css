@@ -106,7 +106,10 @@
   border-bottom: 1px solid rgba(255, 234, 204, 0.15);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+
+
 
 .tab {
   padding: var(--gap-sm) var(--gap-lg);

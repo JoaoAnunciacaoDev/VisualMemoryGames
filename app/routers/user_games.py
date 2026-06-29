@@ -1,6 +1,4 @@
 import json
-import os
-import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -15,9 +13,8 @@ from app.models.user_game import UserGame
 from app.routers.custom_lists import get_or_create_favorites_list, sync_auto_list
 from app.schemas.game import LibraryGameResponse, UserGameCreate, UserGameResponse, UserGameUpdate
 from app.security import get_current_user
+from app.services.storage import save_upload_file
 
-UPLOAD_DIR = "uploads/covers"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
@@ -194,24 +191,7 @@ async def update_custom_cover(
     if cover_file.size and cover_file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="A imagem deve ter no máximo 5 MB.")
 
-    if cover_file.filename and "." in cover_file.filename:
-        extension = cover_file.filename.rsplit(".", 1)[-1].lower()
-        if extension not in ("jpg", "jpeg", "png", "gif", "webp"):
-            extension = "jpg"
-    else:
-        content_type = cover_file.content_type or "image/jpeg"
-        extension = content_type.split("/")[-1] if "/" in content_type else "jpg"
-        if extension == "jpeg":
-            extension = "jpg"
-
-    filename = f"{uuid.uuid4()}.{extension}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    with open(file_path, "wb") as f:
-        content = await cover_file.read()
-        f.write(content)
-
-    cover_url = f"/uploads/covers/{filename}"
+    cover_url = await save_upload_file(cover_file)
 
     setattr(db_user_game, "custom_cover_url", cover_url)
     db.commit()

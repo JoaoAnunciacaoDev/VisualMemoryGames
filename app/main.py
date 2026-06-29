@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,14 +15,12 @@ load_dotenv()
 app = FastAPI(title="GameLog API")
 app.state.limiter = limiter
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

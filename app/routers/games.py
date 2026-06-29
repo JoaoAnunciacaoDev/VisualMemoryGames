@@ -1,8 +1,5 @@
 import json
-import shutil
-import uuid
 from datetime import date
-from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -14,12 +11,9 @@ from app.models.user import User
 from app.schemas.game import GameBase, GameCreate, GameResponse
 from app.security import get_current_user
 from app.services.game_provider import search_games_on_rawg
+from app.services.storage import save_upload_file
 
 router = APIRouter(prefix="/games", tags=["Games"])
-
-
-UPLOAD_DIR = Path("uploads/covers")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @router.get("/search", response_model=List[GameBase])
@@ -99,12 +93,7 @@ async def create_manual_game(
     final_cover_url = cover_url
 
     if cover_file and cover_file.filename:
-        ext = Path(cover_file.filename).suffix
-        filename = f"{uuid.uuid4()}{ext}"
-        file_path = UPLOAD_DIR / filename
-        with open(file_path, "wb") as f:
-            shutil.copyfileobj(cover_file.file, f)
-        final_cover_url = f"/uploads/covers/{filename}"
+        final_cover_url = await save_upload_file(cover_file)
 
     new_game = Game(
         external_id=None,
@@ -168,12 +157,7 @@ async def update_manual_game(
 
     final_cover_url = cover_url
     if cover_file and cover_file.filename:
-        ext = Path(cover_file.filename).suffix
-        filename = f"{uuid.uuid4()}{ext}"
-        file_path = UPLOAD_DIR / filename
-        with open(file_path, "wb") as f:
-            shutil.copyfileobj(cover_file.file, f)
-        final_cover_url = f"/uploads/covers/{filename}"
+        final_cover_url = await save_upload_file(cover_file)
 
     setattr(game, "title", title.strip())
     setattr(game, "release_year", release_year)

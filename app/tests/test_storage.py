@@ -15,9 +15,7 @@ async def test_save_upload_file_local(monkeypatch):
     file_content = b"fake local image content"
     mock_file = io.BytesIO(file_content)
     upload_file = UploadFile(
-        filename="test_image.png",
-        file=mock_file,
-        headers=Headers({"content-type": "image/png"})
+        filename="test_image.png", file=mock_file, headers=Headers({"content-type": "image/png"})
     )
 
     # Executar salvamento
@@ -58,9 +56,7 @@ async def test_save_upload_file_s3(mock_boto_client, monkeypatch):
     file_content = b"fake s3 image content"
     mock_file = io.BytesIO(file_content)
     upload_file = UploadFile(
-        filename="test_s3.jpg",
-        file=mock_file,
-        headers=Headers({"content-type": "image/jpeg"})
+        filename="test_s3.jpg", file=mock_file, headers=Headers({"content-type": "image/jpeg"})
     )
 
     url = await save_upload_file(upload_file)
@@ -74,7 +70,7 @@ async def test_save_upload_file_s3(mock_boto_client, monkeypatch):
         aws_access_key_id="fake_key",
         aws_secret_access_key="fake_secret",
         region_name="sa-east-1",
-        endpoint_url=None
+        endpoint_url=None,
     )
 
     # Verificar se o método de envio do stream foi disparado
@@ -102,9 +98,7 @@ async def test_save_upload_file_s3_custom_endpoint(mock_boto_client, monkeypatch
     file_content = b"fake r2 image content"
     mock_file = io.BytesIO(file_content)
     upload_file = UploadFile(
-        filename="test_r2.gif",
-        file=mock_file,
-        headers=Headers({"content-type": "image/gif"})
+        filename="test_r2.gif", file=mock_file, headers=Headers({"content-type": "image/gif"})
     )
 
     url = await save_upload_file(upload_file)
@@ -118,5 +112,5 @@ async def test_save_upload_file_s3_custom_endpoint(mock_boto_client, monkeypatch
         aws_access_key_id="fake_key",
         aws_secret_access_key="fake_secret",
         region_name="us-east-1",
-        endpoint_url="https://xyz.r2.cloudflarestorage.com"
+        endpoint_url="https://xyz.r2.cloudflarestorage.com",
     )

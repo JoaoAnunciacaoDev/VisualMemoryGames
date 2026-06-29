@@ -32,3 +32,14 @@ class CustomListResponse(BaseModel):
     games: List[GameInList] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CustomListUpdate(BaseModel):
+    name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("O nome da lista não pode estar vazio")
+        return v.strip()

@@ -3,28 +3,36 @@ import shutil
 import uuid
 from pathlib import Path
 
-import boto3
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
 UPLOAD_DIR = Path("uploads/covers")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 
 async def save_upload_file(upload_file: UploadFile) -> str:
     """Salva um arquivo enviado e retorna sua URL.
 
-    - Se STORAGE_PROVIDER for "s3", faz o upload para um serviço compatível
+    - Se STORAGE_PROVIDER for \"s3\", faz o upload para um serviço compatível
       com S3 (ex: Cloudflare R2, Supabase Storage, Backblaze B2) utilizando
       as chaves de acesso genéricas.
-    - Se for "local" ou não definido, salva o arquivo localmente no disco.
+    - Se for \"local\" ou não definido, salva o arquivo localmente no disco.
     """
     provider = os.getenv("STORAGE_PROVIDER", "local").lower()
 
     original_filename = upload_file.filename or "image.jpg"
-    ext = Path(original_filename).suffix or ".jpg"
+    ext = Path(original_filename).suffix.lower() or ".jpg"
+
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de arquivo não permitido. Use: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
     filename = f"{uuid.uuid4()}{ext}"
 
     if provider == "s3":
+        import boto3
 
         access_key = os.getenv("STORAGE_ACCESS_KEY")
         secret_key = os.getenv("STORAGE_SECRET_KEY")
@@ -63,6 +71,7 @@ async def save_upload_file(upload_file: UploadFile) -> str:
         return f"https://{bucket_name}.s3.{region}.amazonaws.com/covers/{filename}"
 
     else:
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         file_path = UPLOAD_DIR / filename
         await upload_file.seek(0)
         with open(file_path, "wb") as f:

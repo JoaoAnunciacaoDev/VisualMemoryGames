@@ -29,6 +29,10 @@ run = "npm run lint"
 dir = "app"
 run = "poetry run ruff check"
 
+[tasks."back.lint.fix"]
+dir = "app"
+run = "poetry run ruff check --fix"
+
 [tasks."back.formatter"]
 description = "Run Ruff formatter on the app/ directory"
 dir="app"

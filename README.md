@@ -195,6 +195,10 @@ mise run back.lint
 ```
 
 ```bash
+mise run back.lint.fix
+```
+
+```bash
 mise run back.formatter
 ```
 

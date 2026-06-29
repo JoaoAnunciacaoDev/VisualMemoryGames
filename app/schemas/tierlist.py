@@ -3,6 +3,33 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# ---------------------------------------------------------------------------
+# Funções privadas de validação reutilizadas entre classes Base e Update
+# ---------------------------------------------------------------------------
+
+
+def _validate_category_name(value: Optional[str]) -> Optional[str]:
+    if value is not None:
+        value = value.strip()
+        if not value:
+            raise ValueError("O nome da categoria não pode estar vazio")
+    return value
+
+
+def _validate_category_color(value: Optional[str]) -> Optional[str]:
+    if value is not None:
+        if not re.match(r"^#[0-9a-fA-F]{6}$", value):
+            raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
+    return value
+
+
+def _validate_tierlist_title(value: Optional[str]) -> Optional[str]:
+    if value is not None:
+        value = value.strip()
+        if not value:
+            raise ValueError("O título da Tier List não pode estar vazio")
+    return value
+
 
 class TierItemBase(BaseModel):
     game_id: str
@@ -44,18 +71,15 @@ class TierCategoryBase(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def validate_name(cls, value):
-        value = value.strip()
-        if not value:
-            raise ValueError("O nome da categoria não pode estar vazio")
-        return value
+    def validate_name(cls, value: str) -> str:
+        result = _validate_category_name(value)
+        return result if result is not None else value
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, value):
-        if not re.match(r"^#[0-9a-fA-F]{6}$", value):
-            raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
-        return value
+    def validate_color(cls, value: str) -> str:
+        result = _validate_category_color(value)
+        return result if result is not None else value
 
 
 class TierCategoryCreate(TierCategoryBase):
@@ -69,20 +93,13 @@ class TierCategoryUpdate(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def validate_name(cls, value):
-        if value is not None:
-            value = value.strip()
-            if not value:
-                raise ValueError("O nome da categoria não pode estar vazio")
-        return value
+    def validate_name(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_category_name(value)
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, value):
-        if value is not None:
-            if not re.match(r"^#[0-9a-fA-F]{6}$", value):
-                raise ValueError("A cor deve estar no formato hexadecimal (#RRGGBB)")
-        return value
+    def validate_color(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_category_color(value)
 
 
 class TierCategoryResponse(TierCategoryBase):
@@ -98,11 +115,9 @@ class TierListBase(BaseModel):
 
     @field_validator("title")
     @classmethod
-    def validate_title(cls, value):
-        value = value.strip()
-        if not value:
-            raise ValueError("O título da Tier List não pode estar vazio")
-        return value
+    def validate_title(cls, value: str) -> str:
+        result = _validate_tierlist_title(value)
+        return result if result is not None else value
 
 
 class TierListCreate(TierListBase):
@@ -114,12 +129,8 @@ class TierListUpdate(BaseModel):
 
     @field_validator("title")
     @classmethod
-    def validate_title(cls, value):
-        if value is not None:
-            value = value.strip()
-            if not value:
-                raise ValueError("O título da Tier List não pode estar vazio")
-        return value
+    def validate_title(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_tierlist_title(value)
 
 
 class TierListResponse(TierListBase):
@@ -128,3 +139,20 @@ class TierListResponse(TierListBase):
 
     categories: List[TierCategoryResponse] = []
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Schemas de request para operações de reordenação e movimentação de itens
+# ---------------------------------------------------------------------------
+
+
+class ReorderCategoriesRequest(BaseModel):
+    category_ids: list[str]
+
+
+class MoveItemRequest(BaseModel):
+    target_category_id: str
+
+
+class ReorderItemsRequest(BaseModel):
+    item_ids: list[str]

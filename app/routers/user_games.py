@@ -5,18 +5,18 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import get_owned_or_raise
 from app.enums.game_status import GameStatus
-from app.models.custom_lists import CustomList
 from app.models.game import Game
 from app.models.user import User
 from app.models.user_game import UserGame
-from app.routers.custom_lists import get_or_create_favorites_list, sync_auto_list
 from app.schemas.game import LibraryGameResponse, UserGameCreate, UserGameResponse, UserGameUpdate
 from app.security import get_current_user
+from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
+from app.services.library_service import remove_from_library
 from app.services.storage import save_upload_file
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
-
 
 router = APIRouter(prefix="/user-games", tags=["User Games"])
 
@@ -112,15 +112,7 @@ def update_user_game(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    db_user_game = db.query(UserGame).filter(UserGame.id == user_game_id).first()
-
-    if not db_user_game:
-        raise HTTPException(status_code=404, detail="Registro não encontrado na biblioteca.")
-
-    if str(db_user_game.user_id) != str(current_user.id):
-        raise HTTPException(
-            status_code=403, detail="Você não tem permissão para alterar este jogo."
-        )
+    db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
 
     update_data = game_update.model_dump(exclude_unset=True)
 
@@ -182,11 +174,7 @@ async def update_custom_cover(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    db_user_game = db.query(UserGame).filter(UserGame.id == user_game_id).first()
-    if not db_user_game:
-        raise HTTPException(status_code=404, detail="Registro não encontrado.")
-    if str(db_user_game.user_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Sem permissão.")
+    db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
 
     if cover_file.size and cover_file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="A imagem deve ter no máximo 5 MB.")
@@ -204,29 +192,6 @@ async def update_custom_cover(
 def remove_game_from_library(
     user_game_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    db_user_game = db.query(UserGame).filter(UserGame.id == user_game_id).first()
-    if not db_user_game:
-        raise HTTPException(status_code=404, detail="Registro não encontrado na biblioteca.")
-    if str(db_user_game.user_id) != str(current_user.id):
-        raise HTTPException(
-            status_code=403, detail="Você não tem permissão para remover este jogo."
-        )
-
-    game = db_user_game.game
-
-    lists = db.query(CustomList).filter(CustomList.user_id == current_user.id).all()
-    for lst in lists:
-        if game in lst.games:
-            lst.games.remove(game)
-            if bool(lst.is_system) and len(lst.games) == 0:
-                db.delete(lst)
-
-    if game.is_manual:
-        if str(game.created_by) != str(current_user.id):
-            raise HTTPException(status_code=403, detail="Você não pode remover este jogo.")
-        db.delete(game)
-    else:
-        db.delete(db_user_game)
-
-    db.commit()
+    db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
+    remove_from_library(db_user_game, current_user, db)
     return None

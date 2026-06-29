@@ -7,6 +7,30 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.enums.game_status import GameStatus
 from app.enums.game_stores import Store
 
+# ---------------------------------------------------------------------------
+# Funções privadas de validação reutilizadas entre classes Base e Update
+# ---------------------------------------------------------------------------
+
+
+def _validate_title(v: str) -> str:
+    if not v.strip():
+        raise ValueError("O título do jogo não pode estar vazio")
+    return v.strip()
+
+
+def _validate_release_year(v: Optional[int]) -> Optional[int]:
+    if v is not None:
+        current_year = date.today().year
+        if v > current_year + 2:
+            raise ValueError(f"Ano de lançamento não pode ser superior a {current_year + 2}")
+    return v
+
+
+def _validate_notes_length(v: Optional[str]) -> Optional[str]:
+    if v is not None and len(v) > 2000:
+        raise ValueError("As notas não podem exceder 2000 caracteres")
+    return v
+
 
 class GameBase(BaseModel):
     external_id: Optional[int] = None
@@ -18,19 +42,13 @@ class GameBase(BaseModel):
 
     @field_validator("title")
     @classmethod
-    def validate_title(cls, v):
-        if not v.strip():
-            raise ValueError("O título do jogo não pode estar vazio")
-        return v.strip()
+    def validate_title(cls, v: str) -> str:
+        return _validate_title(v)
 
     @field_validator("release_year")
     @classmethod
-    def validate_release_year(cls, v):
-        if v is not None:
-            current_year = date.today().year
-            if v > current_year + 2:
-                raise ValueError(f"Ano de lançamento não pode ser superior a {current_year + 2}")
-        return v
+    def validate_release_year(cls, v: Optional[int]) -> Optional[int]:
+        return _validate_release_year(v)
 
     @field_validator("platforms", "genres")
     @classmethod
@@ -51,19 +69,13 @@ class GameManualCreate(BaseModel):
 
     @field_validator("title")
     @classmethod
-    def validate_title(cls, v):
-        if not v.strip():
-            raise ValueError("O título do jogo não pode estar vazio")
-        return v.strip()
+    def validate_title(cls, v: str) -> str:
+        return _validate_title(v)
 
     @field_validator("release_year")
     @classmethod
-    def validate_release_year(cls, v):
-        if v is not None:
-            current_year = date.today().year
-            if v > current_year + 2:
-                raise ValueError(f"Ano de lançamento não pode ser superior a {current_year + 2}")
-        return v
+    def validate_release_year(cls, v: Optional[int]) -> Optional[int]:
+        return _validate_release_year(v)
 
 
 class GameResponse(GameBase):
@@ -116,10 +128,8 @@ class UserGameBase(BaseModel):
 
     @field_validator("notes")
     @classmethod
-    def validate_notes_length(cls, v):
-        if v and len(v) > 2000:
-            raise ValueError("As notas não podem exceder 2000 caracteres")
-        return v
+    def validate_notes_length(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_notes_length(v)
 
 
 class UserGameCreate(UserGameBase):
@@ -155,10 +165,8 @@ class UserGameUpdate(BaseModel):
 
     @field_validator("notes")
     @classmethod
-    def validate_notes_length(cls, v):
-        if v is not None and len(v) > 2000:
-            raise ValueError("As notas não podem exceder 2000 caracteres")
-        return v
+    def validate_notes_length(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_notes_length(v)
 
 
 class UserGameResponse(UserGameBase):

@@ -1,6 +1,5 @@
 from typing import List
 
-import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -8,15 +7,9 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, UserUpdate
 from app.security import get_current_user
+from app.services.auth_service import get_password_hash
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
-
-def get_password_hash(password: str) -> str:
-    pwd_bytes = password.encode("utf-8")
-    salt = bcrypt.gensalt()
-    hashed_password = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed_password.decode("utf-8")
 
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

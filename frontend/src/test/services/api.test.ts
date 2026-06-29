@@ -12,14 +12,13 @@ describe('api response interceptor (401)', () => {
   const originalLocation = window.location;
 
   beforeAll(() => {
-    // Redefinir window.location para permitir espionagem do redirecionamento
-    // @ts-ignore
+    // @ts-expect-error - delete window.location is not allowed by TypeScript on Location type
     delete window.location;
-    window.location = { ...originalLocation, href: '' } as any;
+    (window as unknown as Record<string, unknown>).location = { ...originalLocation, href: '' };
   });
 
   afterAll(() => {
-    window.location = originalLocation;
+    (window as unknown as Record<string, unknown>).location = originalLocation;
   });
 
   beforeEach(() => {
@@ -29,7 +28,7 @@ describe('api response interceptor (401)', () => {
 
   it('deve limpar o token e redirecionar para /login ao receber 401 de rota protegida', async () => {
     // Obter a função de rejeição diretamente do interceptor registrado no Axios
-    // @ts-ignore
+    // @ts-expect-error - handlers is an internal Axios property not typed on interceptors
     const rejectHandler = api.interceptors.response.handlers[0].rejected;
 
     if (rejectHandler) {
@@ -47,7 +46,7 @@ describe('api response interceptor (401)', () => {
   });
 
   it('nao deve redirecionar nem limpar token se o 401 for na rota de login', async () => {
-    // @ts-ignore
+    // @ts-expect-error - handlers is an internal Axios property not typed on interceptors
     const rejectHandler = api.interceptors.response.handlers[0].rejected;
 
     if (rejectHandler) {
@@ -65,7 +64,7 @@ describe('api response interceptor (401)', () => {
   });
 
   it('nao deve redirecionar se o erro nao for 401', async () => {
-    // @ts-ignore
+    // @ts-expect-error - handlers is an internal Axios property not typed on interceptors
     const rejectHandler = api.interceptors.response.handlers[0].rejected;
 
     if (rejectHandler) {

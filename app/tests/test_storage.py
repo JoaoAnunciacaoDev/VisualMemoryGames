@@ -1,22 +1,23 @@
 import io
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi import UploadFile
-from app.services.storage import save_upload_file, UPLOAD_DIR
+from starlette.datastructures import Headers
+
+from app.services.storage import UPLOAD_DIR, save_upload_file
 
 
 @pytest.mark.anyio
 async def test_save_upload_file_local(monkeypatch):
-    # Forçar o provedor a ser local
     monkeypatch.setenv("STORAGE_PROVIDER", "local")
 
-    # Criar um arquivo mockado em memória
     file_content = b"fake local image content"
     mock_file = io.BytesIO(file_content)
     upload_file = UploadFile(
         filename="test_image.png",
         file=mock_file,
-        headers={"content-type": "image/png"}
+        headers=Headers({"content-type": "image/png"})
     )
 
     # Executar salvamento
@@ -59,7 +60,7 @@ async def test_save_upload_file_s3(mock_boto_client, monkeypatch):
     upload_file = UploadFile(
         filename="test_s3.jpg",
         file=mock_file,
-        headers={"content-type": "image/jpeg"}
+        headers=Headers({"content-type": "image/jpeg"})
     )
 
     url = await save_upload_file(upload_file)
@@ -103,7 +104,7 @@ async def test_save_upload_file_s3_custom_endpoint(mock_boto_client, monkeypatch
     upload_file = UploadFile(
         filename="test_r2.gif",
         file=mock_file,
-        headers={"content-type": "image/gif"}
+        headers=Headers({"content-type": "image/gif"})
     )
 
     url = await save_upload_file(upload_file)

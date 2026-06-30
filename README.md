@@ -186,6 +186,29 @@ npm run test
 
 ---
 
+## End-to-End (E2E)
+
+```bash
+mise run e2e.test
+```
+
+Para abrir a interface gráfica (UI Mode) do Playwright:
+
+```bash
+mise run e2e.ui
+```
+
+ou diretamente:
+
+```bash
+cd frontend
+npm run test:e2e
+# ou para UI Mode:
+npm run test:e2e:ui
+```
+
+---
+
 # 🔍 Lint
 
 ## Backend
@@ -231,16 +254,19 @@ GameLog/
 │
 ├── frontend/
 │   ├── public/
-│   └── src/
-│       ├── assets/
-│       ├── components/
-│       ├── hooks/
-│       ├── pages/
-│       ├── providers/
-│       ├── services/
-│       ├── styles/
-│       ├── test/
-│       └── types/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── providers/
+│   │   ├── services/
+│   │   ├── styles/
+│   │   ├── test/
+│   │   └── types/
+│   └── tests/
+│       ├── auth.spec.ts
+│       └── library.spec.ts
 │
 ├── uploads/
 ├── .env.example

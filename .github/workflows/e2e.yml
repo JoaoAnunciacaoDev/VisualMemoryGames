@@ -1,0 +1,44 @@
+name: End-to-End Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    name: Run E2E Tests
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar Poetry
+        run: pipx install poetry
+
+      - name: Configurar Mise
+        uses: jdx/mise-action@v2
+
+      - name: Instalar dependências do Backend
+        run: poetry install
+
+      - name: Instalar dependências do Frontend
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Instalar navegadores do Playwright
+        working-directory: ./frontend
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: "0"
+        run: npx playwright install chromium --with-deps
+
+      - name: Executar testes E2E
+        run: mise run e2e.test

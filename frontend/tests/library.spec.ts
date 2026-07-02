@@ -47,6 +47,14 @@ test.describe('Library Management', () => {
     await page.fill('input[placeholder="Ex: 2024"]', '2025');
     await page.fill('input[placeholder="Ex: PC, PlayStation 5, Xbox (separados por vírgula)"]', 'PC');
     
+    // Select standard genre using autocomplete
+    await page.fill('input[placeholder="Pesquisar ou adicionar gênero..."]', 'Ação');
+    await page.click('button:has-text("Ação")');
+    
+    // Add custom genre using autocomplete
+    await page.fill('input[placeholder="Pesquisar ou adicionar gênero..."]', 'Metroidvania');
+    await page.click('button:has-text("Metroidvania")');
+
     // Submit
     await page.click('button:has-text("Adicionar à Biblioteca")');
 

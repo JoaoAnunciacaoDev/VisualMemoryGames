@@ -6,10 +6,26 @@ from typing import List
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+import json
+import bcrypt
+
 from app.database import get_db
 from app.models.email_verification import EmailVerification
 from app.models.user import User
-from app.schemas.user import UserCreate, UserRegisterInitiate, UserResponse, UserUpdate
+from app.models.user_game import UserGame
+from app.models.tierlist import TierList
+from app.models.custom_lists import CustomList
+from app.schemas.user import (
+    UserCreate,
+    UserRegisterInitiate,
+    UserResponse,
+    UserUpdate,
+    UserPasswordChange,
+    UserDeleteRequest,
+    DashboardResponse,
+    DashboardGame,
+    YearlyGames,
+)
 from app.security import get_current_user
 from app.services.auth_service import get_password_hash
 from app.services.email_service import send_verification_email
@@ -163,3 +179,102 @@ def update_me(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.put("/me/password", status_code=status.HTTP_200_OK)
+def change_password(
+    pwd_change: UserPasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Muda a senha do usuário autenticado após validar a senha atual."""
+    if not bcrypt.checkpw(pwd_change.current_password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta.")
+
+    current_user.password_hash = get_password_hash(pwd_change.new_password)
+    db.commit()
+    return {"message": "Senha alterada com sucesso."}
+
+
+@router.post("/me/deactivate", status_code=status.HTTP_200_OK)
+def deactivate_account(
+    del_req: UserDeleteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Solicita exclusão da conta (desativação temporária por 15 dias)."""
+    if not bcrypt.checkpw(del_req.password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha incorreta.")
+
+    current_user.is_deleted = True
+    current_user.deleted_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Conta desativada com sucesso. Você tem 15 dias para fazer login e reativar a conta."}
+
+
+@router.get("/me/dashboard", response_model=DashboardResponse)
+def get_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Gera dados estatísticos e histórico de jogos do usuário atual para a página de perfil."""
+    user_games = db.query(UserGame).filter(UserGame.user_id == current_user.id).all()
+    games_count = len(user_games)
+
+    lists_count = db.query(CustomList).filter(CustomList.user_id == current_user.id).count()
+    tierlists_count = db.query(TierList).filter(TierList.user_id == current_user.id).count()
+
+    status_distribution = {}
+    for ug in user_games:
+        status_distribution[ug.status] = status_distribution.get(ug.status, 0) + 1
+
+    genre_counts = {}
+    for ug in user_games:
+        if ug.game and ug.game.genres:
+            try:
+                genres_list = json.loads(ug.game.genres)
+                for g in genres_list:
+                    genre_counts[g] = genre_counts.get(g, 0) + 1
+            except Exception:
+                pass
+
+    most_played_genre = None
+    if genre_counts:
+        most_played_genre = max(genre_counts, key=genre_counts.get)
+
+    yearly_dict = {}
+    for ug in user_games:
+        if ug.finished_at:
+            year = ug.finished_at.year
+            cover = ug.custom_cover_url or (ug.game.cover_url if ug.game else None)
+            g_data = DashboardGame(
+                title=ug.game.title if ug.game else "Jogo Desconhecido",
+                cover_url=cover,
+                hours_played=ug.hours_played or 0.0,
+                rating=ug.rating,
+                finished_at=datetime.combine(ug.finished_at, datetime.min.time()) if ug.finished_at else None,
+            )
+            if year not in yearly_dict:
+                yearly_dict[year] = []
+            yearly_dict[year].append(g_data)
+
+    yearly_games_list = []
+    for year in sorted(yearly_dict.keys(), reverse=True):
+        sorted_games = sorted(
+            yearly_dict[year],
+            key=lambda x: (x.hours_played, x.rating or 0.0),
+            reverse=True,
+        )[:5]
+        yearly_games_list.append(YearlyGames(year=year, games=sorted_games))
+
+    return DashboardResponse(
+        username=current_user.username,
+        email=current_user.email,
+        created_at=current_user.created_at,
+        games_count=games_count,
+        lists_count=lists_count,
+        tierlists_count=tierlists_count,
+        status_distribution=status_distribution,
+        most_played_genre=most_played_genre,
+        yearly_games=yearly_games_list,
+    )

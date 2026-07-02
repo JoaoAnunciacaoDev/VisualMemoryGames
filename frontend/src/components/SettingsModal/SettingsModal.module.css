@@ -1,0 +1,116 @@
+.settingsContainer {
+  padding: var(--gap-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  padding-bottom: var(--gap-md);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: var(--gap-md);
+}
+
+.modalHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--gap-xs);
+  margin-bottom: var(--gap-md);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--gap-xs);
+}
+
+.tabButton {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.tabButton:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activeTab {
+  color: var(--primary);
+  font-weight: 600;
+  background: rgba(222, 29, 106, 0.08);
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.helpText {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0 0 var(--gap-xs) 0;
+  line-height: 1.5;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--error);
+  font-size: var(--font-size-sm);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: var(--gap-sm);
+  border-radius: var(--border-radius-sm);
+  margin: 0 0 var(--gap-md) 0;
+}
+
+.alertBox {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--border-radius-sm);
+  padding: var(--gap-md);
+  margin-bottom: var(--gap-xs);
+}
+
+.alertBox strong {
+  color: #f59e0b;
+  display: block;
+  font-size: var(--font-size-sm);
+  margin-bottom: 6px;
+}
+
+.alertBox p {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.dangerButton {
+  color: var(--error) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: var(--error) !important;
+}

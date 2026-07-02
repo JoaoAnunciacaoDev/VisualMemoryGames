@@ -239,3 +239,111 @@
     font-size: var(--font-size-xs);
   }
 }
+
+.genresSection {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  gap: var(--gap-xs);
+}
+
+.genresLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.genreTagsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-xs);
+  margin-top: 4px;
+}
+
+.selectedGenreTag {
+  background: var(--primary);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.removeTagBtn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1;
+}
+
+.searchWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.genreSearchInput {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.genreSearchInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(222, 29, 106, 0.2);
+}
+
+.dropdownList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownItem {
+  background: none;
+  border: none;
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  width: 100%;
+}
+
+.dropdownItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.customItem {
+  color: var(--primary);
+  font-weight: 500;
+  border-top: 1px solid var(--border);
+}
+
+.customItem:hover {
+  background: rgba(222, 29, 106, 0.08);
+}

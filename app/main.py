@@ -37,6 +37,21 @@ app.include_router(tierlists.router)
 app.include_router(custom_lists.router)
 
 
+from app.database import SessionLocal
+from app.routers.auth import cleanup_deleted_users
+
+
+@app.on_event("startup")
+def on_startup():
+    db = SessionLocal()
+    try:
+        cleanup_deleted_users(db)
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+
 @app.get("/")
 def read_root():
     return {"message": "GameLog API rodando liso, liso!"}

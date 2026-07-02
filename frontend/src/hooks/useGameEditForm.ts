@@ -31,7 +31,7 @@ export function useGameEditForm(game: LibraryGame) {
   const [editTitle, setEditTitle] = useState(game.title);
   const [editReleaseYear, setEditReleaseYear] = useState(game.release_year?.toString() ?? '');
   const [editPlatforms, setEditPlatforms] = useState(game.platforms?.join(', ') ?? '');
-  const [editGenres, setEditGenres] = useState(game.genres?.join(', ') ?? '');
+  const [editGenres, setEditGenres] = useState<string[]>(game.genres ?? []);
 
   const canReview = form.status !== 'Quero Jogar';
 
@@ -115,7 +115,7 @@ export function useGameEditForm(game: LibraryGame) {
       gameFormData.append('title', editTitle.trim());
       if (editReleaseYear) gameFormData.append('release_year', editReleaseYear);
       gameFormData.append('platforms', JSON.stringify(editPlatforms.split(',').map(p => p.trim()).filter(Boolean)));
-      gameFormData.append('genres', JSON.stringify(editGenres.split(',').map(g => g.trim()).filter(Boolean)));
+      gameFormData.append('genres', JSON.stringify(editGenres));
 
       await api.put(`/games/manual/${game.game_id}`, gameFormData, {
         headers: { 'Content-Type': 'multipart/form-data' },

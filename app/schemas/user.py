@@ -1,5 +1,6 @@
 import re
-from typing import Optional
+from datetime import datetime
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
@@ -64,3 +65,56 @@ class UserResponse(UserBase):
     id: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserPasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value):
+        if " " in value:
+            raise ValueError("A senha não pode conter espaços")
+        if not re.search(r"[A-Z]", value):
+            raise ValueError("A senha deve conter pelo menos uma letra maiúscula")
+        if not re.search(r"[a-z]", value):
+            raise ValueError("A senha deve conter pelo menos uma letra minúscula")
+        if not re.search(r"\d", value):
+            raise ValueError("A senha deve conter pelo menos um número")
+        if not re.search(r"[@$!%*?&#_\-]", value):
+            raise ValueError(
+                "A senha deve conter pelo menos um caractere especial "
+                "(@, $, !, %, *, ?, &, #, _, -)"
+            )
+        return value
+
+
+class UserDeleteRequest(BaseModel):
+    password: str
+
+
+class DashboardGame(BaseModel):
+    title: str
+    cover_url: Optional[str] = None
+    hours_played: float
+    rating: Optional[float] = None
+    finished_at: Optional[datetime] = None
+
+
+class YearlyGames(BaseModel):
+    year: int
+    games: List[DashboardGame]
+
+
+class DashboardResponse(BaseModel):
+    username: str
+    email: str
+    created_at: Optional[datetime] = None
+    games_count: int
+    lists_count: int
+    tierlists_count: int
+    status_distribution: Dict[str, int]
+    most_played_genre: Optional[str] = None
+    yearly_games: List[YearlyGames]
+

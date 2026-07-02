@@ -34,7 +34,7 @@ const baseForm = {
   setEditReleaseYear: vi.fn(),
   editPlatforms: 'Nintendo Switch',
   setEditPlatforms: vi.fn(),
-  editGenres: 'Action, Adventure',
+  editGenres: ['Action', 'Adventure'],
   setEditGenres: vi.fn(),
   canReview: true,
   updateField: vi.fn(),

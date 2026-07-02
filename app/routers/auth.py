@@ -23,6 +23,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
+def cleanup_deleted_users(db: Session):
+    """Exclui permanentemente contas marcadas como is_deleted há mais de 15 dias."""
+    limit_date = datetime.utcnow() - timedelta(days=15)
+    expired_users = db.query(User).filter(User.is_deleted == True, User.deleted_at < limit_date).all()
+    for u in expired_users:
+        db.delete(u)
+    if expired_users:
+        db.commit()
+
+
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(
@@ -31,6 +41,7 @@ def login(
     db: Session = Depends(get_db),
 ):
     """Rota para autenticar o usuário e gerar o Token JWT."""
+    cleanup_deleted_users(db)
 
     user = (
         db.query(User)
@@ -44,6 +55,13 @@ def login(
             detail="Usuário ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Trata reativação de conta dentro dos 15 dias
+    if user.is_deleted:
+        user.is_deleted = False
+        user.deleted_at = None
+        db.commit()
+        db.refresh(user)
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}

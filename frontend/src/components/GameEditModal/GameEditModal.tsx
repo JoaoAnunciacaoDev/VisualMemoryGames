@@ -11,6 +11,7 @@ import { LibraryGame } from '@/types';
 import { STORE_OPTIONS } from '@/types/enums';
 import { EditGamePayload } from '@/hooks/useGameEditForm';
 import RatingStars from '@/components/RatingStars/RatingStars';
+import { STANDARD_GENRES } from '@/utils/genres';
 
 const STATUS_OPTIONS = [
   'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
@@ -46,6 +47,27 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
     handleSave,
     displayCover,
   } = useGameEditForm(game);
+
+  const [genreSearch, setGenreSearch] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const customGenres = editGenres.filter((id) => !STANDARD_GENRES.some((g) => g.id === id));
+  const AVAILABLE_GENRES = [
+    ...STANDARD_GENRES,
+    ...customGenres.map((id) => ({ id, label: id })),
+  ];
+
+  const filteredGenres = AVAILABLE_GENRES.filter((genre) => {
+    const matchesSearch = genre.label.toLowerCase().includes(genreSearch.toLowerCase()) || 
+                          genre.id.toLowerCase().includes(genreSearch.toLowerCase());
+    const notSelected = !editGenres.includes(genre.id);
+    return matchesSearch && notSelected;
+  });
+
+  const showCustomOption = 
+    genreSearch.trim() !== '' &&
+    !editGenres.some(g => g.toLowerCase() === genreSearch.trim().toLowerCase()) &&
+    !AVAILABLE_GENRES.some(g => g.label.toLowerCase() === genreSearch.trim().toLowerCase() || g.id.toLowerCase() === genreSearch.trim().toLowerCase());
 
   const [isSaving, setIsSaving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -106,10 +128,93 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
                   Plataformas
                   <Input type="text" placeholder="PC, PlayStation 5" value={editPlatforms} onChange={(e) => setEditPlatforms(e.target.value)} disabled={isBusy} />
                 </label>
-                <label className={styles.label}>
-                  Géneros
-                  <Input type="text" placeholder="RPG, Ação" value={editGenres} onChange={(e) => setEditGenres(e.target.value)} disabled={isBusy} />
-                </label>
+              </div>
+              <div className={styles.genresSection}>
+                <span className={styles.genresLabel}>Gêneros</span>
+
+                {editGenres.length > 0 && (
+                  <div className={styles.genreTagsContainer}>
+                    {editGenres.map((genreId) => {
+                      const genreLabel = STANDARD_GENRES.find((g) => g.id === genreId)?.label ?? genreId;
+                      return (
+                        <span key={genreId} className={styles.selectedGenreTag}>
+                          {genreLabel}
+                          <button
+                            type="button"
+                            className={styles.removeTagBtn}
+                            onClick={() => {
+                              if (!isBusy) setEditGenres(editGenres.filter((id) => id !== genreId));
+                            }}
+                            disabled={isBusy}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className={styles.searchWrapper}>
+                  <input
+                    type="text"
+                    placeholder="Pesquisar ou adicionar gênero..."
+                    className={styles.genreSearchInput}
+                    value={genreSearch}
+                    onChange={(e) => setGenreSearch(e.target.value)}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    onBlur={() => {
+                      setTimeout(() => setIsDropdownOpen(false), 200);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const trimmed = genreSearch.trim();
+                        if (trimmed) {
+                          const matchedStandard = STANDARD_GENRES.find(
+                            (g) => g.label.toLowerCase() === trimmed.toLowerCase() || g.id.toLowerCase() === trimmed.toLowerCase()
+                          );
+                          const genreToAdd = matchedStandard ? matchedStandard.id : trimmed;
+                          if (!editGenres.includes(genreToAdd)) {
+                            setEditGenres([...editGenres, genreToAdd]);
+                          }
+                          setGenreSearch('');
+                        }
+                      }
+                    }}
+                    disabled={isBusy}
+                  />
+
+                  {isDropdownOpen && (filteredGenres.length > 0 || showCustomOption) && (
+                    <div className={styles.dropdownList}>
+                      {filteredGenres.map((genre) => (
+                        <button
+                          key={genre.id}
+                          type="button"
+                          className={styles.dropdownItem}
+                          onMouseDown={() => {
+                            setEditGenres([...editGenres, genre.id]);
+                            setGenreSearch('');
+                          }}
+                        >
+                          {genre.label}
+                        </button>
+                      ))}
+                      {showCustomOption && (
+                        <button
+                          type="button"
+                          className={`${styles.dropdownItem} ${styles.customItem}`}
+                          onMouseDown={() => {
+                            setEditGenres([...editGenres, genreSearch.trim()]);
+                            setGenreSearch('');
+                          }}
+                        >
+                          + Adicionar "{genreSearch.trim()}" como gênero personalizado
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

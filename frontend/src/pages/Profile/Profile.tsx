@@ -38,24 +38,22 @@ export default function Profile() {
   const { showToast } = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [collapsedYears, setCollapsedYears] = useState<Set<number>>(new Set());
+  const [selectedBoardYear, setSelectedBoardYear] = useState<number>(new Date().getFullYear());
+  const [selectedBoardMonth, setSelectedBoardMonth] = useState<string>('all');
 
-  const toggleYearCollapse = (year: number) => {
-    setCollapsedYears((prev) => {
-      const next = new Set(prev);
-      if (next.has(year)) {
-        next.delete(year);
-      } else {
-        next.add(year);
-      }
-      return next;
-    });
-  };
+  const MONTH_NAMES = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
 
   useEffect(() => {
     api.get('/users/me/dashboard')
       .then((res) => {
-        setData(res.data);
+        const d: DashboardData = res.data;
+        setData(d);
+        if (d.yearly_games && d.yearly_games.length > 0) {
+          setSelectedBoardYear(d.yearly_games[0].year);
+        }
       })
       .catch(() => {
         showToast('Erro ao carregar dados do perfil.', 'error');
@@ -65,6 +63,25 @@ export default function Profile() {
         setLoading(false);
       });
   }, [navigate, showToast]);
+
+  const getFilteredBoardGames = () => {
+    if (!data) return [];
+    const yearGroup = data.yearly_games.find((yg) => yg.year === selectedBoardYear);
+    if (!yearGroup) return [];
+
+    if (selectedBoardMonth === 'all') {
+      return yearGroup.games;
+    }
+
+    const monthInt = parseInt(selectedBoardMonth, 10);
+    return yearGroup.games.filter((game) => {
+      if (!game.finished_at) return false;
+      const date = new Date(game.finished_at);
+      return date.getMonth() === monthInt;
+    });
+  };
+
+  const boardGames = getFilteredBoardGames();
 
   if (loading) {
     return (
@@ -109,7 +126,7 @@ export default function Profile() {
           {data.username.charAt(0).toUpperCase()}
         </div>
         <div className={styles.profileInfo}>
-          <PageTitle level="h1">{data.username}</PageTitle>
+          <PageTitle level="h1" className={styles.usernameTitle}>{data.username}</PageTitle>
           <p className={styles.emailText}>{data.email}</p>
           <p className={styles.joinedText}>
             Membro desde {formatDate(data.created_at)}
@@ -189,77 +206,87 @@ export default function Profile() {
         </Card>
       </div>
 
-      {/* Jogos Mais Jogados por Ano */}
-      <section className={styles.timelineSection}>
-        <PageTitle level="h2">Histórico de Conclusões por Ano</PageTitle>
-        <p className={styles.timelineSubtitle}>
-          Seus jogos concluídos mais jogados e melhor avaliados agrupados por ano.
-        </p>
-
-        <div className={styles.timeline}>
-          {data.yearly_games.map((yearGroup) => {
-            const isCollapsed = collapsedYears.has(yearGroup.year);
-            return (
-              <div key={yearGroup.year} className={`${styles.timelineYearGroup} ${isCollapsed ? styles.collapsedYearGroup : ''}`}>
-                <button
-                  type="button"
-                  className={`${styles.timelineYearBadge} ${isCollapsed ? styles.collapsedBadge : ''}`}
-                  onClick={() => toggleYearCollapse(yearGroup.year)}
-                >
-                  <span className={styles.collapseIcon}>
-                    {isCollapsed ? '▶' : '▼'}
-                  </span>
-                  {yearGroup.year}
-                </button>
-                
-                {!isCollapsed && (
-                  <div className={styles.timelineGamesGrid}>
-                    {yearGroup.games.map((game, index) => (
-                      <Card key={index} className={styles.gameTimelineCard}>
-                        <div className={styles.gameCoverWrapper}>
-                          {game.cover_url ? (
-                            <img
-                              src={resolveImageUrl(game.cover_url)}
-                              alt={game.title}
-                              className={styles.gameCover}
-                            />
-                          ) : (
-                            <div className={styles.gameCoverPlaceholder}>
-                              <span>Sem capa</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className={styles.gameDetails}>
-                          <h4 className={styles.gameTitle} title={game.title}>
-                            {game.title}
-                          </h4>
-                          <div className={styles.gameMetrics}>
-                            <span className={styles.metric}>
-                              🕒 {game.hours_played}h
-                            </span>
-                            {game.rating !== null && (
-                              <span className={styles.metric}>
-                                ⭐ {game.rating}/10
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+      {/* Board de Conclusões Interativo */}
+      <section className={styles.boardSection}>
+        <Card className={styles.boardCard}>
+          <div className={styles.boardHeader}>
+            <h3 className={styles.boardTitle}>Painel de Conclusões</h3>
+            <div className={styles.boardFilters}>
+              <select
+                className={styles.boardSelect}
+                value={selectedBoardYear}
+                onChange={(e) => {
+                  setSelectedBoardYear(Number(e.target.value));
+                  setSelectedBoardMonth('all');
+                }}
+              >
+                {data.yearly_games.map((yg) => (
+                  <option key={yg.year} value={yg.year}>{yg.year}</option>
+                ))}
+                {data.yearly_games.length === 0 && (
+                  <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
                 )}
+              </select>
+
+              <select
+                className={styles.boardSelect}
+                value={selectedBoardMonth}
+                onChange={(e) => setSelectedBoardMonth(e.target.value)}
+              >
+                <option value="all">Todos os Meses</option>
+                {MONTH_NAMES.map((monthName, index) => (
+                  <option key={index} value={index}>{monthName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.boardContent}>
+            <div className={styles.boardCounterWrapper}>
+              <span className={styles.boardCount}>{boardGames.length}</span>
+              <span className={styles.boardCountLabel}>
+                {boardGames.length === 1 ? 'jogo concluído' : 'jogos concluídos'} em{' '}
+                {selectedBoardMonth === 'all'
+                  ? `todo o ano de ${selectedBoardYear}`
+                  : `${MONTH_NAMES[Number(selectedBoardMonth)]} de ${selectedBoardYear}`}
+              </span>
+            </div>
+
+            {boardGames.length > 0 ? (
+              <div className={styles.boardGamesGrid}>
+                {boardGames.map((game, index) => (
+                  <div key={index} className={styles.boardGameMiniCard}>
+                    {game.cover_url ? (
+                      <img
+                        src={resolveImageUrl(game.cover_url)}
+                        alt={game.title}
+                        className={styles.boardGameCover}
+                      />
+                    ) : (
+                      <div className={styles.boardGameCoverPlaceholder}>
+                        <span>Sem capa</span>
+                      </div>
+                    )}
+                    <div className={styles.boardGameDetails}>
+                      <span className={styles.boardGameTitle} title={game.title}>
+                        {game.title}
+                      </span>
+                      <span className={styles.boardGameMeta}>
+                        🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            );
-          })}
-          {data.yearly_games.length === 0 && (
-            <Card className={styles.emptyTimelineCard}>
-              <p className={styles.emptyText}>
-                Nenhum jogo marcado como "Zerado" ou "Platinado" com data de conclusão definida.
+            ) : (
+              <p className={styles.boardEmptyText}>
+                Nenhum jogo concluído neste período.
               </p>
-            </Card>
-          )}
-        </div>
+            )}
+          </div>
+        </Card>
       </section>
+
     </div>
   );
 }

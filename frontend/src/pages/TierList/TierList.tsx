@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
-import Button from '@/components/Shared/Button/Button';
+import { ConfirmModal, Button } from '@/components/Shared';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';

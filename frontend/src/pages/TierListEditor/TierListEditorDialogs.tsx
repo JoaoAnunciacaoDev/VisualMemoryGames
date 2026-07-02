@@ -1,5 +1,5 @@
-import GameSearchModal from '@/components/GameSearchModal/GameSearchModal';
-import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
+import { GameSearchModal } from '@/components';
+import { ConfirmModal } from '@/components/Shared';
 
 interface Props {
   showSearchModal: boolean;

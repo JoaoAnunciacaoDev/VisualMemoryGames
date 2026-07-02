@@ -1,5 +1,4 @@
-import Button from '@/components/Shared/Button/Button';
-import Input from '@/components/Shared/Input/Input';
+import { Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 
 interface Props {

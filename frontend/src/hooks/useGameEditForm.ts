@@ -3,6 +3,7 @@ import api from '@/services/api';
 import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
 import { resolveImageUrl } from '@/services/media';
+import { isValidUrl } from '@/utils/validation';
 
 export type EditGamePayload = Partial<UpdateLibraryGame> & {
   custom_cover_file?: File | null;
@@ -25,6 +26,7 @@ export function useGameEditForm(game: LibraryGame) {
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const [editTitle, setEditTitle] = useState(game.title);
   const [editReleaseYear, setEditReleaseYear] = useState(game.release_year?.toString() ?? '');
@@ -57,18 +59,57 @@ export function useGameEditForm(game: LibraryGame) {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setFileError(null);
+
+    // Validação de limite de 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError('O arquivo de imagem deve ter no máximo 5MB.');
+      setCoverFile(null);
+      setCoverPreview(null);
+      return;
+    }
+
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
     updateField('custom_cover_url', '');
   };
 
   const handleUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
     updateField('custom_cover_url', e.target.value);
     setCoverFile(null);
     setCoverPreview(null);
   };
 
   const handleSave = async () => {
+    // Validações de Jogo Manual
+    if (game.is_manual) {
+      if (!editTitle.trim()) {
+        throw new Error('O nome do jogo é obrigatório.');
+      }
+      if (editReleaseYear) {
+        const yearVal = Number(editReleaseYear);
+        if (isNaN(yearVal) || !Number.isInteger(yearVal) || yearVal < 1 || yearVal > new Date().getFullYear() + 10) {
+          throw new Error('Por favor, insira um ano de lançamento válido (maior ou igual a 1).');
+        }
+      }
+    }
+
+    // Validação da URL da Capa Customizada
+    if (form.custom_cover_url && !isValidUrl(form.custom_cover_url)) {
+      throw new Error('A URL da capa deve ser um link HTTP ou HTTPS válido.');
+    }
+
+    // Validação de Horas Jogadas
+    if (form.hours_played !== null && (isNaN(form.hours_played) || form.hours_played < 0)) {
+      throw new Error('As horas jogadas não podem ser negativas.');
+    }
+
+    // Validação de Nota
+    if (canReview && form.rating !== null && (isNaN(form.rating) || form.rating < 0 || form.rating > 10)) {
+      throw new Error('A nota deve ser entre 0 e 10.');
+    }
+
     if (game.is_manual) {
       const gameFormData = new FormData();
       gameFormData.append('title', editTitle.trim());
@@ -118,11 +159,13 @@ export function useGameEditForm(game: LibraryGame) {
   const clearCoverFile = () => {
     setCoverFile(null);
     setCoverPreview(null);
-    };
+    setFileError(null);
+  };
 
   return {
     form,
     coverFile,
+    fileError,
     editTitle,
     setEditTitle,
     editReleaseYear,

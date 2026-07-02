@@ -13,7 +13,7 @@ export function useGameSearch() {
     setIsSearching(true);
     setHasSearched(true);
     try {
-      const response = await api.get(`/games/search?q=${query}`);
+      const response = await api.get('/games/search', { params: { q: query } });
       const data = response.data.results || response.data;
       setSearchResults(Array.isArray(data) ? data : []);
     } catch {

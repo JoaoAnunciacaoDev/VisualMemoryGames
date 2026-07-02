@@ -7,8 +7,7 @@ import {
   sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
-import Button from '@/components/Shared/Button/Button';
-import Input from '@/components/Shared/Input/Input';
+import { Button, Input } from '@/components/Shared';
 import TierRow from '@/components/TierListMaker/TierRow';
 import SortableGame from '@/components/TierListMaker/SortableGame';
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';

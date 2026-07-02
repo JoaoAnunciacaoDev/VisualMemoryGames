@@ -1,0 +1,60 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 200px);
+  padding: var(--gap-md);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.glassCard {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.errorCode {
+  font-size: 6rem;
+  font-weight: 800;
+  margin: 0 0 1rem 0;
+  line-height: 1;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.message {
+  color: var(--muted);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+  margin: 0 0 1.5rem 0;
+}
+
+.countdown {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+  margin-bottom: 2rem;
+}
+
+.countdown strong {
+  color: var(--text);
+}
+
+.button {
+  width: auto;
+  min-width: 180px;
+}

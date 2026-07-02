@@ -7,12 +7,13 @@ import { useLibraryFilters } from '@/hooks/useLibraryFilters';
 import { useGameSearch } from '@/hooks/useGameSearch';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 
-import GameEditModal from '@/components/GameEditModal/GameEditModal';
-import CustomListsTab from '@/components/CustomListTab/CustomListTab';
-import GameModal from '@/components/GameModal/GameModal';
-import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
-import ManualGameModal from '@/components/ManualGameModal/ManualGameModal';
-import Button from '@/components/Shared/Button/Button';
+import {
+  GameEditModal,
+  CustomListsTab,
+  GameModal,
+  ManualGameModal
+} from '@/components';
+import { ConfirmModal, Button } from '@/components/Shared';
 
 import { LibraryGame, GameResult } from '@/types';
 

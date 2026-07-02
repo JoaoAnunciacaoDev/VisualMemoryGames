@@ -31,9 +31,9 @@ export default function LibraryCard({
   onClick,
 }: Props) {
   const year = finishedAt
-    ? new Date(finishedAt).getFullYear()
+    ? finishedAt.substring(0, 4)
     : startedAt
-    ? new Date(startedAt).getFullYear()
+    ? startedAt.substring(0, 4)
     : null;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

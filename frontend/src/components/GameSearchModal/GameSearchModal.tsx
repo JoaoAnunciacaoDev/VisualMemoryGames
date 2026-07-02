@@ -25,7 +25,7 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
     if (query.trim().length < 3) return;
     setIsSearching(true);
     try {
-      const response = await api.get(`/games/search?q=${query}`);
+      const response = await api.get('/games/search', { params: { q: query } });
       setResults(response.data);
     } catch {
       showToast('Erro ao buscar jogos.', 'error');

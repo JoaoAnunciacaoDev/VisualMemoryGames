@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import Modal from '@/components/Shared/Modal/Modal';
-import Button from '@/components/Shared/Button/Button';
-import Input from '@/components/Shared/Input/Input';
+import { Modal, Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierList/TierList.module.css';
 import type { CustomList } from '@/types';
 

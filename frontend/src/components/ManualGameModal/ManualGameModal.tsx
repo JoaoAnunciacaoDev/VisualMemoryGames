@@ -3,6 +3,7 @@ import api from '@/services/api';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
+import { isValidUrl } from '@/utils/validation';
 import styles from '@/components/ManualGameModal/ManualGameModal.module.css';
 
 interface Props {
@@ -24,6 +25,16 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError('');
+    
+    // Limite de tamanho de arquivo de 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      setError('O arquivo de capa deve ter no máximo 5MB.');
+      setCoverFile(null);
+      setCoverPreview(null);
+      return;
+    }
+
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
     setCoverUrl('');
@@ -40,6 +51,22 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
       setError('O nome do jogo é obrigatório.');
       return;
     }
+
+    // Validação do Ano de Lançamento
+    if (releaseYear) {
+      const yearVal = Number(releaseYear);
+      if (isNaN(yearVal) || !Number.isInteger(yearVal) || yearVal < 1 || yearVal > new Date().getFullYear() + 10) {
+        setError('Por favor, insira um ano de lançamento válido (maior ou igual a 1).');
+        return;
+      }
+    }
+
+    // Validação da URL da Capa
+    if (coverUrl && !isValidUrl(coverUrl)) {
+      setError('A URL da capa deve ser um link HTTP ou HTTPS válido.');
+      return;
+    }
+
     setIsSaving(true);
     setError('');
 
@@ -77,7 +104,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
   };
 
   return (
-    <Modal open onClose={onClose} maxWidth="560px" showCloseButton>
+    <Modal open onClose={() => !isSaving && onClose()} maxWidth="560px" showCloseButton={!isSaving}>
       <div className={styles.header}>
         <h3>Adicionar Jogo Manualmente</h3>
       </div>
@@ -102,23 +129,26 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
                 placeholder="https://..."
                 value={coverUrl}
                 onChange={handleUrlChange}
-                disabled={!!coverFile}
+                disabled={!!coverFile || isSaving}
               />
             </label>
             <span className={styles.orDivider}>ou</span>
-            <label className={styles.fileLabel}>
+            <label className={`${styles.fileLabel} ${isSaving ? styles.disabledLabel : ''}`}>
               {coverFile ? coverFile.name : 'Escolher arquivo'}
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
                 className={styles.fileInput}
+                disabled={isSaving}
               />
             </label>
             {coverFile && (
               <button
+                type="button"
                 className={styles.clearFile}
                 onClick={() => { setCoverFile(null); setCoverPreview(null); }}
+                disabled={isSaving}
               >
                 Remover arquivo
               </button>
@@ -133,6 +163,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
             placeholder="Nome do jogo"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            disabled={isSaving}
             autoFocus
           />
         </label>
@@ -144,8 +175,9 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
             placeholder="Ex: 2024"
             value={releaseYear}
             onChange={(e) => setReleaseYear(e.target.value)}
-            min={1970}
-            max={new Date().getFullYear() + 2}
+            disabled={isSaving}
+            min={1}
+            max={new Date().getFullYear() + 10}
           />
         </label>
 
@@ -156,6 +188,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
             placeholder="Ex: PC, PlayStation 5, Xbox (separados por vírgula)"
             value={platforms}
             onChange={(e) => setPlatforms(e.target.value)}
+            disabled={isSaving}
           />
         </label>
 
@@ -166,6 +199,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
             placeholder="Ex: RPG, Action, Indie (separados por vírgula)"
             value={genres}
             onChange={(e) => setGenres(e.target.value)}
+            disabled={isSaving}
           />
         </label>
 
@@ -173,7 +207,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
       </div>
 
       <div className={styles.footer}>
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose} disabled={isSaving}>
           Cancelar
         </Button>
         <Button

@@ -43,7 +43,7 @@ describe('useGameSearch', () => {
       await result.current.searchGames('hollow');
     });
 
-    expect(api.get).toHaveBeenCalledWith('/games/search?q=hollow');
+    expect(api.get).toHaveBeenCalledWith('/games/search', { params: { q: 'hollow' } });
     expect(result.current.searchResults).toEqual([mockGame]);
     expect(result.current.hasSearched).toBe(true);
     expect(result.current.isSearching).toBe(false);

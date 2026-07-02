@@ -3,7 +3,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent } from '@dnd-kit/core';
 
-import Button from '@/components/Shared/Button/Button';
+import { Button } from '@/components/Shared';
 
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';

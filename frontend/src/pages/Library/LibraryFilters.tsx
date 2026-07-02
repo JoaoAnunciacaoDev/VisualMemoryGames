@@ -1,5 +1,4 @@
-import Input from '@/components/Shared/Input/Input';
-import Button from '@/components/Shared/Button/Button';
+import { Input, Button } from '@/components/Shared';
 import styles from '@/pages/Library/Library.module.css';
 import type { SortBy, YearField } from '@/pages/Library/Library.types';
 

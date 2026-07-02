@@ -5,6 +5,7 @@ import Login from './pages/Login/Login';
 import Library from './pages/Library/Library';
 import TierList from './pages/TierList/TierList';
 import TierListEditor from './pages/TierListEditor/TierListEditor';
+import NotFound from './pages/NotFound/NotFound';
 import { ToastProvider } from './providers/ToastProvider';
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
               <Route path="/library" element={<Library />} />
               <Route path="/tierlists" element={<TierList />} />
               <Route path="/tierlists/:id" element={<TierListEditor />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </ToastProvider>
         </Layout>

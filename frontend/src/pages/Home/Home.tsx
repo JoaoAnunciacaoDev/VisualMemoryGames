@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import Button from '@/components/Shared/Button/Button';
-import PageTitle from '@/components/Shared/PageTitle/PageTitle';
+import { Button, PageTitle } from '@/components/Shared';
 import styles from '@/pages/Home/Home.module.css';
 
 export default function Home() {

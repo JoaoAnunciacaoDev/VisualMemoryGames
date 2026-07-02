@@ -4,9 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - '**.py'
+      - 'app/**'
+      - 'alembic/**'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - '.github/workflows/backend.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'app/**'
+      - 'alembic/**'
+      - 'pyproject.toml'
+      - 'poetry.lock'
+      - '.github/workflows/backend.yml'
 
 jobs:
   test-backend:

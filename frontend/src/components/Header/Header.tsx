@@ -18,12 +18,17 @@ export default function Header() {
         GameLog
       </button>
       <nav className={styles.nav}>
-        <Button variant="ghost" onClick={() => navigate('/library')}>
+        {token && (
+          <div>
+          <Button variant="ghost" onClick={() => navigate('/library')}>
           Biblioteca
-        </Button>
-        <Button variant="ghost" onClick={() => navigate('/tierlists')}>
-          TierLists
-        </Button>
+          </Button>
+          <Button variant="ghost" onClick={() => navigate('/tierlists')}>
+            TierLists
+          </Button>
+          </div>
+        )}
+        
         
         {token ? (
           <Button variant="ghost" onClick={handleLogout}>

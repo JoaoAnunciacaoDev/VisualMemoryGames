@@ -9,6 +9,8 @@ interface Props {
   rating: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  store?: string | null;
+  favorite?: boolean;
   onClick: () => void;
 }
 
@@ -21,6 +23,17 @@ const STATUS_CLASSES: Record<string, string> = {
   'Em Espera': styles.statusOnHold,
 };
 
+const getStoreEmoji = (storeName: string): string => {
+  const lower = storeName.toLowerCase();
+  if (lower.includes('steam')) return '🎮';
+  if (lower.includes('epic')) return '🔌';
+  if (lower.includes('gog')) return '🟣';
+  if (lower.includes('playstation') || lower.includes('ps')) return '💙';
+  if (lower.includes('xbox')) return '💚';
+  if (lower.includes('nintendo') || lower.includes('switch')) return '❤️';
+  return '🛒';
+};
+
 export default function LibraryCard({
   title,
   coverUrl,
@@ -28,6 +41,8 @@ export default function LibraryCard({
   rating,
   startedAt,
   finishedAt,
+  store,
+  favorite,
   onClick,
 }: Props) {
   const year = finishedAt
@@ -57,6 +72,16 @@ export default function LibraryCard({
           <img src={coverUrl} alt={title} className={styles.cover} />
         ) : (
           <div className={styles.coverFallback}>Sem Imagem</div>
+        )}
+        {store && (
+          <div className={styles.storeTag} title={`Adquirido na ${store}`}>
+            {getStoreEmoji(store)} {store}
+          </div>
+        )}
+        {favorite && (
+          <div className={styles.favoriteBadge} title="Jogo Favorito">
+            ⭐
+          </div>
         )}
         <span className={`${styles.statusTag} ${STATUS_CLASSES[status] ?? styles.statusWantToPlay}`}>
           {status}

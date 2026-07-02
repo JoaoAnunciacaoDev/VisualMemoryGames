@@ -21,6 +21,9 @@ class Game(Base):
     external_id: Mapped[Optional[int]] = mapped_column(
         Integer, unique=True, index=True, nullable=True
     )
+    steam_appid: Mapped[Optional[int]] = mapped_column(
+        Integer, unique=True, index=True, nullable=True
+    )
     title: Mapped[str] = mapped_column(String, nullable=False)
     cover_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

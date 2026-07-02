@@ -9,7 +9,7 @@ from alembic import context
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import Base
-from app.models import user, game, user_game, tierlist, custom_lists, email_verification, password_reset  # noqa
+from app.models import user, game, user_game, tierlist, custom_lists, email_verification, password_reset, steam_account  # noqa
 
 target_metadata = Base.metadata
 

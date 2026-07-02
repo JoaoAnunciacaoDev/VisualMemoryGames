@@ -114,3 +114,121 @@
   background: rgba(239, 68, 68, 0.08) !important;
   border-color: var(--error) !important;
 }
+
+.steamTabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.steamForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--gap-sm);
+}
+
+.inputRow > :first-child {
+  flex: 1;
+}
+
+.steamAccountsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-sm);
+  margin-top: var(--gap-sm);
+}
+
+.steamListHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--gap-xs);
+}
+
+.steamListHeader h4 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.syncAllButton {
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  height: auto !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.steamAccountCard {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md);
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+}
+
+.steamAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary);
+}
+
+.steamAvatarPlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+
+.steamAccountInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.steamAccountInfo strong {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.steamAccountInfo span {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.steamAccountInfo small {
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.disconnectButton {
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+  height: auto !important;
+  color: var(--error) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+.disconnectButton:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: var(--error) !important;
+}
+
+.noAccounts {
+  text-align: center;
+  padding: var(--gap-lg);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--border-radius-sm);
+}

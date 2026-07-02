@@ -188,10 +188,11 @@ def change_password(
 ):
     """Muda a senha do usuário autenticado após validar a senha atual."""
     if not bcrypt.checkpw(
-        pwd_change.current_password.encode("utf-8"),
-        current_user.password_hash.encode("utf-8")):
+        pwd_change.current_password.encode("utf-8"), current_user.password_hash.encode("utf-8")
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta.")
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta."
+        )
 
     current_user.password_hash = get_password_hash(pwd_change.new_password)
     db.commit()
@@ -206,7 +207,8 @@ def deactivate_account(
 ):
     """Solicita exclusão da conta (desativação temporária por 15 dias)."""
     if not bcrypt.checkpw(
-        del_req.password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
+        del_req.password.encode("utf-8"), current_user.password_hash.encode("utf-8")
+    ):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha incorreta.")
 
     current_user.is_deleted = True
@@ -258,9 +260,11 @@ def get_dashboard(
                 cover_url=cover,
                 hours_played=ug.hours_played or 0.0,
                 rating=ug.rating,
-                finished_at=(datetime.combine(
-                    ug.finished_at, datetime.min.time()
-                    ) if ug.finished_at else None),
+                finished_at=(
+                    datetime.combine(ug.finished_at, datetime.min.time())
+                    if ug.finished_at
+                    else None
+                ),
             )
             if year not in yearly_dict:
                 yearly_dict[year] = []

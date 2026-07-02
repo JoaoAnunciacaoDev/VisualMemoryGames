@@ -45,8 +45,7 @@ def test_deactivate_and_reactivate_account(client, auth_headers, db_session):
 
     # Tentar logar com a conta desativada (deve reativar automaticamente se menor de 15 dias)
     response = client.post(
-        "/login",
-        data={"username": user.username, "password": "SenhaSegura_123!"}
+        "/login", data={"username": user.username, "password": "SenhaSegura_123!"}
     )
     assert response.status_code == status.HTTP_200_OK
     assert "access_token" in response.json()
@@ -66,11 +65,7 @@ def test_dashboard_data(client, auth_headers, db_session):
     assert user is not None
 
     # Criar um jogo na biblioteca do usuário para gerar estatísticas
-    new_game = Game(
-        title="Test Genre Game",
-        genres='["Action", "RPG"]',
-        release_year=2024
-    )
+    new_game = Game(title="Test Genre Game", genres='["Action", "RPG"]', release_year=2024)
     db_session.add(new_game)
     db_session.commit()
 
@@ -80,7 +75,7 @@ def test_dashboard_data(client, auth_headers, db_session):
         status="Zerado",
         hours_played=12.5,
         rating=4.5,
-        finished_at=datetime.utcnow().date()
+        finished_at=datetime.utcnow().date(),
     )
     db_session.add(user_game)
     db_session.commit()

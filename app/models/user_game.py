@@ -1,29 +1,41 @@
-import uuid
+from __future__ import annotations
 
-from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, String, Text
-from sqlalchemy.orm import relationship
+import uuid
+from datetime import date
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import Boolean, Date, Float, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.game import Game
+    from app.models.user import User
 
 
 class UserGame(Base):
     __tablename__ = "user_games"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    game_id = Column(String, ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    game_id: Mapped[str] = mapped_column(
+        String, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
+    )
 
-    rating = Column(Float, nullable=True)
-    status = Column(String, nullable=False, default="Quero Jogar")
-    started_at = Column(Date, nullable=True)
-    finished_at = Column(Date, nullable=True)
-    acquired_at = Column(Date, nullable=True)
-    platinum_at = Column(Date, nullable=True)
-    hours_played = Column(Float, nullable=True)
-    store = Column(String, nullable=True)
-    custom_cover_url = Column(String, nullable=True)
-    notes = Column(Text, nullable=True)
-    favorite = Column(Boolean, default=False)
+    rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="Quero Jogar")
+    started_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    finished_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    acquired_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    platinum_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    hours_played: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    store: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    custom_cover_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    favorite: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    user = relationship("User", back_populates="user_games")
-    game = relationship("Game", back_populates="user_games")
+    user: Mapped["User"] = relationship("User", back_populates="user_games")
+    game: Mapped["Game"] = relationship("Game", back_populates="user_games")

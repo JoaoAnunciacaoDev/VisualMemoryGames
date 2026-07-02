@@ -1,29 +1,28 @@
+import json
 import os
 import random
 from datetime import datetime, timedelta, timezone
 from typing import List
 
+import bcrypt
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-import json
-import bcrypt
-
 from app.database import get_db
+from app.models.custom_lists import CustomList
 from app.models.email_verification import EmailVerification
+from app.models.tierlist import TierList
 from app.models.user import User
 from app.models.user_game import UserGame
-from app.models.tierlist import TierList
-from app.models.custom_lists import CustomList
 from app.schemas.user import (
+    DashboardGame,
+    DashboardResponse,
     UserCreate,
+    UserDeleteRequest,
+    UserPasswordChange,
     UserRegisterInitiate,
     UserResponse,
     UserUpdate,
-    UserPasswordChange,
-    UserDeleteRequest,
-    DashboardResponse,
-    DashboardGame,
     YearlyGames,
 )
 from app.security import get_current_user
@@ -188,8 +187,11 @@ def change_password(
     current_user: User = Depends(get_current_user),
 ):
     """Muda a senha do usuário autenticado após validar a senha atual."""
-    if not bcrypt.checkpw(pwd_change.current_password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta.")
+    if not bcrypt.checkpw(
+        pwd_change.current_password.encode("utf-8"),
+        current_user.password_hash.encode("utf-8")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta.")
 
     current_user.password_hash = get_password_hash(pwd_change.new_password)
     db.commit()
@@ -203,13 +205,17 @@ def deactivate_account(
     current_user: User = Depends(get_current_user),
 ):
     """Solicita exclusão da conta (desativação temporária por 15 dias)."""
-    if not bcrypt.checkpw(del_req.password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
+    if not bcrypt.checkpw(
+        del_req.password.encode("utf-8"), current_user.password_hash.encode("utf-8")):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha incorreta.")
 
     current_user.is_deleted = True
     current_user.deleted_at = datetime.utcnow()
     db.commit()
-    return {"message": "Conta desativada com sucesso. Você tem 15 dias para fazer login e reativar a conta."}
+    return {
+        "message": "Conta desativada com sucesso. "
+        "Você tem 15 dias para fazer login e reativar a conta."
+    }
 
 
 @router.get("/me/dashboard", response_model=DashboardResponse)
@@ -252,7 +258,9 @@ def get_dashboard(
                 cover_url=cover,
                 hours_played=ug.hours_played or 0.0,
                 rating=ug.rating,
-                finished_at=datetime.combine(ug.finished_at, datetime.min.time()) if ug.finished_at else None,
+                finished_at=(datetime.combine(
+                    ug.finished_at, datetime.min.time()
+                    ) if ug.finished_at else None),
             )
             if year not in yearly_dict:
                 yearly_dict[year] = []

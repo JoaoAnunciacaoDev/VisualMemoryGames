@@ -26,7 +26,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def cleanup_deleted_users(db: Session):
     """Exclui permanentemente contas marcadas como is_deleted há mais de 15 dias."""
     limit_date = datetime.utcnow() - timedelta(days=15)
-    expired_users = db.query(User).filter(User.is_deleted == True, User.deleted_at < limit_date).all()
+    expired_users = db.query(User).filter(User.is_deleted, User.deleted_at < limit_date).all()
     for u in expired_users:
         db.delete(u)
     if expired_users:

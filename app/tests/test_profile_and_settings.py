@@ -1,6 +1,7 @@
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
+
 from fastapi import status
+
 
 def test_change_password(client, auth_headers, db_session):
     # Alterar a senha com sucesso
@@ -57,8 +58,8 @@ def test_deactivate_and_reactivate_account(client, auth_headers, db_session):
 
 
 def test_dashboard_data(client, auth_headers, db_session):
-    from app.models.user import User
     from app.models.game import Game
+    from app.models.user import User
     from app.models.user_game import UserGame
 
     user = db_session.query(User).filter(User.username == "tester").first()

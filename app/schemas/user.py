@@ -19,7 +19,7 @@ class UserBase(BaseModel):
         return value
 
 
-class UserCreate(UserBase):
+class UserRegisterInitiate(UserBase):
     password: str = Field(min_length=8)
 
     @field_validator("password")
@@ -43,6 +43,10 @@ class UserCreate(UserBase):
             )
 
         return value
+
+
+class UserCreate(UserRegisterInitiate):
+    code: str = Field(min_length=6, max_length=6)
 
 
 class UserUpdate(BaseModel):

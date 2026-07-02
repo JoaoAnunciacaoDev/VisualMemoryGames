@@ -24,3 +24,11 @@
     margin-top: 0;
   }
 }
+
+.infoText {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--gap-md);
+  text-align: center;
+  line-height: 1.5;
+}

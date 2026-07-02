@@ -38,6 +38,9 @@ export default defineConfig({
       command: 'mise run api.dev',
       cwd: '..', // run backend from project root
       port: 8000,
+      env: {
+        ENVIRONMENT: 'testing',
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },

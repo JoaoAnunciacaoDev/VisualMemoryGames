@@ -89,13 +89,27 @@ export default function Login() {
     }
   };
 
-  const handleRegister = async (username: string, email: string, password: string) => {
+  const handleRegisterInitiate = async (username: string, email: string, password: string) => {
     setError('');
     try {
-      await api.post('/users/', { username, email, password });
+      await api.post('/users/register/initiate', { username, email, password });
+      showToast('Código de verificação enviado! Verifique seu e-mail.', 'info');
+    } catch (err) {
+      const parsed = parseError(err);
+      setError(parsed);
+      throw err;
+    }
+  };
+
+  const handleRegisterConfirm = async (username: string, email: string, password: string, code: string) => {
+    setError('');
+    try {
+      await api.post('/users/', { username, email, password, code });
       showToast('Conta criada com sucesso! Faça o login agora.', 'success');
     } catch (err) {
-      setError(parseError(err));
+      const parsed = parseError(err);
+      setError(parsed);
+      throw err;
     }
   };
 
@@ -103,8 +117,10 @@ export default function Login() {
     <>
       <AuthForm
         onLogin={handleLogin}
-        onRegister={handleRegister}
+        onRegisterInitiate={handleRegisterInitiate}
+        onRegisterConfirm={handleRegisterConfirm}
         error={error}
+        clearError={() => setError('')}
       />
     </>
   );

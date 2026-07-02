@@ -24,3 +24,31 @@
     margin-top: 0;
   }
 }
+
+.infoText {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--gap-md);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.forgotPasswordButton {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: var(--font-size-sm);
+  text-align: right;
+  align-self: flex-end;
+  cursor: pointer;
+  padding: 0;
+  margin-top: -5px;
+  margin-bottom: var(--gap-sm);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.forgotPasswordButton:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}

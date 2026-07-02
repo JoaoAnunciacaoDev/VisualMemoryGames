@@ -57,6 +57,18 @@ export default function Login() {
           }
           return `O campo deve ter pelo menos ${num} caracteres.`;
         }
+
+        if (msg.includes('should have at most')) {
+          const match = msg.match(/\d+/);
+          const num = match ? match[0] : '';
+          if (isUsername) {
+            return `O nome de usuário deve ter no máximo ${num} caracteres.`;
+          }
+          if (isPassword) {
+            return `A senha deve ter no máximo ${num} caracteres.`;
+          }
+          return `O campo deve ter no máximo ${num} caracteres.`;
+        }
         
         if (msg.includes('value is not a valid email')) {
           return 'E-mail inválido.';
@@ -89,13 +101,51 @@ export default function Login() {
     }
   };
 
-  const handleRegister = async (username: string, email: string, password: string) => {
+  const handleRegisterInitiate = async (username: string, email: string, password: string) => {
     setError('');
     try {
-      await api.post('/users/', { username, email, password });
+      await api.post('/users/register/initiate', { username, email, password });
+      showToast('Código de verificação enviado! Verifique seu e-mail.', 'info');
+    } catch (err) {
+      const parsed = parseError(err);
+      setError(parsed);
+      throw err;
+    }
+  };
+
+  const handleRegisterConfirm = async (username: string, email: string, password: string, code: string) => {
+    setError('');
+    try {
+      await api.post('/users/', { username, email, password, code });
       showToast('Conta criada com sucesso! Faça o login agora.', 'success');
     } catch (err) {
-      setError(parseError(err));
+      const parsed = parseError(err);
+      setError(parsed);
+      throw err;
+    }
+  };
+
+  const handlePasswordResetInitiate = async (email: string) => {
+    setError('');
+    try {
+      await api.post('/password-reset/initiate', { email });
+      showToast('Se o e-mail estiver cadastrado, um código foi enviado.', 'info');
+    } catch (err) {
+      const parsed = parseError(err);
+      setError(parsed);
+      throw err;
+    }
+  };
+
+  const handlePasswordResetConfirm = async (email: string, code: string, new_password: string) => {
+    setError('');
+    try {
+      await api.post('/password-reset/confirm', { email, code, new_password });
+      showToast('Senha redefinida com sucesso! Faça login com a nova senha.', 'success');
+    } catch (err) {
+      const parsed = parseError(err);
+      setError(parsed);
+      throw err;
     }
   };
 
@@ -103,8 +153,12 @@ export default function Login() {
     <>
       <AuthForm
         onLogin={handleLogin}
-        onRegister={handleRegister}
+        onRegisterInitiate={handleRegisterInitiate}
+        onRegisterConfirm={handleRegisterConfirm}
+        onPasswordResetInitiate={handlePasswordResetInitiate}
+        onPasswordResetConfirm={handlePasswordResetConfirm}
         error={error}
+        clearError={() => setError('')}
       />
     </>
   );

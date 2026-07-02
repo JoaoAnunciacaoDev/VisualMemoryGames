@@ -1,7 +1,16 @@
 def test_login_user(client):
     client.post(
-        "/users/",
+        "/users/register/initiate",
         json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+    )
+    client.post(
+        "/users/",
+        json={
+            "username": "joaogamer",
+            "email": "joao@gamelog.com",
+            "password": "SenhaSegura_123!",
+            "code": "123456",
+        },
     )
 
     response = client.post("/login", data={"username": "joaogamer", "password": "SenhaSegura_123!"})
@@ -13,8 +22,17 @@ def test_login_user(client):
 
 def test_login_wrong_password(client):
     client.post(
-        "/users/",
+        "/users/register/initiate",
         json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+    )
+    client.post(
+        "/users/",
+        json={
+            "username": "joaogamer",
+            "email": "joao@gamelog.com",
+            "password": "SenhaSegura_123!",
+            "code": "123456",
+        },
     )
 
     response = client.post(
@@ -27,18 +45,29 @@ def test_login_wrong_password(client):
 
 def test_create_user_weak_password(client):
     response = client.post(
-        "/users/", json={"username": "weak", "email": "weak@example.com", "password": "12345"}
+        "/users/register/initiate",
+        json={"username": "weak", "email": "weak@example.com", "password": "12345"},
     )
     assert response.status_code == 422
 
 
 def test_create_duplicate_user(client):
     client.post(
-        "/users/",
+        "/users/register/initiate",
         json={"username": "dup", "email": "dup@example.com", "password": "SenhaSegura_123!"},
     )
-    response = client.post(
+    client.post(
         "/users/",
+        json={
+            "username": "dup",
+            "email": "dup@example.com",
+            "password": "SenhaSegura_123!",
+            "code": "123456",
+        },
+    )
+
+    response = client.post(
+        "/users/register/initiate",
         json={"username": "dup", "email": "dup2@example.com", "password": "SenhaSegura_123!"},
     )
     assert response.status_code == 400

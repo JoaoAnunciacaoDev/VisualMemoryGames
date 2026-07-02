@@ -1,7 +1,7 @@
 import os
 
 os.environ["SECRET_KEY"] = "test-secret-key-with-exactly-32-bytes-long"
-os.environ["ENVIRONMENT"] = "development"
+os.environ["ENVIRONMENT"] = "testing"
 
 import pytest
 from fastapi.testclient import TestClient
@@ -53,8 +53,17 @@ def client(db_session):
 def auth_headers(client):
     """Cria um usuário padrão e retorna os headers com o Token JWT."""
     client.post(
-        "/users/",
+        "/users/register/initiate",
         json={"username": "tester", "email": "tester@gamelog.com", "password": "SenhaSegura_123!"},
+    )
+    client.post(
+        "/users/",
+        json={
+            "username": "tester",
+            "email": "tester@gamelog.com",
+            "password": "SenhaSegura_123!",
+            "code": "123456",
+        },
     )
 
     login = client.post("/login", data={"username": "tester", "password": "SenhaSegura_123!"})
@@ -66,11 +75,20 @@ def auth_headers(client):
 def second_user_headers(client):
     """Cria um segundo usuário para testar regras de segurança/permissão."""
     client.post(
+        "/users/register/initiate",
+        json={
+            "username": "invasor",
+            "email": "invasor@gamelog.com",
+            "password": "SenhaSegura_123!",
+        },
+    )
+    client.post(
         "/users/",
         json={
             "username": "invasor",
             "email": "invasor@gamelog.com",
             "password": "SenhaSegura_123!",
+            "code": "123456",
         },
     )
 

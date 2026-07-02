@@ -17,15 +17,20 @@ test.describe('Authentication', () => {
     await page.fill('input[placeholder="E-mail"]', testEmail);
     await page.fill('input[placeholder="Senha"]', testPassword);
 
-    // Submit registration
-    await page.click('button:has-text("Registrar")');
+    // Submit initiation
+    await page.click('button:has-text("Enviar Código")');
 
-    // Verify registration success (assuming a toast appears)
+    // Fill verification code
+    await page.fill('input[placeholder="Código de 6 dígitos"]', '123456');
+
+    // Confirm registration
+    await page.click('button:has-text("Confirmar Código")');
+
+    // Verify registration success
     const successToast = page.locator('text=Conta criada com sucesso');
     await expect(successToast).toBeVisible();
 
-    // Now attempt to login
-    await page.click('text=Já tem conta? Faça login');
+    // Now attempt to login (form auto-transitions to login state)
     await page.fill('input[placeholder="Username ou E-mail"]', testUsername);
     await page.fill('input[placeholder="Senha"]', testPassword);
     await page.click('form button:has-text("Entrar")');

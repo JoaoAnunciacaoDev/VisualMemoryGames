@@ -13,10 +13,16 @@ test.describe('Library Management', () => {
     await page.fill('input[placeholder="Username"]', testUsername);
     await page.fill('input[placeholder="E-mail"]', testEmail);
     await page.fill('input[placeholder="Senha"]', testPassword);
-    await page.click('button:has-text("Registrar")');
+    
+    // Submit initiation
+    await page.click('button:has-text("Enviar Código")');
+    // Fill verification code
+    await page.fill('input[placeholder="Código de 6 dígitos"]', '123456');
+    // Confirm registration
+    await page.click('button:has-text("Confirmar Código")');
+    
     await expect(page.getByText(/Conta criada com sucesso/i)).toBeVisible();
     
-    await page.click('text=Já tem conta? Faça login');
     await page.fill('input[placeholder="Username ou E-mail"]', testUsername);
     await page.fill('input[placeholder="Senha"]', testPassword);
     await page.click('form button:has-text("Entrar")');

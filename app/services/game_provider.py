@@ -12,12 +12,13 @@ def search_games_on_rawg(query: str) -> List[Dict]:
     """Busca jogos na API externa da RAWG pelo nome."""
 
     url = f"{BASE_URL}/games"
-    params = {"key": RAWG_API_KEY,
-              "search": query,
-              "page_size": 15,
-              "ordering": "-released",
-              "store": [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]
-              }
+    params = {
+        "key": RAWG_API_KEY,
+        "search": query,
+        "page_size": 15,
+        "ordering": "-released",
+        "store": [1, 2, 3, 4, 5, 6, 7, 8, 9, 11],
+    }
 
     try:
         with httpx.Client(timeout=10) as client:

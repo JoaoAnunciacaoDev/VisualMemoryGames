@@ -35,12 +35,9 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: 'mise run api.dev',
+      command: 'poetry run python run_e2e_server.py',
       cwd: '..', // run backend from project root
       port: 8000,
-      env: {
-        ENVIRONMENT: 'testing',
-      },
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },

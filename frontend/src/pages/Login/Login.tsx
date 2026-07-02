@@ -57,6 +57,18 @@ export default function Login() {
           }
           return `O campo deve ter pelo menos ${num} caracteres.`;
         }
+
+        if (msg.includes('should have at most')) {
+          const match = msg.match(/\d+/);
+          const num = match ? match[0] : '';
+          if (isUsername) {
+            return `O nome de usuário deve ter no máximo ${num} caracteres.`;
+          }
+          if (isPassword) {
+            return `A senha deve ter no máximo ${num} caracteres.`;
+          }
+          return `O campo deve ter no máximo ${num} caracteres.`;
+        }
         
         if (msg.includes('value is not a valid email')) {
           return 'E-mail inválido.';

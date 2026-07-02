@@ -114,6 +114,7 @@ export default function AuthForm({
               onChange={(e) => setUsername(e.target.value)}
               required
               disabled={isSubmitting}
+              maxLength={step === 'register' ? 30 : undefined}
             />
             {step === 'register' && (
               <Input

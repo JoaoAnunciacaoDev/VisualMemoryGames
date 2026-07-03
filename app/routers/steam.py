@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import List
 
 import httpx
@@ -193,16 +193,21 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
 
     async with httpx.AsyncClient() as client:
 
-        async def check_platinum(appid: int) -> tuple[int, bool]:
+        async def check_platinum(appid: int) -> tuple[int, date | None]:
             async with sem:
-                is_plat = await steam_service.is_game_platinized(
+                plat_date = await steam_service.is_game_platinized(
                     account.steam_id, appid, client=client
                 )
-                return appid, is_plat
+                return appid, plat_date
 
         tasks = [check_platinum(g["appid"]) for g in games_to_check]
         results = await asyncio.gather(*tasks)
-        platinized_appids = {appid for appid, is_plat in results if is_plat}
+        platinized_game_dates = {}
+        for appid, plat_date in results:
+            if plat_date is True:
+                platinized_game_dates[appid] = datetime.utcnow().date()
+            elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
+                platinized_game_dates[appid] = plat_date
 
     for sg in steam_games:
         appid = sg.get("appid")
@@ -227,7 +232,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             .first()
         )
 
-        is_platinized = appid in platinized_appids
+        is_platinized = appid in platinized_game_dates
         is_recent = appid in recent_appids
 
         if not user_game:
@@ -239,7 +244,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             platinum_date = None
             if is_platinized:
                 status_init = "Platinado"
-                platinum_date = datetime.utcnow().date()
+                platinum_date = platinized_game_dates[appid]
             elif is_recent:
                 status_init = "Jogando"
 
@@ -262,7 +267,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             if is_platinized and user_game.status != "Platinado":
                 user_game.status = "Platinado"
                 if not user_game.platinum_at:
-                    user_game.platinum_at = datetime.utcnow().date()
+                    user_game.platinum_at = platinized_game_dates[appid]
                 has_changes = True
 
             if user_game.hours_played is None or hours > user_game.hours_played:

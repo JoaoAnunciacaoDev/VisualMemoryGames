@@ -121,8 +121,10 @@ def test_sync_steam_games_success(
 
     mock_recent.return_value = [{"appid": 400}]
 
+    from datetime import date
+
     async def side_effect_plat(steam_id, appid, *args, **kwargs):
-        return appid == 500
+        return date(2026, 7, 2) if appid == 500 else None
 
     mock_plat.side_effect = side_effect_plat
 

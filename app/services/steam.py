@@ -1,4 +1,5 @@
 import os
+from datetime import date, datetime
 
 import httpx
 from fastapi import HTTPException
@@ -113,11 +114,13 @@ class SteamService:
 
     async def is_game_platinized(
         self, steam_id: str, appid: int, client: httpx.AsyncClient = None
-    ) -> bool:
-        """Verifica se o jogador completou 100% das conquistas do jogo (Platinou)."""
+    ) -> date | None:
+        """Verifica se o jogador completou 100% das conquistas do jogo (Platinou).
+        Retorna a data da última conquista (platina) ou None se não platinado.
+        """
         self._check_api_key()
 
-        async def fetch(c: httpx.AsyncClient) -> bool:
+        async def fetch(c: httpx.AsyncClient) -> date | None:
             response = await c.get(
                 f"{STEAM_API_URL}/ISteamUserStats/GetPlayerAchievements/v0001/",
                 params={
@@ -128,23 +131,33 @@ class SteamService:
                 timeout=3.0,
             )
             if response.status_code != 200:
-                return False
+                return None
             data = response.json().get("playerstats", {})
             if not data.get("success"):
-                return False
+                return None
             achievements = data.get("achievements", [])
             if not achievements:
-                return False
-            return all(ach.get("achieved") == 1 for ach in achievements)
+                return None
+
+            is_plat = all(ach.get("achieved") == 1 for ach in achievements)
+            if not is_plat:
+                return None
+
+            # Pega o timestamp da última conquista obtida
+            unlock_times = [ach.get("unlocktime", 0) for ach in achievements]
+            max_unlock = max(unlock_times) if unlock_times else 0
+            if max_unlock > 0:
+                return datetime.fromtimestamp(max_unlock).date()
+            return datetime.utcnow().date()
 
         if client is not None:
             try:
                 return await fetch(client)
             except Exception:
-                return False
+                return None
         else:
             async with httpx.AsyncClient() as c:
                 try:
                     return await fetch(c)
                 except Exception:
-                    return False
+                    return None

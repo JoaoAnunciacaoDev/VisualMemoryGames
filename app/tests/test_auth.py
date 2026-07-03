@@ -1,7 +1,11 @@
 def test_login_user(client):
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "joaogamer",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
     client.post(
         "/users/",
@@ -23,7 +27,11 @@ def test_login_user(client):
 def test_login_wrong_password(client):
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "joaogamer",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
     client.post(
         "/users/",

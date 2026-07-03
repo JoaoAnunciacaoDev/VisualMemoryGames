@@ -9,7 +9,16 @@ from fastapi.staticfiles import StaticFiles
 from app.database import SessionLocal
 from app.limiter import limiter
 from app.models import custom_lists, game, tierlist, user, user_game  # noqa: F401
-from app.routers import auth, custom_lists, games, steam, tierlists, user_games, users  # noqa: F811
+from app.routers import (
+    admin,
+    auth,
+    custom_lists,  # noqa: F811
+    games,
+    steam,
+    tierlists,
+    user_games,
+    users,
+)  # noqa: F811
 from app.routers.auth import cleanup_deleted_users
 
 load_dotenv()
@@ -38,6 +47,7 @@ app.include_router(user_games.router)
 app.include_router(tierlists.router)
 app.include_router(custom_lists.router)
 app.include_router(steam.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")

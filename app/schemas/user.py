@@ -63,6 +63,9 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: str
+    is_admin: bool = False
+    is_deleted: bool = False
+    created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

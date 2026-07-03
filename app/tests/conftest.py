@@ -54,7 +54,11 @@ def auth_headers(client):
     """Cria um usuário padrão e retorna os headers com o Token JWT."""
     client.post(
         "/users/register/initiate",
-        json={"username": "tester", "email": "tester@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "tester",
+            "email": "tester@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
     client.post(
         "/users/",

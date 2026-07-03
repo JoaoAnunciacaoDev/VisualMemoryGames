@@ -5,6 +5,7 @@ import SettingsModal from '@/components/SettingsModal/SettingsModal';
 import { clearToken, isAuthenticated } from '@/services/auth';
 import { useToast } from '@/hooks/useToast';
 import api from '@/services/api';
+import { User } from '@/types';
 import styles from '@/components/Header/Header.module.css';
 
 export default function Header() {
@@ -12,7 +13,7 @@ export default function Header() {
   const token = isAuthenticated();
   const { showToast } = useToast();
 
-  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -109,6 +110,11 @@ export default function Header() {
             <Button variant="ghost" onClick={() => navigate('/tierlists')}>
               TierLists
             </Button>
+            {user?.is_admin && (
+              <Button variant="ghost" onClick={() => navigate('/admin')}>
+                Admin
+              </Button>
+            )}
           </div>
         )}
 

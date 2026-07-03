@@ -88,3 +88,12 @@ export interface GameDisplay {
   platforms: string[];
   genres: string[];
 }
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  is_admin: boolean;
+  is_deleted: boolean;
+  created_at?: string;
+}

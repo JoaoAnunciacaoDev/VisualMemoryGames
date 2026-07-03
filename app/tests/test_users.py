@@ -7,7 +7,11 @@ def test_create_user(client):
     # 1. Iniciar registro
     init_resp = client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "joaogamer",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
     assert init_resp.status_code == 200
 
@@ -32,7 +36,11 @@ def test_create_user_duplicate_email(client):
     # Cadastrar primeiro usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "joaogamer",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
     client.post(
         "/users/",
@@ -47,7 +55,11 @@ def test_create_user_duplicate_email(client):
     # Tentar iniciar cadastro de segundo usuário com e-mail duplicado
     response = client.post(
         "/users/register/initiate",
-        json={"username": "maria", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "maria",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
     assert response.status_code == 400
 
@@ -101,7 +113,11 @@ def test_create_user_invalid_code(client):
     # 1. Iniciar registro
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "joaogamer",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
 
     # 2. Confirmar com código incorreto
@@ -122,7 +138,11 @@ def test_create_user_expired_code(client, db_session):
     # 1. Iniciar registro
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
+        json={
+            "username": "joaogamer",
+            "email": "joao@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
     )
 
     # Forçar expiração do código editando diretamente no banco

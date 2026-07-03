@@ -7,6 +7,7 @@ import TierList from './pages/TierList/TierList';
 import TierListEditor from './pages/TierListEditor/TierListEditor';
 import Profile from './pages/Profile/Profile';
 import NotFound from './pages/NotFound/NotFound';
+import Admin from './pages/Admin/Admin';
 import { ToastProvider } from './providers/ToastProvider';
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
               <Route path="/tierlists" element={<TierList />} />
               <Route path="/tierlists/:id" element={<TierListEditor />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

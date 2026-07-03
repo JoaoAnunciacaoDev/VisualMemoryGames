@@ -33,7 +33,10 @@ def send_verification_email(email: str, code: str):
             message["From"] = os.getenv("SMTP_FROM", smtp_user)
             message["To"] = email
 
-            text = f"Seu código de verificação para o VisualMemory é: {code}. Ele expira em 10 minutos."
+            text = (
+                f"Seu código de verificação para o VisualMemory é: {code}. "
+                "Ele expira em 10 minutos."
+            )
             html = f"""
             <html>
               <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">

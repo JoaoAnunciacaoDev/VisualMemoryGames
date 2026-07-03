@@ -7,7 +7,11 @@ def test_password_reset_success(client):
     # 1. Registrar um usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "resetuser", "email": "reset@visualmemory.com", "password": "Password123!"},
+        json={
+            "username": "resetuser",
+            "email": "reset@visualmemory.com",
+            "password": "Password123!",
+        },
     )
     client.post(
         "/users/",
@@ -70,7 +74,11 @@ def test_password_reset_incorrect_code(client):
     # 1. Registrar um usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "resetuser", "email": "reset@visualmemory.com", "password": "Password123!"},
+        json={
+            "username": "resetuser",
+            "email": "reset@visualmemory.com",
+            "password": "Password123!",
+        },
     )
     client.post(
         "/users/",
@@ -105,7 +113,11 @@ def test_password_reset_expired_code(client, db_session):
     # 1. Registrar um usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "resetuser", "email": "reset@visualmemory.com", "password": "Password123!"},
+        json={
+            "username": "resetuser",
+            "email": "reset@visualmemory.com",
+            "password": "Password123!",
+        },
     )
     client.post(
         "/users/",
@@ -125,7 +137,9 @@ def test_password_reset_expired_code(client, db_session):
 
     # Forçar a expiração do código de redefinição no banco de dados
     pwd_reset = (
-        db_session.query(PasswordReset).filter(PasswordReset.email == "reset@visualmemory.com").first()
+        db_session.query(PasswordReset)
+        .filter(PasswordReset.email == "reset@visualmemory.com")
+        .first()
     )
     assert pwd_reset is not None
     pwd_reset.expires_at = datetime.now() - timedelta(minutes=1)

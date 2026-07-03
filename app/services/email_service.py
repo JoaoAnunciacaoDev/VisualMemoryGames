@@ -1,38 +1,25 @@
 import logging
 import os
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
+import resend
 
 logger = logging.getLogger("visualmemory.email")
 
+resend.api_key = os.getenv("RESEND_API_KEY", "")
+
+RESEND_FROM = os.getenv(
+    "RESEND_FROM",
+    "VisualMemory <onboarding@resend.dev>",
+)
 
 def send_verification_email(email: str, code: str):
     """Envia um e-mail contendo o código de verificação para o usuário.
 
-    Se o SMTP não estiver configurado, apenas registra o código no console/logs.
+    Se a API do Resend não estiver configurada, apenas registra o código no console/logs.
     """
-    logger.info(f"[MOCK EMAIL] Código de verificação para {email}: {code}")
-    print("\n==================================================")
-    print(f"[MOCK EMAIL] Enviado código de verificação para {email}")
-    print(f"CÓDIGO: {code}")
-    print("==================================================\n")
 
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_port = os.getenv("SMTP_PORT")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-
-    if smtp_host and smtp_port and smtp_user and smtp_password:
+    if resend.api_key:
         try:
-            smtp_port_int = int(smtp_port)
-
-            # Criar a mensagem multipart
-            message = MIMEMultipart("alternative")
-            message["Subject"] = "Código de Verificação - VisualMemory"
-            message["From"] = os.getenv("SMTP_FROM", smtp_user)
-            message["To"] = email
-
             text = (
                 f"Seu código de verificação para o VisualMemory é: {code}. "
                 "Ele expira em 10 minutos."
@@ -54,72 +41,43 @@ def send_verification_email(email: str, code: str):
             </html>
             """
 
-            part1 = MIMEText(text, "plain", "utf-8")
-            part2 = MIMEText(html, "html", "utf-8")
-            message.attach(part1)
-            message.attach(part2)
+            params: resend.Emails.SendParams = {
+                "from": RESEND_FROM,
+                "to": [email],
+                "subject": "Código de Verificação - VisualMemory",
+                "text": text,
+                "html": html,
+            }
 
-            if smtp_port_int == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port_int) as server:
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
-            else:
-                with smtplib.SMTP(smtp_host, smtp_port_int) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
+            response = resend.Emails.send(params)
 
-            logger.info(f"E-mail de verificação real enviado com sucesso para {email}")
-            print(f"[SMTP SUCCESS] E-mail de verificação enviado para {email}")
-        except Exception as e:
-            logger.error(f"Erro ao enviar e-mail real para {email}: {e}")
-            print(f"[SMTP ERROR] Erro ao enviar e-mail real: {e}")
+            logger.info(f"E-mail de verificação real enviado com sucesso para {email}."
+                        f" ID: {response.get('id')}")
+            print(f"[RESEND SUCCESS] E-mail de verificação enviado para {email}")
+
+        except Exception:
+            logger.exception(
+                f"Erro ao enviar e-mail real para {email}"
+            )
     else:
-        missing = [
-            k
-            for k, v in {
-                "SMTP_HOST": smtp_host,
-                "SMTP_PORT": smtp_port,
-                "SMTP_USER": smtp_user,
-                "SMTP_PASSWORD": smtp_password,
-            }.items()
-            if not v
-        ]
-        print(f"[SMTP WARNING] Variáveis ausentes para verificação: {', '.join(missing)}")
-        logger.warning(
-            f"Envio de e-mail real de verificação ignorado. "
-            f"Variáveis ausentes: {', '.join(missing)}"
-        )
+        logger.info(f"[MOCK EMAIL] Código de verificação para {email}: {code}")
+        print("\n==================================================")
+        print(f"[MOCK EMAIL] Enviado código de verificação para {email}")
+        print(f"CÓDIGO: {code}")
+        print("==================================================\n")
+        print("[RESEND WARNING] Variável 'RESEND_API_KEY' ausente. Envio real ignorado.")
+        logger.warning("Envio de e-mail real de verificação ignorado. RESEND_API_KEY ausente.")
 
 
 def send_password_reset_email(email: str, code: str):
     """Envia um e-mail contendo o código de redefinição de senha para o usuário.
 
-    Se o SMTP não estiver configurado, apenas registra o código no console/logs.
+    Se a API do Resend não estiver configurada, apenas registra o código no console/logs.
     """
-    logger.info(f"[MOCK EMAIL] Código de redefinição de senha para {email}: {code}")
-    print("\n==================================================")
-    print(f"[MOCK EMAIL] Enviado código de redefinição de senha para {email}")
-    print(f"CÓDIGO: {code}")
-    print("==================================================\n")
-
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_port = os.getenv("SMTP_PORT")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-
-    if smtp_host and smtp_port and smtp_user and smtp_password:
+    if resend.api_key:
         try:
-            smtp_port_int = int(smtp_port)
-
-            # Criar a mensagem multipart
-            message = MIMEMultipart("alternative")
-            message["Subject"] = "Recuperação de Senha - VisualMemory"
-            message["From"] = os.getenv("SMTP_FROM", smtp_user)
-            message["To"] = email
-
-            text = f"Seu código de redefinição de senha para o VisualMemory é: {code}."
-            text += "Ele expira em 10 minutos."
+            text = (f"Seu código de redefinição de senha para o VisualMemory é: "
+                    f"{code}. Ele expira em 10 minutos.")
             html = f"""
             <html>
               <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
@@ -138,39 +96,30 @@ def send_password_reset_email(email: str, code: str):
             </html>
             """
 
-            part1 = MIMEText(text, "plain", "utf-8")
-            part2 = MIMEText(html, "html", "utf-8")
-            message.attach(part1)
-            message.attach(part2)
+            params: resend.Emails.SendParams = {
+                "from": RESEND_FROM,
+                "to": [email],
+                "subject": "Recuperação de Senha - VisualMemory",
+                "text": text,
+                "html": html,
+            }
 
-            if smtp_port_int == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port_int) as server:
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
-            else:
-                with smtplib.SMTP(smtp_host, smtp_port_int) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
+            response = resend.Emails.send(params)
 
-            logger.info(f"E-mail de redefinição de senha real enviado para {email}")
-            print(f"[SMTP SUCCESS] E-mail de redefinição de senha enviado para {email}")
-        except Exception as e:
-            logger.error(f"Erro ao enviar e-mail de redefinição de senha real para {email}: {e}")
-            print(f"[SMTP ERROR] Erro ao enviar e-mail de redefinição: {e}")
+            logger.info(
+                f"E-mail de redefinição de senha real enviado "
+                f"para {email}. ID: {response.get('id')}")
+            print(f"[RESEND SUCCESS] E-mail de redefinição de senha enviado para {email}")
+
+        except Exception:
+            logger.exception(
+                f"Erro ao enviar e-mail real para {email}"
+            )
     else:
-        missing = [
-            k
-            for k, v in {
-                "SMTP_HOST": smtp_host,
-                "SMTP_PORT": smtp_port,
-                "SMTP_USER": smtp_user,
-                "SMTP_PASSWORD": smtp_password,
-            }.items()
-            if not v
-        ]
-        print(f"[SMTP WARNING] Variáveis ausentes para redefinição: {', '.join(missing)}")
-        logger.warning(
-            f"Envio de e-mail real de redefinição ignorado. "
-            f"Variáveis ausentes: {', '.join(missing)}"
-        )
+        logger.info(f"[MOCK EMAIL] Código de redefinição de senha para {email}: {code}")
+        print("\n==================================================")
+        print(f"[MOCK EMAIL] Enviado código de redefinição de senha para {email}")
+        print(f"CÓDIGO: {code}")
+        print("==================================================\n")
+        print("[RESEND WARNING] Variável 'RESEND_API_KEY' ausente. Envio de redefinição ignorado.")
+        logger.warning("Envio de e-mail real de redefinição ignorado. RESEND_API_KEY ausente.")

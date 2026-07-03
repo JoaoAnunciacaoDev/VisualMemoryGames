@@ -10,14 +10,14 @@ ENV POETRY_CACHE_DIR=/tmp/poetry_cache
 
 WORKDIR /app
 
-# Instala curl e ferramentas de build caso necessário
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Instala curl, atualiza pacotes do sistema (para mitigar CVEs) e ferramentas de build
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     curl \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala o Poetry
-RUN pip install poetry
+# Atualiza o pip e instala o Poetry (para mitigar CVEs do pip)
+RUN pip install --upgrade pip && pip install poetry
 
 # Copia arquivos de dependência
 COPY pyproject.toml poetry.lock ./

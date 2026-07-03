@@ -1,4 +1,4 @@
-# 🎮 GameLog
+# 🎮 VisualMemory
 
 *Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e criação de tier lists personalizadas.*
 

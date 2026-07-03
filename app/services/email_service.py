@@ -72,6 +72,21 @@ def send_verification_email(email: str, code: str):
             logger.info(f"E-mail de verificação real enviado com sucesso para {email}")
         except Exception as e:
             logger.error(f"Erro ao enviar e-mail real para {email}: {e}")
+    else:
+        missing = [
+            k
+            for k, v in {
+                "SMTP_HOST": smtp_host,
+                "SMTP_PORT": smtp_port,
+                "SMTP_USER": smtp_user,
+                "SMTP_PASSWORD": smtp_password,
+            }.items()
+            if not v
+        ]
+        logger.warning(
+            f"Envio de e-mail real de verificação ignorado. "
+            f"Variáveis ausentes: {', '.join(missing)}"
+        )
 
 
 def send_password_reset_email(email: str, code: str):
@@ -138,3 +153,18 @@ def send_password_reset_email(email: str, code: str):
             logger.info(f"E-mail de redefinição de senha real enviado para {email}")
         except Exception as e:
             logger.error(f"Erro ao enviar e-mail de redefinição de senha real para {email}: {e}")
+    else:
+        missing = [
+            k
+            for k, v in {
+                "SMTP_HOST": smtp_host,
+                "SMTP_PORT": smtp_port,
+                "SMTP_USER": smtp_user,
+                "SMTP_PASSWORD": smtp_password,
+            }.items()
+            if not v
+        ]
+        logger.warning(
+            f"Envio de e-mail real de redefinição ignorado. "
+            f"Variáveis ausentes: {', '.join(missing)}"
+        )

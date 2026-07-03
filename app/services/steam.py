@@ -111,28 +111,40 @@ class SteamService:
             except Exception:
                 return []
 
-    async def is_game_platinized(self, steam_id: str, appid: int) -> bool:
+    async def is_game_platinized(
+        self, steam_id: str, appid: int, client: httpx.AsyncClient = None
+    ) -> bool:
         """Verifica se o jogador completou 100% das conquistas do jogo (Platinou)."""
         self._check_api_key()
-        async with httpx.AsyncClient() as client:
+
+        async def fetch(c: httpx.AsyncClient) -> bool:
+            response = await c.get(
+                f"{STEAM_API_URL}/ISteamUserStats/GetPlayerAchievements/v0001/",
+                params={
+                    "key": self.api_key,
+                    "steamid": steam_id,
+                    "appid": appid,
+                },
+                timeout=3.0,
+            )
+            if response.status_code != 200:
+                return False
+            data = response.json().get("playerstats", {})
+            if not data.get("success"):
+                return False
+            achievements = data.get("achievements", [])
+            if not achievements:
+                return False
+            return all(ach.get("achieved") == 1 for ach in achievements)
+
+        if client is not None:
             try:
-                response = await client.get(
-                    f"{STEAM_API_URL}/ISteamUserStats/GetPlayerAchievements/v0001/",
-                    params={
-                        "key": self.api_key,
-                        "steamid": steam_id,
-                        "appid": appid,
-                    },
-                    timeout=3.0,
-                )
-                if response.status_code != 200:
-                    return False
-                data = response.json().get("playerstats", {})
-                if not data.get("success"):
-                    return False
-                achievements = data.get("achievements", [])
-                if not achievements:
-                    return False
-                return all(ach.get("achieved") == 1 for ach in achievements)
+                return await fetch(client)
             except Exception:
                 return False
+        else:
+            async with httpx.AsyncClient() as c:
+                try:
+                    return await fetch(c)
+                except Exception:
+                    return False

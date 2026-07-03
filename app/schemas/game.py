@@ -32,6 +32,19 @@ def _validate_notes_length(v: Optional[str]) -> Optional[str]:
     return v
 
 
+def _normalize_store(v):
+    if not v or (isinstance(v, str) and not v.strip()):
+        return None
+    if isinstance(v, str):
+        val_upper = v.upper().strip()
+        if val_upper == "STEAM":
+            return "STEAM"
+        for item in Store:
+            if item.value.upper() == val_upper:
+                return item.value
+    return v
+
+
 class GameBase(BaseModel):
     external_id: Optional[int] = None
     title: str
@@ -105,14 +118,7 @@ class UserGameBase(BaseModel):
     @field_validator("store", mode="before")
     @classmethod
     def normalize_store(cls, v):
-        if isinstance(v, str):
-            val_upper = v.upper()
-            if val_upper == "STEAM":
-                return "STEAM"
-            for item in Store:
-                if item.value.upper() == val_upper:
-                    return item.value
-        return v
+        return _normalize_store(v)
 
     custom_cover_url: Optional[str] = None
 
@@ -173,6 +179,11 @@ class UserGameUpdate(BaseModel):
 
     notes: Optional[str] = None
 
+    @field_validator("store", mode="before")
+    @classmethod
+    def normalize_store(cls, v):
+        return _normalize_store(v)
+
     @field_validator("notes")
     @classmethod
     def validate_notes_length(cls, v: Optional[str]) -> Optional[str]:
@@ -216,14 +227,7 @@ class LibraryGameResponse(BaseModel):
     @field_validator("store", mode="before")
     @classmethod
     def normalize_store(cls, v):
-        if isinstance(v, str):
-            val_upper = v.upper()
-            if val_upper == "STEAM":
-                return "STEAM"
-            for item in Store:
-                if item.value.upper() == val_upper:
-                    return item.value
-        return v
+        return _normalize_store(v)
 
     favorite: bool = False
 

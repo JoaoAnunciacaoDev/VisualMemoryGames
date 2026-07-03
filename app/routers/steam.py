@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from typing import List
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -121,7 +122,7 @@ async def connect_steam_account(
     db.commit()
     db.refresh(new_account)
 
-    # Sincroniza imediatamente os jogos da nova conta em segundo plano/inline
+    # Sincroniza imediatamente os jogos da nova conta inline
     await sync_single_account(new_account, db)
 
     return new_account
@@ -190,14 +191,18 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
     games_to_check = [g for g in steam_games if g.get("playtime_forever", 0) > 0]
     sem = asyncio.Semaphore(10)
 
-    async def check_platinum(appid: int) -> tuple[int, bool]:
-        async with sem:
-            is_plat = await steam_service.is_game_platinized(account.steam_id, appid)
-            return appid, is_plat
+    async with httpx.AsyncClient() as client:
 
-    tasks = [check_platinum(g["appid"]) for g in games_to_check]
-    results = await asyncio.gather(*tasks)
-    platinized_appids = {appid for appid, is_plat in results if is_plat}
+        async def check_platinum(appid: int) -> tuple[int, bool]:
+            async with sem:
+                is_plat = await steam_service.is_game_platinized(
+                    account.steam_id, appid, client=client
+                )
+                return appid, is_plat
+
+        tasks = [check_platinum(g["appid"]) for g in games_to_check]
+        results = await asyncio.gather(*tasks)
+        platinized_appids = {appid for appid, is_plat in results if is_plat}
 
     for sg in steam_games:
         appid = sg.get("appid")

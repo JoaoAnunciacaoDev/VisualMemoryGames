@@ -121,7 +121,7 @@ def test_sync_steam_games_success(
 
     mock_recent.return_value = [{"appid": 400}]
 
-    async def side_effect_plat(steam_id, appid):
+    async def side_effect_plat(steam_id, appid, *args, **kwargs):
         return appid == 500
 
     mock_plat.side_effect = side_effect_plat

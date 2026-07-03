@@ -34,10 +34,7 @@ def create_game(
     if game.external_id:
         existing_game = db.query(Game).filter(Game.external_id == game.external_id).first()
         if existing_game:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Este jogo já está catalogado no nosso banco de dados.",
-            )
+            return existing_game
 
     new_game = Game(
         external_id=game.external_id,

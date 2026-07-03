@@ -1,8 +1,18 @@
+# ruff: noqa: F401
 import argparse
 import sys
 
 from app.database import SessionLocal
-from app.models import custom_lists, game, tierlist, user, user_game  # noqa: F401
+from app.models import (
+    custom_lists,
+    email_verification,
+    game,
+    password_reset,
+    steam_account,
+    tierlist,
+    user,
+    user_game,
+)
 from app.models.user import User
 
 

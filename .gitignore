@@ -13,3 +13,8 @@ uploads/
 visualmemory.db
 *.db
 .ruff_cache/
+
+# Docker volumes locais (dados e uploads)
+uploads_prod/
+data_prod/
+

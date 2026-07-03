@@ -44,7 +44,7 @@
 
 .statTitle {
   font-size: 0.875rem;
-  color: var(--text-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 500;
@@ -53,10 +53,7 @@
 .statValue {
   font-size: 2.25rem;
   font-weight: 800;
-  color: var(--text);
-  background: linear-gradient(135deg, var(--text), var(--text-muted));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--primary);
 }
 
 .controlsRow {

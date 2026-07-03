@@ -1,10 +1,6 @@
-<h1 align="center">
-  🎮 GameLog
-</h1>
+# 🎮 GameLog
 
-<p align="center">
-  <em>Plataforma para gestão de bibliotecas de videojogos e criação de tier lists personalizadas.</em>
-</p>
+*Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e criação de tier lists personalizadas.*
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" />
@@ -27,30 +23,32 @@
 
 # 🎯 Sobre o Projeto
 
-O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções e organizar jogos em *tier lists*.
+O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam para importar jogos automaticamente e organizar jogos em *tier lists*.
 
 ---
 
 # ✨ Funcionalidades
 
-- 🔐 Autenticação com JWT (OAuth2).
-- ⏱️ Rate limiting no login contra ataques de força bruta.
-- 🔍 Pesquisa de jogos utilizando a API oficial da RAWG.
-- 📚 Biblioteca pessoal de jogos.
-- ➕ Adição manual de jogos.
-- ✏️ Edição completa de jogos adicionados manualmente.
-- ⭐ Sistema de avaliação de 0 a 10 com suporte a meia estrela.
-- ❤️ Sistema de favoritos.
-- 📋 Listas personalizadas.
-- 🤖 Listas automáticas:
-  - Favoritos
-  - Concluídos por ano
-  - Platinados por ano
-- 🏆 Criação de Tier Lists.
-- 🎨 Drag & Drop para organização das tiers.
-- 📱 Interface responsiva.
-- ✅ Testes automatizados (Backend e Frontend).
-- 🔄 CI/CD com GitHub Actions.
+- 🔐 **Segurança & Autenticação:** Autenticação robusta com JWT (OAuth2) e rate limiting contra ataques de força bruta.
+- 🔗 **Integração com a Steam:** 
+  - Vínculo de múltiplas contas Steam públicas por perfil de usuário.
+  - Sincronização automatizada em segundo plano a cada nova sessão ou manual instantânea.
+  - Detecção real de platinas (100% de conquistas obtidas) rodando chamadas em paralelo de forma otimizada.
+  - Classificação inteligente de status inicial: *"Platinado"* para conquistas completas, *"Jogando"* para jogos iniciados nas últimas 2 semanas, e *"Quero Jogar"* para os demais.
+- 🎨 **Visual Moderno de Capas (Glassmorphism):**
+  - Badge dinâmico com o ícone e nome da loja (ex: `🎮 Steam`, `PlayStation Store`, `Xbox Store`) sobreposto nos cards da biblioteca.
+  - Indicador de estrela dourada (`⭐`) no topo direito para os jogos favoritados.
+- 🔍 **Pesquisa e Cadastro Inteligente:**
+  - Pesquisa integrada com a API oficial da RAWG.
+  - Seletor de gêneros inteligente com busca textual, autocomplete de gêneros sugeridos e tags com remoção rápida.
+  - Criação de gêneros personalizados dinamicamente sob demanda.
+- 📊 **Painel de Perfil Avançado (Dashboard):**
+  - Board estatístico interativo para ver jogos concluídos no ano filtrados por mês, contendo contador de jogos zerados e grade de capas correspondentes.
+  - Histórico de conclusões anual colapsável em acordeões (`▶` / `▼`) para otimização de espaço.
+  - Responsividade total para telas móveis e desktop (nome de usuário e menus centralizados no mobile).
+- ⚙️ **Configurações Flexíveis:**
+  - Controle de preferências gerais, incluindo opção para habilitar ou desabilitar o fechamento de modais ao clicar do lado de fora (overlay).
+- 🏆 **Tier Lists:** Criação de Tier Lists com sistema intuitivo de Drag & Drop.
 
 ---
 
@@ -60,175 +58,101 @@ O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desaco
 
 O projeto utiliza:
 
-- Mise
-- Poetry
-- Node.js
-- npm
+- [Mise](https://mise.jdx.dev/) (gerenciador de dependências globais e runtime)
+- Poetry (para dependências Python)
+- Node.js & npm (para o frontend)
 
 ---
 
 ## Preparação do ambiente
 
-Clone o repositório:
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/JoaoAnunciacaoDev/GameLog.git
+   cd GameLog
+   ```
 
-```bash
-git clone https://github.com/JoaoAnunciacaoDev/GameLog.git
-cd GameLog
-```
+2. Crie o arquivo de ambiente e preencha as chaves:
+   ```bash
+   cp .env.example .env
+   ```
+   *Nota: Configure a variável `STEAM_API_KEY` para ativar a sincronização com a Steam.*
 
-Crie o arquivo de ambiente:
+3. Instale as ferramentas requeridas via Mise:
+   ```bash
+   mise install
+   ```
 
-```bash
-cp .env.example .env
-```
-
-Instale as ferramentas:
-
-```bash
-mise install
-```
-
-Configure todo o ambiente:
-
-```bash
-mise run setup
-```
+4. Configure todo o ambiente (instalação de dependências front/back e migrações do banco):
+   ```bash
+   mise run setup
+   ```
 
 ---
 
 # ▶️ Execução
 
 ## Backend
-
 ```bash
 mise run api.back
 ```
-
-Disponível em:
-
-```
-http://localhost:8000
-```
-
----
+Disponível em: `http://localhost:8000` (documentação automática em `http://localhost:8000/docs`).
 
 ## Frontend
-
 ```bash
 mise run api.front
 ```
-
-Disponível em:
-
-```
-http://localhost:5173
-```
+Disponível em: `http://localhost:5173`
 
 ---
 
 # 🗄️ Base de Dados
 
-O projeto utiliza:
+O projeto utiliza **SQLAlchemy 2.0** com tipagem forte (`Mapped` e `mapped_column`) e controle de migrações com **Alembic**.
 
-- SQLAlchemy
-- Alembic
-
-Durante o desenvolvimento utiliza SQLite.
-
-Em produção pode utilizar PostgreSQL através da variável:
-
-```
-DATABASE_URL
+Durante o desenvolvimento utiliza SQLite (`gamelog.db`). Em produção pode utilizar PostgreSQL através da variável:
+```env
+DATABASE_URL=postgresql://user:password@host/dbname
 ```
 
-## Criar uma migração
-
+### Criar uma nova migração
 ```bash
-alembic revision --autogenerate -m "descricao da mudanca"
+poetry run alembic revision --autogenerate -m "descricao da mudanca"
 ```
 
-## Aplicar migrações
-
+### Aplicar as migrações existentes
 ```bash
-alembic upgrade head
+poetry run alembic upgrade head
 ```
 
 ---
 
-# 🧪 Testes
+# 🧪 Testes e Qualidade
 
-## Backend
-
+## Executar Linter (Ruff & ESLint)
 ```bash
+# Backend (Ruff)
+mise run back.lint       # Analisa erros
+mise run back.lint.fix   # Corrige imports e pequenos problemas
+mise run back.formatter  # Formata o estilo do código
+
+# Frontend (ESLint)
+mise run front.lint      # Analisa erros do React/TypeScript
+```
+
+## Executar Testes Unitários
+```bash
+# Backend (Pytest)
 mise run back.test
-```
 
-ou
-
-```bash
-poetry run pytest app/tests -v
-```
-
----
-
-## Frontend
-
-```bash
+# Frontend (Vitest)
 mise run front.test
 ```
 
-ou
-
+## Executar Testes End-to-End (Playwright)
 ```bash
-cd frontend
-npm run test
-```
-
----
-
-## End-to-End (E2E)
-
-```bash
-mise run e2e.test
-```
-
-Para abrir a interface gráfica (UI Mode) do Playwright:
-
-```bash
-mise run e2e.ui
-```
-
-ou diretamente:
-
-```bash
-cd frontend
-npm run test:e2e
-# ou para UI Mode:
-npm run test:e2e:ui
-```
-
----
-
-# 🔍 Lint
-
-## Backend
-
-```bash
-mise run back.lint
-```
-
-```bash
-mise run back.lint.fix
-```
-
-```bash
-mise run back.formatter
-```
-
-## Frontend
-
-```bash
-mise run front.lint
+mise run e2e.test        # Roda os testes no terminal
+mise run e2e.ui          # Abre o painel interativo do Playwright
 ```
 
 ---
@@ -237,59 +161,53 @@ mise run front.lint
 
 ```text
 GameLog/
-├── .github/
-│   └── workflows/
-├── alembic/
-├── app/
-│   ├── enums/
-│   ├── models/
-│   ├── routers/
-│   ├── schemas/
-│   ├── services/
-│   ├── tests/
-│   ├── database.py
-│   ├── limiter.py
-│   ├── main.py
-│   └── security.py
+├── .github/               # Workflows de CI/CD (GitHub Actions)
+├── alembic/               # Histórico de migrações do banco de dados
+├── app/                   # Código-fonte do Backend (FastAPI)
+│   ├── enums/             # Enums compartilhados (status do jogo, lojas)
+│   ├── models/            # Modelos do ORM SQLAlchemy 2.0 (User, Game, SteamAccount)
+│   ├── routers/           # Roteadores/Endpoints da API (auth, games, steam)
+│   ├── schemas/           # Esquemas de validação Pydantic v2
+│   ├── services/          # Serviços externos e lógicas complexas (Steam API, storage)
+│   ├── tests/             # Suíte de testes unitários do backend (Pytest)
+│   ├── database.py        # Inicialização do DB Session
+│   ├── limiter.py         # Configuração de limitação de requisições
+│   ├── main.py            # Ponto de entrada do FastAPI
+│   ├── security.py        # Auxiliares de hashing e geração de tokens JWT
+│   └── utils.py           # Utilitários globais de tratamento de dados
 │
-├── frontend/
-│   ├── public/
+├── frontend/              # Código-fonte do Frontend (Vite + React + TS)
+│   ├── public/            # Recursos e mídias estáticas
 │   ├── src/
-│   │   ├── assets/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── pages/
-│   │   ├── providers/
-│   │   ├── services/
-│   │   ├── styles/
-│   │   ├── test/
-│   │   └── types/
-│   └── tests/
-│       ├── auth.spec.ts
-│       └── library.spec.ts
+│   │   ├── assets/        # Recursos de imagem/estilo
+│   │   ├── components/    # Componentes modulares (Modal, LibraryCard, SettingsModal)
+│   │   ├── hooks/         # Hooks customizados do React (useLibrary, useAuth)
+│   │   ├── pages/         # Páginas do aplicativo (Library, Profile, Login)
+│   │   ├── providers/     # Context Providers (Auth, Toast)
+│   │   ├── services/      # Integração e cliente HTTP Axios
+│   │   ├── styles/        # CSS global e de layout
+│   │   ├── test/          # Testes unitários de componentes e hooks (Vitest)
+│   │   └── types/         # Definições de tipagem do TypeScript
+│   └── tests/             # Testes End-to-End (Playwright)
 │
-├── uploads/
-├── .env.example
-├── mise.toml
-├── pyproject.toml
-├── ruff.toml
-├── alembic.ini
-└── README.md
+├── uploads/               # Diretório local para uploads de capas personalizadas
+├── mise.toml              # Orquestrador de tarefas do projeto
+├── pyproject.toml         # Gerenciamento de pacotes Python (Poetry)
+└── README.md              # Documentação oficial do projeto
 ```
 
 ---
 
 # 🛡️ Segurança
 
-- JWT configurado via `SECRET_KEY`.
-- Rate limiting (5 tentativas/minuto) usando SlowAPI.
-- Validações com Pydantic.
-- Proteção de rotas.
-- Apenas o proprietário pode alterar recursos.
-- Sanitização de URLs de imagens.
+- Hashing de senhas seguro e geração de tokens JWT.
+- Rate limiting nas rotas de login/autenticação usando SlowAPI.
+- Normalização e validação de payloads com Pydantic v2.
+- Proteção de escopo e privilégios: apenas o proprietário pode alterar os registros da sua biblioteca.
+- Parser robusto de dados (`safe_load_json_list`) para prevenir vulnerabilidades de decodificação na leitura do DB.
 
 ---
 
 ## ❤️ Autor
 
-Feito por **João Victor Anunciação da Silva**.
+Desenvolvido por [João Victor Anunciação da Silva](https://github.com/JoaoAnunciacaoDev).

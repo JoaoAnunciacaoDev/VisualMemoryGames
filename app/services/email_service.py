@@ -4,9 +4,14 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import requests
 import resend
 
 logger = logging.getLogger("visualmemory.email")
+
+# Configurações do Brevo HTTP API
+brevo_api_key = os.getenv("BREVO_API_KEY", "")
+BREVO_SENDER_EMAIL = os.getenv("SMTP_FROM", os.getenv("SMTP_USER", "visualmemorylog@gmail.com"))
 
 # Configurações do Resend
 resend.api_key = os.getenv("RESEND_API_KEY", "")
@@ -17,9 +22,10 @@ def send_verification_email(email: str, code: str):
     """Envia um e-mail contendo o código de verificação para o usuário.
 
     Decide o método de envio automaticamente com base nas variáveis disponíveis:
-    1. Se RESEND_API_KEY estiver configurado, usa a API do Resend.
-    2. Caso contrário, se SMTP_HOST estiver configurado, usa o envio SMTP clássico (ex: Gmail).
-    3. Se nenhum estiver configurado, apenas registra o código em modo simulação (Mock).
+    1. Se BREVO_API_KEY estiver configurado, envia via API HTTP do Brevo (Recomendado para Render).
+    2. Se RESEND_API_KEY estiver configurado, usa a API do Resend.
+    3. Se SMTP_HOST estiver configurado, usa o envio SMTP clássico.
+    4. Se nenhum estiver configurado, apenas registra o código em modo simulação (Mock).
     """
     text = f"Seu código de verificação para o VisualMemory é: {code}. Ele expira em 10 minutos."
     html = f"""
@@ -39,7 +45,40 @@ def send_verification_email(email: str, code: str):
     </html>
     """
 
-    # 1. Tentar por Resend
+    # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
+    if brevo_api_key:
+        try:
+            response = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "api-key": brevo_api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                json={
+                    "sender": {"name": "VisualMemory", "email": BREVO_SENDER_EMAIL},
+                    "to": [{"email": email}],
+                    "subject": "Código de Verificação - VisualMemory",
+                    "htmlContent": html,
+                    "textContent": text,
+                },
+                timeout=10,
+            )
+            if response.status_code in (200, 201, 202):
+                logger.info(f"[BREVO SUCCESS] E-mail de verificação enviado para {email}")
+                print(f"[BREVO SUCCESS] E-mail de verificação enviado para {email}")
+                return
+            else:
+                logger.error(
+                    f"[BREVO ERROR] Falha no envio. Status: {response.status_code}, "
+                    f"Detalhes: {response.text}"
+                )
+                print(f"[BREVO ERROR] Status: {response.status_code}, Detalhes: {response.text}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar via Brevo API para {email}: {e}")
+            print(f"[BREVO ERROR] Falha na conexão com a API Brevo: {e}")
+
+    # 2. Tentar por Resend
     if resend.api_key:
         try:
             params: resend.Emails.SendParams = {
@@ -60,7 +99,7 @@ def send_verification_email(email: str, code: str):
             logger.error(f"Erro ao enviar via Resend para {email}: {e}")
             print(f"[RESEND ERROR] Erro ao enviar: {e}")
 
-    # 2. Tentar por SMTP (Gmail)
+    # 3. Tentar por SMTP clássico
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = os.getenv("SMTP_PORT")
     smtp_user = os.getenv("SMTP_USER")
@@ -96,7 +135,7 @@ def send_verification_email(email: str, code: str):
             logger.error(f"Erro ao enviar via SMTP para {email}: {e}")
             print(f"[SMTP ERROR] Erro ao enviar via SMTP: {e}")
 
-    # 3. Fallback (Modo Simulado / Mock)
+    # 4. Fallback (Modo Simulado / Mock)
     logger.info(f"[MOCK EMAIL] Código de verificação para {email}: {code}")
     print("\n==================================================")
     print(f"[MOCK EMAIL] Enviado código de verificação para {email}")
@@ -105,10 +144,7 @@ def send_verification_email(email: str, code: str):
 
 
 def send_password_reset_email(email: str, code: str):
-    """Envia um e-mail contendo o código de redefinição de senha para o usuário.
-
-    Decide o método de envio automaticamente com base nas variáveis disponíveis.
-    """
+    """Envia um e-mail contendo o código de redefinição de senha para o usuário."""
     text = (
         f"Seu código de redefinição de senha para o VisualMemory é: {code}. "
         "Ele expira em 10 minutos."
@@ -131,7 +167,40 @@ def send_password_reset_email(email: str, code: str):
     </html>
     """
 
-    # 1. Tentar por Resend
+    # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
+    if brevo_api_key:
+        try:
+            response = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "api-key": brevo_api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                json={
+                    "sender": {"name": "VisualMemory", "email": BREVO_SENDER_EMAIL},
+                    "to": [{"email": email}],
+                    "subject": "Recuperação de Senha - VisualMemory",
+                    "htmlContent": html,
+                    "textContent": text,
+                },
+                timeout=10,
+            )
+            if response.status_code in (200, 201, 202):
+                logger.info(f"[BREVO SUCCESS] E-mail de redefinição enviado para {email}")
+                print(f"[BREVO SUCCESS] E-mail de redefinição enviado para {email}")
+                return
+            else:
+                logger.error(
+                    f"[BREVO ERROR] Falha no envio. Status: {response.status_code}, "
+                    f"Detalhes: {response.text}"
+                )
+                print(f"[BREVO ERROR] Status: {response.status_code}, Detalhes: {response.text}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar via Brevo API para {email}: {e}")
+            print(f"[BREVO ERROR] Falha na conexão com a API Brevo: {e}")
+
+    # 2. Tentar por Resend
     if resend.api_key:
         try:
             params: resend.Emails.SendParams = {
@@ -152,7 +221,7 @@ def send_password_reset_email(email: str, code: str):
             logger.error(f"Erro ao enviar via Resend para {email}: {e}")
             print(f"[RESEND ERROR] Erro ao enviar: {e}")
 
-    # 2. Tentar por SMTP (Gmail)
+    # 3. Tentar por SMTP clássico
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = os.getenv("SMTP_PORT")
     smtp_user = os.getenv("SMTP_USER")
@@ -188,7 +257,7 @@ def send_password_reset_email(email: str, code: str):
             logger.error(f"Erro ao enviar via SMTP para {email}: {e}")
             print(f"[SMTP ERROR] Erro ao enviar via SMTP: {e}")
 
-    # 3. Fallback (Modo Simulado / Mock)
+    # 4. Fallback (Modo Simulado / Mock)
     logger.info(f"[MOCK EMAIL] Código de redefinição de senha para {email}: {code}")
     print("\n==================================================")
     print(f"[MOCK EMAIL] Enviado código de redefinição de senha para {email}")

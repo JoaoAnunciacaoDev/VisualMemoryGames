@@ -2,6 +2,8 @@ import type { KeyboardEvent } from 'react';
 import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/LibraryCard/LibraryCard.module.css';
 
+import { STORE_OPTIONS } from '@/types/enums';
+
 interface Props {
   title: string;
   coverUrl: string | undefined;
@@ -23,8 +25,8 @@ const STATUS_CLASSES: Record<string, string> = {
   'Em Espera': styles.statusOnHold,
 };
 
-const getStoreEmoji = (storeName: string): string => {
-  const lower = storeName.toLowerCase();
+const getStoreEmoji = (storeKey: string): string => {
+  const lower = storeKey.toLowerCase();
   if (lower.includes('steam')) return '🎮';
   if (lower.includes('epic')) return '🔌';
   if (lower.includes('gog')) return '🟣';
@@ -32,6 +34,11 @@ const getStoreEmoji = (storeName: string): string => {
   if (lower.includes('xbox')) return '💚';
   if (lower.includes('nintendo') || lower.includes('switch')) return '❤️';
   return '🛒';
+};
+
+const getStoreLabel = (storeKey: string): string => {
+  const option = STORE_OPTIONS.find((opt) => opt.value.toUpperCase() === storeKey.toUpperCase());
+  return option ? option.label : storeKey;
 };
 
 export default function LibraryCard({
@@ -74,8 +81,8 @@ export default function LibraryCard({
           <div className={styles.coverFallback}>Sem Imagem</div>
         )}
         {store && (
-          <div className={styles.storeTag} title={`Adquirido na ${store}`}>
-            {getStoreEmoji(store)} {store}
+          <div className={styles.storeTag} title={`Adquirido na ${getStoreLabel(store)}`}>
+            {getStoreEmoji(store)} {getStoreLabel(store)}
           </div>
         )}
         {favorite && (

@@ -65,6 +65,9 @@ async def save_upload_file(upload_file: UploadFile) -> str:
         )
 
         if endpoint_url:
+            if "supabase.co" in endpoint_url:
+                base_url = endpoint_url.replace("/s3", "/object/public")
+                return f"{base_url}/{bucket_name}/covers/{filename}"
             base_url = endpoint_url.rstrip("/")
             return f"{base_url}/{bucket_name}/covers/{filename}"
 

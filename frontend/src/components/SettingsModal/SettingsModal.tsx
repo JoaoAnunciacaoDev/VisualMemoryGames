@@ -11,15 +11,20 @@ interface Props {
   onLogout: () => void;
 }
 
-interface BackendErrorResponse {
+type Tab = 'profile' | 'password' | 'deactivate' | 'steam';
+
+interface PydanticErrorDetail {
+  msg?: string;
+  loc?: Array<string | number>;
+}
+
+interface AxiosErrorDetail {
   response?: {
     data?: {
-      detail?: string;
+      detail?: string | PydanticErrorDetail[];
     };
   };
 }
-
-type Tab = 'profile' | 'password' | 'deactivate' | 'steam';
 
 export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
@@ -38,6 +43,53 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const parseError = (err: unknown, fallback = 'Ocorreu um erro no servidor.'): string => {
+    const errorObj = err as AxiosErrorDetail;
+    const detail = errorObj.response?.data?.detail;
+    
+    if (!detail) return fallback;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d: PydanticErrorDetail) => {
+        const msg = d.msg || '';
+        const loc = d.loc || [];
+        const isPassword = loc.includes('password') || loc.includes('new_password') || loc.includes('current_password');
+        const isUsername = loc.includes('username');
+        const isEmail = loc.includes('email');
+
+        if (msg.includes('should have at least')) {
+          const match = msg.match(/\d+/);
+          const num = match ? match[0] : '';
+          if (isPassword) return `A senha deve ter pelo menos ${num} caracteres.`;
+          if (isUsername) return `O nome de usuário deve ter pelo menos ${num} caracteres.`;
+          return `O campo deve ter pelo menos ${num} caracteres.`;
+        }
+
+        if (msg.includes('should have at most')) {
+          const match = msg.match(/\d+/);
+          const num = match ? match[0] : '';
+          if (isUsername) return `O nome de usuário deve ter no máximo ${num} caracteres.`;
+          if (isPassword) return `A senha deve ter no máximo ${num} caracteres.`;
+          return `O campo deve ter no máximo ${num} caracteres.`;
+        }
+        
+        if (msg.includes('value is not a valid email')) {
+          return 'E-mail inválido.';
+        }
+
+        if (msg.includes('Field required')) {
+          if (isPassword) return 'A senha é obrigatória.';
+          if (isUsername) return 'O nome de usuário é obrigatório.';
+          if (isEmail) return 'O e-mail é obrigatório.';
+          return 'Campo obrigatório.';
+        }
+
+        return msg.replace(/^Value error,\s*/i, '');
+      }).join('\n');
+    }
+    return fallback;
+  };
 
   // States para Steam
   interface SteamAccount {
@@ -90,8 +142,10 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       setError(
-        (err as BackendErrorResponse).response?.data?.detail ||
+        parseError(
+          err,
           'Erro ao conectar conta Steam. Verifique se o perfil e os detalhes de jogo estão públicos.'
+        )
       );
     } finally {
       setIsFetchingSteam(false);
@@ -112,7 +166,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       showToast('Conta Steam desconectada com sucesso.', 'success');
       void fetchSteamAccounts();
     } catch (err: unknown) {
-      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao desconectar conta Steam.');
+      setError(parseError(err, 'Erro ao desconectar conta Steam.'));
     }
   };
 
@@ -129,7 +183,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       void fetchSteamAccounts();
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao sincronizar contas Steam.');
+      setError(parseError(err, 'Erro ao sincronizar contas Steam.'));
     } finally {
       setIsFetchingSteam(false);
     }
@@ -148,7 +202,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setNewUsername('');
       onClose();
     } catch (err: unknown) {
-      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao alterar nome de usuário.');
+      setError(parseError(err, 'Erro ao alterar nome de usuário.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -174,7 +228,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setConfirmPassword('');
       onClose();
     } catch (err: unknown) {
-      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao alterar senha.');
+      setError(parseError(err, 'Erro ao alterar senha.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -195,7 +249,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       onClose();
       onLogout(); // Desloga o usuário
     } catch (err: unknown) {
-      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao desativar conta.');
+      setError(parseError(err, 'Erro ao desativar conta.'));
     } finally {
       setIsSubmitting(false);
     }

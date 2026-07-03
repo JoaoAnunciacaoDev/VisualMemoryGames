@@ -107,7 +107,7 @@ export default function Library() {
     }
   };
 
-  if (authLoading || libraryLoading) return <p>Carregando biblioteca...</p>;
+  if (authLoading || (libraryLoading && games.length === 0)) return <p>Carregando biblioteca...</p>;
 
   return (
     <div className={styles.page}>

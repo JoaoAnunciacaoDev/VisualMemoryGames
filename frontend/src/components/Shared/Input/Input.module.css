@@ -25,3 +25,37 @@
     padding: 12px 14px;
   }
 }
+
+.container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInput {
+  padding-right: 40px;
+}
+
+.toggleButton {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.toggleButton:hover:not(:disabled) {
+  color: var(--primary);
+}
+
+.toggleButton:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}

@@ -4,7 +4,7 @@ import sys
 
 # Configura as variáveis de ambiente necessárias para o servidor de testes E2E
 os.environ["ENVIRONMENT"] = "testing"
-os.environ["DATABASE_URL"] = "sqlite:///./gamelog_test.db"
+os.environ["DATABASE_URL"] = "sqlite:///./visualmemory_test.db"
 
 # Força codificação UTF-8 para evitar falhas com emojis/Unicode no Windows
 os.environ["PYTHONIOENCODING"] = "utf-8"

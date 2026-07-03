@@ -1,24 +1,24 @@
-.scrollbar-gamelog {
+.scrollbar-visualmemory {
   scrollbar-width: thin;
   scrollbar-color: var(--border) var(--surface);
 }
 
-.scrollbar-gamelog::-webkit-scrollbar {
+.scrollbar-visualmemory::-webkit-scrollbar {
   width: 8px;
 }
 
-.scrollbar-gamelog::-webkit-scrollbar-track {
+.scrollbar-visualmemory::-webkit-scrollbar-track {
   background: var(--surface);
   border-radius: 8px;
   margin-block: 4px;
 }
 
-.scrollbar-gamelog::-webkit-scrollbar-thumb {
+.scrollbar-visualmemory::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 8px;
   border: 2px solid var(--surface);
 }
 
-.scrollbar-gamelog::-webkit-scrollbar-thumb:hover {
+.scrollbar-visualmemory::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
 }

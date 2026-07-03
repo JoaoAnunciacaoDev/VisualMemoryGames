@@ -7,7 +7,7 @@ def test_create_user(client):
     # 1. Iniciar registro
     init_resp = client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
     )
     assert init_resp.status_code == 200
 
@@ -16,7 +16,7 @@ def test_create_user(client):
         "/users/",
         json={
             "username": "joaogamer",
-            "email": "joao@gamelog.com",
+            "email": "joao@visualmemory.com",
             "password": "SenhaSegura_123!",
             "code": "123456",
         },
@@ -32,13 +32,13 @@ def test_create_user_duplicate_email(client):
     # Cadastrar primeiro usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
     )
     client.post(
         "/users/",
         json={
             "username": "joaogamer",
-            "email": "joao@gamelog.com",
+            "email": "joao@visualmemory.com",
             "password": "SenhaSegura_123!",
             "code": "123456",
         },
@@ -47,7 +47,7 @@ def test_create_user_duplicate_email(client):
     # Tentar iniciar cadastro de segundo usuário com e-mail duplicado
     response = client.post(
         "/users/register/initiate",
-        json={"username": "maria", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+        json={"username": "maria", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
     )
     assert response.status_code == 400
 
@@ -55,7 +55,7 @@ def test_create_user_duplicate_email(client):
 def test_create_user_weak_password(client):
     response = client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "123"},
+        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "123"},
     )
     assert response.status_code == 422
 
@@ -101,7 +101,7 @@ def test_create_user_invalid_code(client):
     # 1. Iniciar registro
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
     )
 
     # 2. Confirmar com código incorreto
@@ -109,7 +109,7 @@ def test_create_user_invalid_code(client):
         "/users/",
         json={
             "username": "joaogamer",
-            "email": "joao@gamelog.com",
+            "email": "joao@visualmemory.com",
             "password": "SenhaSegura_123!",
             "code": "000000",
         },
@@ -122,13 +122,13 @@ def test_create_user_expired_code(client, db_session):
     # 1. Iniciar registro
     client.post(
         "/users/register/initiate",
-        json={"username": "joaogamer", "email": "joao@gamelog.com", "password": "SenhaSegura_123!"},
+        json={"username": "joaogamer", "email": "joao@visualmemory.com", "password": "SenhaSegura_123!"},
     )
 
     # Forçar expiração do código editando diretamente no banco
     verification = (
         db_session.query(EmailVerification)
-        .filter(EmailVerification.email == "joao@gamelog.com")
+        .filter(EmailVerification.email == "joao@visualmemory.com")
         .first()
     )
     assert verification is not None
@@ -140,7 +140,7 @@ def test_create_user_expired_code(client, db_session):
         "/users/",
         json={
             "username": "joaogamer",
-            "email": "joao@gamelog.com",
+            "email": "joao@visualmemory.com",
             "password": "SenhaSegura_123!",
             "code": "123456",
         },

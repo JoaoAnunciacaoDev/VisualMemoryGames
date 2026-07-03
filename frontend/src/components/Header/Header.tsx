@@ -98,7 +98,7 @@ export default function Header() {
   return (
     <header className={styles.header}>
       <button type="button" className={styles.logo} onClick={() => navigate('/')}>
-        GameLog
+        VisualMemory
       </button>
       <nav className={styles.nav}>
         {token && (

@@ -110,7 +110,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
           <h2 className={styles.title}>{game.title}</h2>
         </div>
 
-        <div className={`${styles.fields} scrollbar-gamelog`}>
+        <div className={`${styles.fields} scrollbar-visualmemory`}>
           {game.is_manual && (
             <>
               <div className={styles.dateRow}>

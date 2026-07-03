@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.back
+    ports:
+      - "8000:8000"
+    volumes:
+      # Monta a pasta de dados e uploads localmente para persistência total
+      - ./data_prod:/app/data
+      - ./uploads_prod:/app/uploads
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///data/visualmemory.db
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:5173,http://127.0.0.1:5173
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.front
+      args:
+        - VITE_API_URL=http://localhost:8000
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always

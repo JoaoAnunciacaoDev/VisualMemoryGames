@@ -83,7 +83,7 @@ export default function AuthForm({
   };
 
   const getTitle = () => {
-    if (step === 'login') return 'Entrar no GameLog';
+    if (step === 'login') return 'Entrar no VisualMemory';
     if (step === 'register') return 'Criar nova conta';
     if (step === 'verify') return 'Verificação de E-mail';
     if (step === 'reset_password_initiate') return 'Recuperar Senha';

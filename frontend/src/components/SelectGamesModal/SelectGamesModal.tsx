@@ -52,7 +52,7 @@ export default function SelectGamesModal({ games, alreadyInList, onConfirm, onCl
         {selected.size > 0 && `${selected.size} jogo(s) selecionado(s)`}
       </div>
 
-      <div className={`${styles.gameList} scrollbar-gamelog`}>
+      <div className={`${styles.gameList} scrollbar-visualmemory`}>
         {filtered.length === 0 ? (
           <p className={styles.empty}>
             {games.length === alreadyInList.size

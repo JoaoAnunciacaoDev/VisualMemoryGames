@@ -1,4 +1,4 @@
-# 🎮 GameLog
+# 🎮 VisualMemory
 
 *Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e criação de tier lists personalizadas.*
 
@@ -23,7 +23,7 @@
 
 # 🎯 Sobre o Projeto
 
-O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam para importar jogos automaticamente e organizar jogos em *tier lists*.
+O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam para importar jogos automaticamente e organizar jogos em *tier lists*.
 
 ---
 
@@ -68,8 +68,8 @@ O projeto utiliza:
 
 1. Clone o repositório:
    ```bash
-   git clone https://github.com/JoaoAnunciacaoDev/GameLog.git
-   cd GameLog
+   git clone https://github.com/JoaoAnunciacaoDev/VisualMemory.git
+   cd VisualMemory
    ```
 
 2. Crie o arquivo de ambiente e preencha as chaves:
@@ -110,7 +110,7 @@ Disponível em: `http://localhost:5173`
 
 O projeto utiliza **SQLAlchemy 2.0** com tipagem forte (`Mapped` e `mapped_column`) e controle de migrações com **Alembic**.
 
-Durante o desenvolvimento utiliza SQLite (`gamelog.db`). Em produção pode utilizar PostgreSQL através da variável:
+Durante o desenvolvimento utiliza SQLite (`visualmemory.db`). Em produção pode utilizar PostgreSQL através da variável:
 ```env
 DATABASE_URL=postgresql://user:password@host/dbname
 ```
@@ -160,7 +160,7 @@ mise run e2e.ui          # Abre o painel interativo do Playwright
 # 🗂️ Estrutura do Projeto
 
 ```text
-GameLog/
+VisualMemory/
 ├── .github/               # Workflows de CI/CD (GitHub Actions)
 ├── alembic/               # Histórico de migrações do banco de dados
 ├── app/                   # Código-fonte do Backend (FastAPI)

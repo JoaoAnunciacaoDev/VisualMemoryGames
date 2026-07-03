@@ -72,7 +72,7 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
         </Button>
       </div>
 
-      <div className={`${styles.results} scrollbar-gamelog`}>
+      <div className={`${styles.results} scrollbar-visualmemory`}>
         {results.map((game) => {
           const alreadyAdded = existingGameIds.has(String(game.external_id));
           return (

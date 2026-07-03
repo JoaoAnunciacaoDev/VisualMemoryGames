@@ -21,7 +21,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # URL do banco
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gamelog.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./visualmemory.db")
 
 
 def run_migrations_offline():

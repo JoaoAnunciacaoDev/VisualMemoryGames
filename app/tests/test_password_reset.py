@@ -7,13 +7,13 @@ def test_password_reset_success(client):
     # 1. Registrar um usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "resetuser", "email": "reset@gamelog.com", "password": "Password123!"},
+        json={"username": "resetuser", "email": "reset@visualmemory.com", "password": "Password123!"},
     )
     client.post(
         "/users/",
         json={
             "username": "resetuser",
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "password": "Password123!",
             "code": "123456",
         },
@@ -22,7 +22,7 @@ def test_password_reset_success(client):
     # 2. Iniciar a redefinição de senha
     init_resp = client.post(
         "/password-reset/initiate",
-        json={"email": "reset@gamelog.com"},
+        json={"email": "reset@visualmemory.com"},
     )
     assert init_resp.status_code == 200
     assert "código de redefinição foi enviado" in init_resp.json()["message"]
@@ -31,7 +31,7 @@ def test_password_reset_success(client):
     confirm_resp = client.post(
         "/password-reset/confirm",
         json={
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "code": "654321",
             "new_password": "NewPassword123!",
         },
@@ -60,7 +60,7 @@ def test_password_reset_inexistent_email(client):
     # (prevenção de enumeração)
     response = client.post(
         "/password-reset/initiate",
-        json={"email": "nonexistent@gamelog.com"},
+        json={"email": "nonexistent@visualmemory.com"},
     )
     assert response.status_code == 200
     assert "código de redefinição foi enviado" in response.json()["message"]
@@ -70,13 +70,13 @@ def test_password_reset_incorrect_code(client):
     # 1. Registrar um usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "resetuser", "email": "reset@gamelog.com", "password": "Password123!"},
+        json={"username": "resetuser", "email": "reset@visualmemory.com", "password": "Password123!"},
     )
     client.post(
         "/users/",
         json={
             "username": "resetuser",
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "password": "Password123!",
             "code": "123456",
         },
@@ -85,14 +85,14 @@ def test_password_reset_incorrect_code(client):
     # 2. Iniciar a redefinição de senha
     client.post(
         "/password-reset/initiate",
-        json={"email": "reset@gamelog.com"},
+        json={"email": "reset@visualmemory.com"},
     )
 
     # 3. Confirmar com código incorreto (deve falhar)
     confirm_resp = client.post(
         "/password-reset/confirm",
         json={
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "code": "000000",
             "new_password": "NewPassword123!",
         },
@@ -105,13 +105,13 @@ def test_password_reset_expired_code(client, db_session):
     # 1. Registrar um usuário
     client.post(
         "/users/register/initiate",
-        json={"username": "resetuser", "email": "reset@gamelog.com", "password": "Password123!"},
+        json={"username": "resetuser", "email": "reset@visualmemory.com", "password": "Password123!"},
     )
     client.post(
         "/users/",
         json={
             "username": "resetuser",
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "password": "Password123!",
             "code": "123456",
         },
@@ -120,12 +120,12 @@ def test_password_reset_expired_code(client, db_session):
     # 2. Iniciar a redefinição de senha
     client.post(
         "/password-reset/initiate",
-        json={"email": "reset@gamelog.com"},
+        json={"email": "reset@visualmemory.com"},
     )
 
     # Forçar a expiração do código de redefinição no banco de dados
     pwd_reset = (
-        db_session.query(PasswordReset).filter(PasswordReset.email == "reset@gamelog.com").first()
+        db_session.query(PasswordReset).filter(PasswordReset.email == "reset@visualmemory.com").first()
     )
     assert pwd_reset is not None
     pwd_reset.expires_at = datetime.now() - timedelta(minutes=1)
@@ -135,7 +135,7 @@ def test_password_reset_expired_code(client, db_session):
     confirm_resp = client.post(
         "/password-reset/confirm",
         json={
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "code": "654321",
             "new_password": "NewPassword123!",
         },
@@ -151,7 +151,7 @@ def test_password_reset_weak_new_password(client):
     response = client.post(
         "/password-reset/confirm",
         json={
-            "email": "reset@gamelog.com",
+            "email": "reset@visualmemory.com",
             "code": "654321",
             "new_password": "123",
         },

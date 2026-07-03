@@ -14,7 +14,7 @@ from app.routers.auth import cleanup_deleted_users
 
 load_dotenv()
 
-app = FastAPI(title="GameLog API")
+app = FastAPI(title="VisualMemory API")
 app.state.limiter = limiter
 
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
@@ -53,4 +53,4 @@ def on_startup():
 
 @app.get("/")
 def read_root():
-    return {"message": "GameLog API rodando liso, liso!"}
+    return {"message": "VisualMemory API rodando liso, liso!"}

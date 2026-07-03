@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./gamelog.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./visualmemory.db")
 
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(

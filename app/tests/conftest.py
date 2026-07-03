@@ -54,13 +54,13 @@ def auth_headers(client):
     """Cria um usuário padrão e retorna os headers com o Token JWT."""
     client.post(
         "/users/register/initiate",
-        json={"username": "tester", "email": "tester@gamelog.com", "password": "SenhaSegura_123!"},
+        json={"username": "tester", "email": "tester@visualmemory.com", "password": "SenhaSegura_123!"},
     )
     client.post(
         "/users/",
         json={
             "username": "tester",
-            "email": "tester@gamelog.com",
+            "email": "tester@visualmemory.com",
             "password": "SenhaSegura_123!",
             "code": "123456",
         },
@@ -78,7 +78,7 @@ def second_user_headers(client):
         "/users/register/initiate",
         json={
             "username": "invasor",
-            "email": "invasor@gamelog.com",
+            "email": "invasor@visualmemory.com",
             "password": "SenhaSegura_123!",
         },
     )
@@ -86,7 +86,7 @@ def second_user_headers(client):
         "/users/",
         json={
             "username": "invasor",
-            "email": "invasor@gamelog.com",
+            "email": "invasor@visualmemory.com",
             "password": "SenhaSegura_123!",
             "code": "123456",
         },

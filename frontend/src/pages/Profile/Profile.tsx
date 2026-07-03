@@ -194,7 +194,7 @@ export default function Profile() {
                 {translateGenre(data.most_played_genre)}
               </span>
               <p className={styles.genreDesc}>
-                Este é o gênero mais proeminente e jogado em sua biblioteca do GameLog.
+                Este é o gênero mais proeminente e jogado em sua biblioteca do VisualMemory.
               </p>
             </div>
           ) : (

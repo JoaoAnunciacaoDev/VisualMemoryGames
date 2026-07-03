@@ -4,7 +4,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-logger = logging.getLogger("gamelog.email")
+logger = logging.getLogger("visualmemory.email")
 
 
 def send_verification_email(email: str, code: str):
@@ -29,15 +29,15 @@ def send_verification_email(email: str, code: str):
 
             # Criar a mensagem multipart
             message = MIMEMultipart("alternative")
-            message["Subject"] = "Código de Verificação - GameLog"
+            message["Subject"] = "Código de Verificação - VisualMemory"
             message["From"] = os.getenv("SMTP_FROM", smtp_user)
             message["To"] = email
 
-            text = f"Seu código de verificação para o GameLog é: {code}. Ele expira em 10 minutos."
+            text = f"Seu código de verificação para o VisualMemory é: {code}. Ele expira em 10 minutos."
             html = f"""
             <html>
               <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                <h2 style="color: #4f46e5;">Bem-vindo ao GameLog!</h2>
+                <h2 style="color: #4f46e5;">Bem-vindo ao VisualMemory!</h2>
                 <p>Use o código de verificação abaixo para confirmar seu cadastro:</p>
                 <div style="font-size: 24px; font-weight: bold; padding: 15px 25px;
                 background-color: #f3f4f6; display: inline-block; border-radius: 8px;
@@ -93,16 +93,16 @@ def send_password_reset_email(email: str, code: str):
 
             # Criar a mensagem multipart
             message = MIMEMultipart("alternative")
-            message["Subject"] = "Recuperação de Senha - GameLog"
+            message["Subject"] = "Recuperação de Senha - VisualMemory"
             message["From"] = os.getenv("SMTP_FROM", smtp_user)
             message["To"] = email
 
-            text = f"Seu código de redefinição de senha para o GameLog é: {code}."
+            text = f"Seu código de redefinição de senha para o VisualMemory é: {code}."
             text += "Ele expira em 10 minutos."
             html = f"""
             <html>
               <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                <h2 style="color: #ef4444;">Recuperação de Senha - GameLog</h2>
+                <h2 style="color: #ef4444;">Recuperação de Senha - VisualMemory</h2>
                 <p>Você solicitou a redefinição de sua senha. Use o código abaixo para confirmar a
                 alteração:</p>
                 <div style="font-size: 24px; font-weight: bold; padding: 15px 25px;

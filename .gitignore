@@ -10,6 +10,6 @@ __pycache__/
 # Testes
 .pytest_cache/
 uploads/
-gamelog.db
+visualmemory.db
 *.db
 .ruff_cache/

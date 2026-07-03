@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className={styles.footer}>
       <p className={styles.text}>
-        © {new Date().getFullYear()} GameLog. Todos os direitos reservados.
+        © {new Date().getFullYear()} VisualMemory. Todos os direitos reservados.
       </p>
       <div className={styles.socials}>
         <p className={styles.text}>Por João Victor Anunciação da Silva</p>

@@ -41,6 +41,7 @@ run = "poetry run ruff format ."
 
 [tasks."back.test"]
 dir = "app"
+env = { PYTHONPATH = ".." }
 run = "poetry run pytest"
 
 [tasks."front.test"]
@@ -48,20 +49,20 @@ dir = "frontend"
 run = "npm run test"
 
 [tasks."back.e2e.setup"]
-env = { DATABASE_URL = "sqlite:///{{ config_root }}/gamelog_test.db" }
+env = { DATABASE_URL = "sqlite:///{{ config_root }}/visualmemory_test.db" }
 run = [
-  "poetry run python -c \"import os; os.remove('gamelog_test.db') if os.path.exists('gamelog_test.db') else None\"",
+  "poetry run python -c \"import os; os.remove('visualmemory_test.db') if os.path.exists('visualmemory_test.db') else None\"",
   "poetry run alembic upgrade head"
 ]
 
 [tasks."e2e.test"]
 dir = "frontend"
 depends = ["back.e2e.setup"]
-env = { PLAYWRIGHT_BROWSERS_PATH = "0", DATABASE_URL = "sqlite:///{{ config_root }}/gamelog_test.db" }
+env = { PLAYWRIGHT_BROWSERS_PATH = "0", DATABASE_URL = "sqlite:///{{ config_root }}/visualmemory_test.db" }
 run = "npm run test:e2e"
 
 [tasks."e2e.ui"]
 dir = "frontend"
 depends = ["back.e2e.setup"]
-env = { PLAYWRIGHT_BROWSERS_PATH = "0", DATABASE_URL = "sqlite:///{{ config_root }}/gamelog_test.db" }
+env = { PLAYWRIGHT_BROWSERS_PATH = "0", DATABASE_URL = "sqlite:///{{ config_root }}/visualmemory_test.db" }
 run = "npm run test:e2e:ui"

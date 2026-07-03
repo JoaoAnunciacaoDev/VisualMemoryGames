@@ -1,4 +1,4 @@
-import { useState, SyntheticEvent } from 'react';
+import { useState, useEffect, useCallback, SyntheticEvent } from 'react';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import Modal from '@/components/Shared/Modal/Modal';
@@ -19,7 +19,7 @@ interface BackendErrorResponse {
   };
 }
 
-type Tab = 'profile' | 'password' | 'deactivate';
+type Tab = 'profile' | 'password' | 'deactivate' | 'steam';
 
 export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
@@ -38,6 +38,102 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // States para Steam
+  interface SteamAccount {
+    id: string;
+    steam_id: string;
+    persona_name: string | null;
+    avatar_url: string | null;
+    last_sync_at: string | null;
+  }
+  const [steamAccounts, setSteamAccounts] = useState<SteamAccount[]>([]);
+  const [steamUrl, setSteamUrl] = useState('');
+  const [isFetchingSteam, setIsFetchingSteam] = useState(false);
+
+  const fetchSteamAccounts = useCallback(async () => {
+    try {
+      const res = await api.get('/users/me/steam/accounts');
+      setSteamAccounts(res.data);
+    } catch (err) {
+      console.error('Erro ao buscar contas Steam:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'steam') return;
+
+    let active = true;
+    api.get('/users/me/steam/accounts')
+      .then((res) => {
+        if (active) setSteamAccounts(res.data);
+      })
+      .catch((err) => {
+        console.error('Erro ao buscar contas Steam:', err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeTab]);
+
+  const handleConnectSteam = async (e: SyntheticEvent) => {
+    e.preventDefault();
+    if (!steamUrl.trim()) return;
+    setIsFetchingSteam(true);
+    setError('');
+    try {
+      await api.post('/users/me/steam/accounts', { profile_url: steamUrl.trim() });
+      showToast('Conta Steam conectada e biblioteca importada!', 'success');
+      setSteamUrl('');
+      void fetchSteamAccounts();
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(
+        (err as BackendErrorResponse).response?.data?.detail ||
+          'Erro ao conectar conta Steam. Verifique se o perfil e os detalhes de jogo estão públicos.'
+      );
+    } finally {
+      setIsFetchingSteam(false);
+    }
+  };
+
+  const handleDisconnectSteam = async (accountId: string) => {
+    if (
+      !window.confirm(
+        'Tem certeza que deseja desconectar esta conta Steam? Os jogos importados continuarão na sua biblioteca, mas não serão mais sincronizados.'
+      )
+    ) {
+      return;
+    }
+    setError('');
+    try {
+      await api.delete(`/users/me/steam/accounts/${accountId}`);
+      showToast('Conta Steam desconectada com sucesso.', 'success');
+      void fetchSteamAccounts();
+    } catch (err: unknown) {
+      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao desconectar conta Steam.');
+    }
+  };
+
+  const handleSyncSteam = async () => {
+    setIsFetchingSteam(true);
+    setError('');
+    try {
+      const res = await api.post('/users/me/steam/sync');
+      const { new_games_count, updated_games_count } = res.data;
+      showToast(
+        `Sincronização concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
+        'success'
+      );
+      void fetchSteamAccounts();
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError((err as BackendErrorResponse).response?.data?.detail || 'Erro ao sincronizar contas Steam.');
+    } finally {
+      setIsFetchingSteam(false);
+    }
+  };
 
   const handleUpdateUsername = async (e: SyntheticEvent) => {
     e.preventDefault();
@@ -137,6 +233,14 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
           >
             Excluir Conta
           </button>
+          <button
+            type="button"
+            className={`${styles.tabButton} ${activeTab === 'steam' ? styles.activeTab : ''}`}
+            onClick={() => { setActiveTab('steam'); setError(''); }}
+            disabled={isSubmitting}
+          >
+            Contas Steam
+          </button>
         </div>
 
         <div className={styles.modalBody}>
@@ -229,6 +333,59 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                 {isSubmitting ? 'Processando...' : 'Solicitar Exclusão de Conta'}
               </Button>
             </form>
+          )}
+
+          {activeTab === 'steam' && (
+            <div className={styles.steamTabContent}>
+              <p className={styles.helpText}>
+                Conecte uma ou mais contas Steam para importar e sincronizar seus jogos automaticamente. 
+                <strong> Nota:</strong> O perfil e os "Detalhes do Jogo" devem estar definidos como <strong>Públicos</strong> nas configurações da Steam.
+              </p>
+
+              <form onSubmit={handleConnectSteam} className={styles.steamForm}>
+                <div className={styles.inputRow}>
+                  <Input
+                    placeholder="URL do perfil Steam ou ID (ex: 7656119...)"
+                    value={steamUrl}
+                    onChange={(e) => setSteamUrl(e.target.value)}
+                    disabled={isFetchingSteam}
+                    required
+                  />
+                  <Button type="submit" disabled={isFetchingSteam || !steamUrl.trim()}>
+                    {isFetchingSteam ? 'Conectando...' : 'Conectar'}
+                  </Button>
+                </div>
+              </form>
+
+              {steamAccounts.length > 0 ? (
+                <div className={styles.steamAccountsList}>
+                  <div className={styles.steamListHeader}>
+                    <h4>Contas Conectadas ({steamAccounts.length})</h4>
+                    <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingSteam} onClick={handleSyncSteam}>
+                      🔄 Sincronizar Tudo
+                    </Button>
+                  </div>
+                  
+                  {steamAccounts.map((acc) => (
+                    <div key={acc.id} className={acc.avatar_url ? styles.steamAccountCard : `${styles.steamAccountCard} ${styles.steamAccountCardNoAvatar}`}>
+                      <img src={acc.avatar_url || 'https://avatars.githubusercontent.com/u/0?v=4'} alt={acc.persona_name || ''} className={acc.avatar_url ? styles.steamAvatar : styles.steamAvatarPlaceholder} />
+                      <div className={styles.steamAccountInfo}>
+                        <strong>{acc.persona_name || 'Usuário Steam'}</strong>
+                        <span>ID: {acc.steam_id}</span>
+                        {acc.last_sync_at && (
+                          <small>Sincronizado em: {new Date(acc.last_sync_at).toLocaleString()}</small>
+                        )}
+                      </div>
+                      <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectSteam(acc.id)}>
+                        Desconectar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={styles.noAccounts}>Nenhuma conta Steam vinculada ainda.</div>
+              )}
+            </div>
           )}
         </div>
       </div>

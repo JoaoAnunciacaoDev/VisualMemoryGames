@@ -33,6 +33,13 @@ export function useLibrary(userId: string) {
     return () => window.clearTimeout(timeout);
   }, [userId, loadLibrary]);
 
+  useEffect(() => {
+    window.addEventListener('steam-synced', loadLibrary);
+    return () => {
+      window.removeEventListener('steam-synced', loadLibrary);
+    };
+  }, [loadLibrary]);
+
   const updateGame = async (
       id: string,
       data: Partial<UpdateLibraryGame>

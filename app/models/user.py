@@ -11,6 +11,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.custom_lists import CustomList
+    from app.models.steam_account import SteamAccount
     from app.models.tierlist import TierList
     from app.models.user_game import UserGame
 
@@ -36,4 +37,7 @@ class User(Base):
     )
     custom_lists: Mapped[List["CustomList"]] = relationship(
         "CustomList", back_populates="user", cascade="all, delete-orphan"
+    )
+    steam_accounts: Mapped[List["SteamAccount"]] = relationship(
+        "SteamAccount", back_populates="user", cascade="all, delete-orphan"
     )

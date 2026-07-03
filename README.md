@@ -101,7 +101,7 @@ mise run setup
 ## Backend
 
 ```bash
-mise run api.dev
+mise run api.back
 ```
 
 Disponível em:

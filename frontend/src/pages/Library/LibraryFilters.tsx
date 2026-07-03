@@ -73,6 +73,7 @@ export default function LibraryFilters({
         <option value="rating">Nota</option>
         <option value="started_at">Data de início</option>
         <option value="finished_at">Data de término</option>
+        <option value="platinum_at">Data de platina</option>
       </select>
 
       <select value={sortOrder} onChange={(e) => onSortOrderChange(e.target.value as 'asc' | 'desc')} className={styles.select}>

@@ -23,7 +23,7 @@
 
 # 🎯 Sobre o Projeto
 
-O **GameLog** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam para importar jogos automaticamente e organizar jogos em *tier lists*.
+O **VisualmMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam para importar jogos automaticamente e organizar jogos em *tier lists*.
 
 ---
 

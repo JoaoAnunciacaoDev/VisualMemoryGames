@@ -1,6 +1,8 @@
-# 🎮 VisualMemory
+<h1 align="center">🎮 VisualMemory</h1>
 
-*Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e criação de tier lists personalizadas.*
+<p align="center">
+  <em>Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e criação de tier lists personalizadas.</em>
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white" />
@@ -30,12 +32,18 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
 # ✨ Funcionalidades
 
 - 🔐 **Segurança & Autenticação:** Autenticação robusta com JWT (OAuth2) e rate limiting contra ataques de força bruta.
+- 🛡️ **Painel Administrativo:**
+  - Acesso restrito e protegido para administradores.
+  - Board estatístico de saúde do sistema (Total de usuários, ativos, desativados, administradores).
+  - Tabela gerencial de usuários com suporte a busca em tempo real.
+  - Ações administrativas seguras: promover/rebaixar privilégios de admin, ativar/desativar contas e exclusão permanente com cascade completo de registros relacionados.
+  - Script CLI (`manage_admin.py`) para promoção e rebaixamento de usuários com segurança diretamente pelo terminal.
 - 🔗 **Integração com a Steam:** 
   - Vínculo de múltiplas contas Steam públicas por perfil de usuário.
   - Sincronização automatizada em segundo plano a cada nova sessão ou manual instantânea.
   - Detecção real de platinas (100% de conquistas obtidas) rodando chamadas em paralelo de forma otimizada.
   - Classificação inteligente de status inicial: *"Platinado"* para conquistas completas, *"Jogando"* para jogos iniciados nas últimas 2 semanas, e *"Quero Jogar"* para os demais.
-- 🎨 **Visual Moderno de Capas (Glassmorphism):**
+- 🎨 **Visual Moderno de Capas:**
   - Badge dinâmico com o ícone e nome da loja (ex: `🎮 Steam`, `PlayStation Store`, `Xbox Store`) sobreposto nos cards da biblioteca.
   - Indicador de estrela dourada (`⭐`) no topo direito para os jogos favoritados.
 - 🔍 **Pesquisa e Cadastro Inteligente:**
@@ -92,13 +100,32 @@ O projeto utiliza:
 
 # ▶️ Execução
 
-## Backend
+## 🐳 Via Docker (Recomendado / Produção)
+
+O projeto conta com suporte completo para Docker e Docker Compose.
+
+1. **Subir toda a infraestrutura:**
+   ```bash
+   docker compose up --build -d
+   ```
+   *O frontend estará disponível em `http://localhost` e o backend em `http://localhost:8000`.*
+
+2. **Promover uma conta a administrador pelo Docker:**
+   ```bash
+   docker compose exec backend poetry run python -m app.scripts.manage_admin --email seu-email@email.com --action promote
+   ```
+
+---
+
+## 🛠️ Via CLI (Desenvolvimento Local)
+
+### Backend
 ```bash
 mise run api.back
 ```
 Disponível em: `http://localhost:8000` (documentação automática em `http://localhost:8000/docs`).
 
-## Frontend
+### Frontend
 ```bash
 mise run api.front
 ```
@@ -142,7 +169,7 @@ mise run front.lint      # Analisa erros do React/TypeScript
 
 ## Executar Testes Unitários
 ```bash
-# Backend (Pytest)
+# Backend (Pytest - 63 testes completos)
 mise run back.test
 
 # Frontend (Vitest)
@@ -166,8 +193,9 @@ VisualMemory/
 ├── app/                   # Código-fonte do Backend (FastAPI)
 │   ├── enums/             # Enums compartilhados (status do jogo, lojas)
 │   ├── models/            # Modelos do ORM SQLAlchemy 2.0 (User, Game, SteamAccount)
-│   ├── routers/           # Roteadores/Endpoints da API (auth, games, steam)
+│   ├── routers/           # Roteadores/Endpoints da API (auth, games, steam, admin)
 │   ├── schemas/           # Esquemas de validação Pydantic v2
+│   ├── scripts/           # Scripts utilitários de CLI (manage_admin.py)
 │   ├── services/          # Serviços externos e lógicas complexas (Steam API, storage)
 │   ├── tests/             # Suíte de testes unitários do backend (Pytest)
 │   ├── database.py        # Inicialização do DB Session
@@ -182,7 +210,7 @@ VisualMemory/
 │   │   ├── assets/        # Recursos de imagem/estilo
 │   │   ├── components/    # Componentes modulares (Modal, LibraryCard, SettingsModal)
 │   │   ├── hooks/         # Hooks customizados do React (useLibrary, useAuth)
-│   │   ├── pages/         # Páginas do aplicativo (Library, Profile, Login)
+│   │   ├── pages/         # Páginas do aplicativo (Library, Profile, Login, Admin)
 │   │   ├── providers/     # Context Providers (Auth, Toast)
 │   │   ├── services/      # Integração e cliente HTTP Axios
 │   │   ├── styles/        # CSS global e de layout
@@ -191,6 +219,8 @@ VisualMemory/
 │   └── tests/             # Testes End-to-End (Playwright)
 │
 ├── uploads/               # Diretório local para uploads de capas personalizadas
+├── data_prod/             # Volume local persistido do banco de dados SQLite no Docker
+├── uploads_prod/          # Volume local persistido das imagens de capas no Docker
 ├── mise.toml              # Orquestrador de tarefas do projeto
 ├── pyproject.toml         # Gerenciamento de pacotes Python (Poetry)
 └── README.md              # Documentação oficial do projeto
@@ -205,6 +235,7 @@ VisualMemory/
 - Normalização e validação de payloads com Pydantic v2.
 - Proteção de escopo e privilégios: apenas o proprietário pode alterar os registros da sua biblioteca.
 - Parser robusto de dados (`safe_load_json_list`) para prevenir vulnerabilidades de decodificação na leitura do DB.
+- Imagens Docker endurecidas contra CVEs (OS atualizado e Pip moderno no build).
 
 ---
 

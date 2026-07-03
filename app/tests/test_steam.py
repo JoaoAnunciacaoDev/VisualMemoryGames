@@ -106,23 +106,38 @@ def test_disconnect_steam_account_success(mock_summary, client, auth_headers, db
         assert list_resp.json() == []
 
 
+@patch("app.routers.steam.steam_service.is_game_platinized")
+@patch("app.routers.steam.steam_service.get_recently_played_games")
 @patch("app.routers.steam.steam_service.get_owned_games")
 @patch("app.routers.steam.steam_service.get_player_summary")
-def test_sync_steam_games_success(mock_summary, mock_games, client, auth_headers, db_session):
+def test_sync_steam_games_success(
+    mock_summary, mock_games, mock_recent, mock_plat, client, auth_headers, db_session
+):
     mock_summary.return_value = {
         "steam_id": "765611980843858",
         "persona_name": "Gamer123",
         "avatar_url": "http://avatar.url",
     }
 
+    mock_recent.return_value = [{"appid": 400}]
+
+    async def side_effect_plat(steam_id, appid):
+        return appid == 500
+
+    mock_plat.side_effect = side_effect_plat
+
     # Mock de jogos retornados pela API da Steam
     mock_games.return_value = [
-        {"appid": 400, "name": "Portal", "playtime_forever": 600},  # 10 horas -> status Jogando
+        {
+            "appid": 400,
+            "name": "Portal",
+            "playtime_forever": 600,
+        },  # 10 horas -> status Jogando (recentemente jogado)
         {
             "appid": 500,
             "name": "Left 4 Dead",
             "playtime_forever": 1200,
-        },  # 20 horas -> status Zerado
+        },  # 20 horas -> status Platinado (tem platina)
         {
             "appid": 600,
             "name": "Half-Life 2",
@@ -156,12 +171,43 @@ def test_sync_steam_games_success(mock_summary, mock_games, client, auth_headers
     portal_ug = db_session.query(UserGame).join(Game).filter(Game.steam_appid == 400).first()
     assert portal_ug.hours_played == 10.0
     assert portal_ug.status == "Jogando"
-    assert portal_ug.store == "Steam"
+    assert portal_ug.store == "STEAM"
 
     l4d_ug = db_session.query(UserGame).join(Game).filter(Game.steam_appid == 500).first()
     assert l4d_ug.hours_played == 20.0
-    assert l4d_ug.status == "Zerado"
+    assert l4d_ug.status == "Platinado"
 
     hl2_ug = db_session.query(UserGame).join(Game).filter(Game.steam_appid == 600).first()
     assert hl2_ug.hours_played == 0.0
     assert hl2_ug.status == "Quero Jogar"
+
+
+def test_safe_load_json_list():
+    from app.utils import safe_load_json_list
+
+    assert safe_load_json_list('["PC", "PS5"]') == ["PC", "PS5"]
+    assert safe_load_json_list("PC, PS5") == ["PC", "PS5"]
+    assert safe_load_json_list("PC") == ["PC"]
+    assert safe_load_json_list(None) == []
+    assert safe_load_json_list("") == []
+    assert safe_load_json_list(["Nintendo Switch"]) == ["Nintendo Switch"]
+
+
+def test_store_normalization():
+    from app.enums.game_stores import Store
+    from app.schemas.game import LibraryGameResponse
+
+    data = {
+        "id": "1",
+        "user_id": "u1",
+        "game_id": "g1",
+        "title": "Portal",
+        "status": "Jogando",
+        "store": "Steam",  # Casing de banco legado
+        "favorite": False,
+        "platforms": ["PC"],
+        "genres": ["Puzzle"],
+    }
+
+    response = LibraryGameResponse(**data)
+    assert response.store == Store.STEAM

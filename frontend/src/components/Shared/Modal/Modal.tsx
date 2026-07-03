@@ -10,6 +10,7 @@ interface ModalProps {
   showCloseButton?: boolean;
   titleId?: string;
   descriptionId?: string;
+  closeOnOverlayClick?: boolean;
 }
 
 export default function Modal({
@@ -21,6 +22,7 @@ export default function Modal({
   showCloseButton = true,
   titleId,
   descriptionId,
+  closeOnOverlayClick = false,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedElement = useRef<HTMLElement | null>(null);
@@ -104,7 +106,7 @@ export default function Modal({
   if (!open) return null;
 
   return (
-    <div className={styles.overlay} onClick={onClose} role="presentation">
+    <div className={styles.overlay} onClick={closeOnOverlayClick ? onClose : undefined} role="presentation">
       <div
         ref={modalRef}
         className={`${styles.modal} ${className}`}

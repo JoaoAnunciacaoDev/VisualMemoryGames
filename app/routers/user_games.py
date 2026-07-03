@@ -1,4 +1,3 @@
-import json
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -15,6 +14,7 @@ from app.security import get_current_user
 from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
 from app.services.library_service import remove_from_library
 from app.services.storage import save_upload_file
+from app.utils import safe_load_json_list
 
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
@@ -93,12 +93,8 @@ def get_user_library(
                 favorite=user_game.favorite,
                 notes=user_game.notes,
                 is_manual=game.is_manual,
-                platforms=game.platforms
-                if isinstance(game.platforms, list)
-                else json.loads(game.platforms or "[]"),
-                genres=game.genres
-                if isinstance(game.genres, list)
-                else json.loads(game.genres or "[]"),
+                platforms=safe_load_json_list(game.platforms),
+                genres=safe_load_json_list(game.genres),
             )
         )
 

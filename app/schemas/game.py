@@ -1,4 +1,3 @@
-import json
 from datetime import date
 from typing import Optional
 
@@ -6,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.enums.game_status import GameStatus
 from app.enums.game_stores import Store
+from app.utils import safe_load_json_list
 
 # ---------------------------------------------------------------------------
 # Funções privadas de validação reutilizadas entre classes Base e Update
@@ -86,9 +86,7 @@ class GameResponse(GameBase):
     @field_validator("platforms", "genres", mode="before")
     @classmethod
     def parse_json_list(cls, v):
-        if isinstance(v, str):
-            return json.loads(v)
-        return v or []
+        return safe_load_json_list(v)
 
 
 class UserGameBase(BaseModel):
@@ -103,6 +101,18 @@ class UserGameBase(BaseModel):
     hours_played: Optional[float] = Field(default=None, ge=0)
 
     store: Optional[Store] = None
+
+    @field_validator("store", mode="before")
+    @classmethod
+    def normalize_store(cls, v):
+        if isinstance(v, str):
+            val_upper = v.upper()
+            if val_upper == "STEAM":
+                return "STEAM"
+            for item in Store:
+                if item.value.upper() == val_upper:
+                    return item.value
+        return v
 
     custom_cover_url: Optional[str] = None
 
@@ -202,6 +212,18 @@ class LibraryGameResponse(BaseModel):
     hours_played: Optional[float] = None
 
     store: Optional[Store] = None
+
+    @field_validator("store", mode="before")
+    @classmethod
+    def normalize_store(cls, v):
+        if isinstance(v, str):
+            val_upper = v.upper()
+            if val_upper == "STEAM":
+                return "STEAM"
+            for item in Store:
+                if item.value.upper() == val_upper:
+                    return item.value
+        return v
 
     favorite: bool = False
 

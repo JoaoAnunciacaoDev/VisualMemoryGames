@@ -1,3 +1,4 @@
+import asyncio
 import re
 from datetime import datetime
 from typing import List
@@ -173,12 +174,30 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
 
     try:
         steam_games = await steam_service.get_owned_games(account.steam_id)
+        # Busca os jogos jogados recentemente (últimas 2 semanas)
+        recent_games = await steam_service.get_recently_played_games(account.steam_id)
     except Exception as e:
         print(f"Erro ao sincronizar conta Steam {account.steam_id}: {e}")
         return 0, 0
 
     if not steam_games:
         return 0, 0
+
+    # Conjunto de appids jogados recentemente
+    recent_appids = {g.get("appid") for g in recent_games if g.get("appid")}
+
+    # Busca as conquistas concorrentemente para todos os jogos com tempo de jogo
+    games_to_check = [g for g in steam_games if g.get("playtime_forever", 0) > 0]
+    sem = asyncio.Semaphore(10)
+
+    async def check_platinum(appid: int) -> tuple[int, bool]:
+        async with sem:
+            is_plat = await steam_service.is_game_platinized(account.steam_id, appid)
+            return appid, is_plat
+
+    tasks = [check_platinum(g["appid"]) for g in games_to_check]
+    results = await asyncio.gather(*tasks)
+    platinized_appids = {appid for appid, is_plat in results if is_plat}
 
     for sg in steam_games:
         appid = sg.get("appid")
@@ -203,12 +222,20 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             .first()
         )
 
+        is_platinized = appid in platinized_appids
+        is_recent = appid in recent_appids
+
         if not user_game:
-            # Classifica o status inicial baseado nas horas
+            # Classifica o status inicial:
+            # - Se platinou: "Platinado"
+            # - Se jogou recentemente: "Jogando"
+            # - Senão: "Quero Jogar"
             status_init = "Quero Jogar"
-            if hours > 10:
-                status_init = "Zerado"
-            elif hours > 0:
+            platinum_date = None
+            if is_platinized:
+                status_init = "Platinado"
+                platinum_date = datetime.utcnow().date()
+            elif is_recent:
                 status_init = "Jogando"
 
             user_game = UserGame(
@@ -217,20 +244,27 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                 rating=None,
                 status=status_init,
                 hours_played=hours,
-                store="Steam",
+                store="STEAM",
                 acquired_at=datetime.utcnow().date(),
+                platinum_at=platinum_date,
                 favorite=False,
             )
             db.add(user_game)
             new_games_count += 1
         else:
-            # Apenas atualiza se o playtime for maior ou se a loja não estivesse definida como Steam
             has_changes = False
+            # Se platinou na Steam e o status local não reflete isso, atualizamos para "Platinado"
+            if is_platinized and user_game.status != "Platinado":
+                user_game.status = "Platinado"
+                if not user_game.platinum_at:
+                    user_game.platinum_at = datetime.utcnow().date()
+                has_changes = True
+
             if user_game.hours_played is None or hours > user_game.hours_played:
                 user_game.hours_played = hours
                 has_changes = True
-            if user_game.store != "Steam":
-                user_game.store = "Steam"
+            if user_game.store != "STEAM":
+                user_game.store = "STEAM"
                 has_changes = True
 
             if has_changes:

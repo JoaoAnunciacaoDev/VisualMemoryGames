@@ -22,7 +22,19 @@ describe('Modal', () => {
     expect(screen.getByText('Conteúdo')).toBeInTheDocument();
   });
 
-  it('chama onClose ao clicar no overlay', async () => {
+  it('chama onClose ao clicar no overlay se closeOnOverlayClick for true', async () => {
+    const onClose = vi.fn();
+    render(
+      <Modal open={true} onClose={onClose} closeOnOverlayClick={true}>
+        <p>Conteúdo</p>
+      </Modal>
+    );
+    const overlay = screen.getByRole('presentation');
+    await userEvent.click(overlay);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('não chama onClose ao clicar no overlay se closeOnOverlayClick for false por padrão', async () => {
     const onClose = vi.fn();
     render(
       <Modal open={true} onClose={onClose}>
@@ -31,7 +43,7 @@ describe('Modal', () => {
     );
     const overlay = screen.getByRole('presentation');
     await userEvent.click(overlay);
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('não fecha ao clicar dentro do modal', async () => {

@@ -92,3 +92,47 @@ class SteamService:
                 raise HTTPException(
                     status_code=500, detail=f"Erro interno ao buscar jogos da Steam: {str(e)}"
                 )
+
+    async def get_recently_played_games(self, steam_id: str) -> list[dict]:
+        """Busca os jogos jogados recentemente (últimas 2 semanas)."""
+        self._check_api_key()
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{STEAM_API_URL}/IPlayerService/GetRecentlyPlayedGames/v0001/",
+                    params={
+                        "key": self.api_key,
+                        "steamid": steam_id,
+                    },
+                )
+                response.raise_for_status()
+                data = response.json().get("response", {})
+                return data.get("games", [])
+            except Exception:
+                return []
+
+    async def is_game_platinized(self, steam_id: str, appid: int) -> bool:
+        """Verifica se o jogador completou 100% das conquistas do jogo (Platinou)."""
+        self._check_api_key()
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{STEAM_API_URL}/ISteamUserStats/GetPlayerAchievements/v0001/",
+                    params={
+                        "key": self.api_key,
+                        "steamid": steam_id,
+                        "appid": appid,
+                    },
+                    timeout=3.0,
+                )
+                if response.status_code != 200:
+                    return False
+                data = response.json().get("playerstats", {})
+                if not data.get("success"):
+                    return False
+                achievements = data.get("achievements", [])
+                if not achievements:
+                    return False
+                return all(ach.get("achieved") == 1 for ach in achievements)
+            except Exception:
+                return False

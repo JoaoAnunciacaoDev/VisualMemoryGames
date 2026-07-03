@@ -52,3 +52,27 @@
   color: var(--primary-hover);
   text-decoration: underline;
 }
+
+.resendButton {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  margin: var(--gap-sm) auto;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+  display: block;
+}
+
+.resendButton:hover:not(:disabled) {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.resendButton:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}

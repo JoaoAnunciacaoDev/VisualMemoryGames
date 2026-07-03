@@ -1,4 +1,4 @@
-import { useState, SyntheticEvent } from 'react';
+import { useState, useEffect, SyntheticEvent } from 'react';
 import Card from '@/components/Shared/Card/Card';
 import FormLayout from '@/components/Shared/FormLayout/FormLayout';
 import Button from '@/components/Shared/Button/Button';
@@ -33,6 +33,32 @@ export default function AuthForm({
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || isSubmitting) return;
+    clearError();
+    setIsSubmitting(true);
+    try {
+      if (step === 'verify') {
+        await onRegisterInitiate(username, email, password);
+      } else if (step === 'reset_password_confirm') {
+        await onPasswordResetInitiate(email);
+      }
+      setResendCooldown(60);
+    } catch {
+      // O erro é tratado no componente pai
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
@@ -166,6 +192,16 @@ export default function AuthForm({
               required
               disabled={isSubmitting}
             />
+            <button
+              type="button"
+              className={styles.resendButton}
+              onClick={handleResendCode}
+              disabled={resendCooldown > 0 || isSubmitting}
+            >
+              {resendCooldown > 0
+                ? `Reenviar código em ${resendCooldown}s`
+                : 'Reenviar código'}
+            </button>
           </>
         )}
 
@@ -210,6 +246,16 @@ export default function AuthForm({
               required
               disabled={isSubmitting}
             />
+            <button
+              type="button"
+              className={styles.resendButton}
+              onClick={handleResendCode}
+              disabled={resendCooldown > 0 || isSubmitting}
+            >
+              {resendCooldown > 0
+                ? `Reenviar código em ${resendCooldown}s`
+                : 'Reenviar código'}
+            </button>
           </>
         )}
 

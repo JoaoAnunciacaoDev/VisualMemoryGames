@@ -6,7 +6,7 @@ from typing import List
 
 import bcrypt
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.custom_lists import CustomList
@@ -226,7 +226,12 @@ def get_dashboard(
     current_user: User = Depends(get_current_user),
 ):
     """Gera dados estatísticos e histórico de jogos do usuário atual para a página de perfil."""
-    user_games = db.query(UserGame).filter(UserGame.user_id == current_user.id).all()
+    user_games = (
+        db.query(UserGame)
+        .options(joinedload(UserGame.game))
+        .filter(UserGame.user_id == current_user.id)
+        .all()
+    )
     games_count = len(user_games)
 
     lists_count = db.query(CustomList).filter(CustomList.user_id == current_user.id).count()
@@ -248,7 +253,7 @@ def get_dashboard(
 
     most_played_genre = None
     if genre_counts:
-        most_played_genre = max(genre_counts, key=genre_counts.get)
+        most_played_genre = max(genre_counts.keys(), key=lambda g: genre_counts[g])
 
     yearly_dict = {}
     for ug in user_games:

@@ -56,6 +56,12 @@ def add_game_to_library(
     return new_entry
 
 
+@router.get("/me", response_model=List[LibraryGameResponse])
+def get_my_library(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Retorna os jogos da biblioteca do usuário logado."""
+    return get_user_library(str(current_user.id), db, current_user)
+
+
 @router.get("/user/{user_id}", response_model=List[LibraryGameResponse])
 def get_user_library(
     user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)

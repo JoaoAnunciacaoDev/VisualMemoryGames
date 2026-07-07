@@ -33,12 +33,16 @@ def create_default_categories(tierlist_id: str, db: Session) -> None:
 
 def enrich_tierlist_with_custom_covers(tierlist: TierList, db: Session) -> None:
     """Injeta custom_cover_url nos itens da tier list a partir dos dados de UserGame."""
-    user_games = db.query(UserGame).filter(UserGame.user_id == tierlist.user_id).all()
+    user_games_data = (
+        db.query(UserGame.game_id, UserGame.custom_cover_url)
+        .filter(UserGame.user_id == tierlist.user_id)
+        .all()
+    )
 
     custom_covers = {
-        ug.game_id: ug.custom_cover_url
-        for ug in user_games
-        if ug.custom_cover_url is not None and str(ug.custom_cover_url).strip() != ""
+        game_id: custom_cover_url
+        for game_id, custom_cover_url in user_games_data
+        if custom_cover_url is not None and str(custom_cover_url).strip() != ""
     }
 
     for category in tierlist.categories:

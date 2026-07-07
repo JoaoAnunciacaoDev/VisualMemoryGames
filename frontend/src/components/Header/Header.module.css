@@ -1,12 +1,17 @@
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: var(--gap-md) var(--gap-xl);
-  border-bottom: 1px solid var(--bg);
-  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+  background-color: rgba(32, 24, 38, 0.75);
   color: var(--text);
-  gap: var(--gap-lg);                     /* ← espaço horizontal entre logo e nav */
+  gap: var(--gap-lg);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
 }
 
 .logo {

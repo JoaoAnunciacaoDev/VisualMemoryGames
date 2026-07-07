@@ -4,9 +4,9 @@ import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
 
 
-export function useLibrary(userId?: string) {
+export function useLibrary() {
   const [games, setGames] = useState<LibraryGame[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadLibrary = useCallback(async () => {
@@ -23,8 +23,28 @@ export function useLibrary(userId?: string) {
   }, []);
 
   useEffect(() => {
-    void loadLibrary();
-  }, [loadLibrary]);
+    let active = true;
+    api.get('/user-games/me')
+      .then((response) => {
+        if (active) {
+          setGames(response.data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setError('Erro ao carregar biblioteca.');
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     window.addEventListener('steam-synced', loadLibrary);

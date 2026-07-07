@@ -33,13 +33,13 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   
   // States para Alteração de Dados
-  const [newUsername, setNewUsername] = useState('');
+  const [newUsername, setNewUsername] = useState(user?.username || '');
+  const [prevUsername, setPrevUsername] = useState(user?.username || '');
 
-  useEffect(() => {
-    if (user?.username) {
-      setNewUsername(user.username);
-    }
-  }, [user]);
+  if (user?.username !== prevUsername) {
+    setPrevUsername(user?.username || '');
+    setNewUsername(user?.username || '');
+  }
   
   // States para Alteração de Senha
   const [currentPassword, setCurrentPassword] = useState('');

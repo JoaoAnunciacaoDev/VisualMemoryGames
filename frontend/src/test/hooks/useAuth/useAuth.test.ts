@@ -44,7 +44,9 @@ describe('useAuth', () => {
 
     const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
 
-    expect(api.get).toHaveBeenCalledWith('/users/me');
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/users/me');
+    });
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });

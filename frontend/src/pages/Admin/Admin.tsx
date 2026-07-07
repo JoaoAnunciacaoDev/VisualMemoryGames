@@ -25,14 +25,13 @@ export default function Admin() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [adminChecked, setAdminChecked] = useState(false);
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
   // Modal de confirmação para exclusão permanente
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
 
-  // 1. Validar se o usuário está logado e é um administrador
+  // 1. Validar se o usuário está logado, é admin e carregar dados
   useEffect(() => {
     if (!token) {
       navigate('/login');
@@ -49,14 +48,8 @@ export default function Admin() {
     if (!user.is_admin) {
       showToast('Acesso negado. Apenas administradores podem acessar esta página.', 'error');
       navigate('/library');
-    } else {
-      setAdminChecked(true);
+      return;
     }
-  }, [token, user, authLoading, navigate, showToast]);
-
-  // 2. Carregar dados de usuários e estatísticas se for admin
-  useEffect(() => {
-    if (!adminChecked) return;
 
     let active = true;
     Promise.resolve().then(() => {
@@ -84,7 +77,7 @@ export default function Admin() {
     return () => {
       active = false;
     };
-  }, [adminChecked, search, reloadTrigger, showToast]);
+  }, [token, user, authLoading, search, reloadTrigger, navigate, showToast]);
 
   // 3. Ações rápidas
   const handleToggleActive = (user: User) => {
@@ -137,7 +130,7 @@ export default function Admin() {
       });
   };
 
-  if (!adminChecked) {
+  if (authLoading || !user) {
     return (
       <div className={styles.container}>
         <p className={styles.emptyText}>Verificando credenciais de administrador...</p>

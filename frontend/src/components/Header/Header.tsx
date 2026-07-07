@@ -2,10 +2,9 @@ import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Shared/Button/Button';
 import SettingsModal from '@/components/SettingsModal/SettingsModal';
-import { clearToken, isAuthenticated } from '@/services/auth';
+import { isAuthenticated } from '@/services/auth';
 import { useToast } from '@/hooks/useToast';
 import api from '@/services/api';
-import { User } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
 

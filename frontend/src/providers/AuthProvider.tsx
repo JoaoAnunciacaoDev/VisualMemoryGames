@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   const [user, setUserState] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!getToken());
 
   const token = getToken();
 
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     try {
       const res = await api.get('/users/me');
       setUserState(res.data);
@@ -49,8 +50,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void reloadUser();
-  }, [reloadUser, token]);
+    if (!token) {
+      return;
+    }
+    let active = true;
+    api.get('/users/me')
+      .then((res) => {
+        if (active) {
+          setUserState(res.data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setUserState(null);
+          clearToken();
+          navigateRef.current('/login');
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [token]);
 
   const logout = useCallback(() => {
     clearToken();

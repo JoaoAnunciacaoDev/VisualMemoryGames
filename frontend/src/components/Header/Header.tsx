@@ -65,69 +65,71 @@ export default function Header() {
   };
 
   return (
-    <header className={styles.header}>
-      <button type="button" className={styles.logo} onClick={() => navigate('/')}>
-        VisualMemory
-      </button>
-      <nav className={styles.nav}>
-        {token && (
-          <div className={styles.navLinks}>
-            <Button variant="ghost" onClick={() => navigate('/library')}>
-              Biblioteca
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/tierlists')}>
-              TierLists
-            </Button>
-            {user?.is_admin && (
-              <Button variant="ghost" onClick={() => navigate('/admin')}>
-                Admin
+    <>
+      <header className={styles.header}>
+        <button type="button" className={styles.logo} onClick={() => navigate('/')}>
+          VisualMemory
+        </button>
+        <nav className={styles.nav}>
+          {token && (
+            <div className={styles.navLinks}>
+              <Button variant="ghost" onClick={() => navigate('/library')}>
+                Biblioteca
               </Button>
-            )}
-          </div>
-        )}
+              <Button variant="ghost" onClick={() => navigate('/tierlists')}>
+                TierLists
+              </Button>
+              {user?.is_admin && (
+                <Button variant="ghost" onClick={() => navigate('/admin')}>
+                  Admin
+                </Button>
+              )}
+            </div>
+          )}
 
-        {token ? (
-          <div className={styles.avatarContainer}>
-            <button
-              type="button"
-              className={styles.avatar}
-              onClick={handleAvatarClick}
-            >
-              {getInitial()}
-            </button>
+          {token ? (
+            <div className={styles.avatarContainer}>
+              <button
+                type="button"
+                className={styles.avatar}
+                onClick={handleAvatarClick}
+              >
+                {getInitial()}
+              </button>
 
-            {dropdownOpen && (
-              <div className={styles.dropdown}>
-                <button
-                  type="button"
-                  className={styles.dropdownItem}
-                  onClick={() => navigate('/profile')}
-                >
-                  Ver Perfil
-                </button>
-                <button
-                  type="button"
-                  className={styles.dropdownItem}
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  Configurações
-                </button>
-                <button
-                  type="button"
-                  className={styles.dropdownItem}
-                  onClick={handleLogout}
-                >
-                  Sair
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <Button variant="ghost" onClick={() => navigate('/login')}>
-            Entrar
-          </Button>
-        )}
-      </nav>
+              {dropdownOpen && (
+                <div className={styles.dropdown}>
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => navigate('/profile')}
+                  >
+                    Ver Perfil
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={() => setSettingsOpen(true)}
+                  >
+                    Configurações
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.dropdownItem}
+                    onClick={handleLogout}
+                  >
+                    Sair
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button variant="ghost" onClick={() => navigate('/login')}>
+              Entrar
+            </Button>
+          )}
+        </nav>
+      </header>
 
       {settingsOpen && (
         <SettingsModal
@@ -135,6 +137,6 @@ export default function Header() {
           onLogout={handleLogout}
         />
       )}
-    </header>
+    </>
   );
 }

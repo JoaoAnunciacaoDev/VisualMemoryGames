@@ -9,7 +9,7 @@
   font-size: var(--font-size-md);
   font-weight: 500;
   box-shadow: var(--shadow-md);
-  z-index: 200;
+  z-index: 2000;
   animation: slidein 0.3s ease;
   border: 1px solid var(--border);
   backdrop-filter: blur(6px);

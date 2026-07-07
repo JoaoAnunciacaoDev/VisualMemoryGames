@@ -1,4 +1,5 @@
 import { useEffect, useRef, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './Modal.module.css';
 
 interface ModalProps {
@@ -105,7 +106,7 @@ export default function Modal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={closeOnOverlayClick ? onClose : undefined} role="presentation">
       <div
         ref={modalRef}
@@ -125,6 +126,7 @@ export default function Modal({
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

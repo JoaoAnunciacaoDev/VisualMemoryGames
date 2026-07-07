@@ -6,6 +6,7 @@ from typing import List
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -218,12 +219,24 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
         # 1. Verifica se o jogo existe pelo steam_appid
         game = db.query(Game).filter(Game.steam_appid == appid).first()
         if not game:
-            cover = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
-            game = Game(
-                title=name, steam_appid=appid, cover_url=cover, platforms="PC", is_manual=False
-            )
-            db.add(game)
-            db.flush()  # Gera ID
+            # Tenta encontrar jogo já cadastrado com o mesmo título (case-insensitive)
+            if name:
+                game = db.query(Game).filter(func.lower(Game.title) == name.lower().strip()).first()
+
+            if game:
+                game.steam_appid = appid
+                db.flush()
+            else:
+                cover = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
+                game = Game(
+                    title=name or f"Steam App {appid}",
+                    steam_appid=appid,
+                    cover_url=cover,
+                    platforms="PC",
+                    is_manual=False,
+                )
+                db.add(game)
+                db.flush()  # Gera ID
 
         # 2. Verifica se o usuário já tem o jogo na biblioteca
         user_game = (
@@ -255,7 +268,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                 status=status_init,
                 hours_played=hours,
                 store="STEAM",
-                acquired_at=datetime.utcnow().date(),
+                acquired_at=None,
                 platinum_at=platinum_date,
                 favorite=False,
             )
@@ -263,12 +276,14 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             new_games_count += 1
         else:
             has_changes = False
-            # Se platinou na Steam e o status local não reflete isso, atualizamos para "Platinado"
-            if is_platinized and user_game.status != "Platinado":
-                user_game.status = "Platinado"
+            # Se platinou na Steam e o status local não reflete isso ou a data está em branco
+            if is_platinized:
+                if user_game.status != "Platinado":
+                    user_game.status = "Platinado"
+                    has_changes = True
                 if not user_game.platinum_at:
                     user_game.platinum_at = platinized_game_dates[appid]
-                has_changes = True
+                    has_changes = True
 
             if user_game.hours_played is None or hours > user_game.hours_played:
                 user_game.hours_played = hours

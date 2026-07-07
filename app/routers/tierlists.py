@@ -48,6 +48,12 @@ def create_tierlist(
     return new_tierlist
 
 
+@router.get("/me", response_model=List[TierListResponse])
+def get_my_tierlists(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Busca todas as Tier Lists do usuário logado."""
+    return get_user_tierlists(str(current_user.id), db, current_user)
+
+
 @router.get("/user/{user_id}", response_model=List[TierListResponse])
 def get_user_tierlists(
     user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
@@ -56,7 +62,14 @@ def get_user_tierlists(
     if str(user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão para ver estas tier lists.")
 
-    tierlists = db.query(TierList).filter(TierList.user_id == user_id).all()
+    tierlists = (
+        db.query(TierList)
+        .options(
+            joinedload(TierList.categories).joinedload(TierCategory.items).joinedload(TierItem.game)
+        )
+        .filter(TierList.user_id == user_id)
+        .all()
+    )
     return tierlists
 
 

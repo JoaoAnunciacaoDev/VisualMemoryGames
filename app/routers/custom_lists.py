@@ -1,7 +1,7 @@
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.dependencies import get_owned_or_raise
@@ -32,6 +32,12 @@ def create_list(
     return new_list
 
 
+@router.get("/me", response_model=List[CustomListResponse])
+def get_my_lists(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Retorna as listas customizadas do usuário logado."""
+    return get_user_lists(str(current_user.id), db, current_user)
+
+
 @router.get("/user/{user_id}", response_model=List[CustomListResponse])
 def get_user_lists(
     user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
@@ -39,7 +45,12 @@ def get_user_lists(
     if str(user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão para ver estas listas.")
     get_or_create_favorites_list(user_id, db)
-    return db.query(CustomList).filter(CustomList.user_id == user_id).all()
+    return (
+        db.query(CustomList)
+        .options(selectinload(CustomList.games))
+        .filter(CustomList.user_id == user_id)
+        .all()
+    )
 
 
 @router.delete("/{list_id}", status_code=status.HTTP_204_NO_CONTENT)

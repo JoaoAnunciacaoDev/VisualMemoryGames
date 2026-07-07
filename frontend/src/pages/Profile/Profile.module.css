@@ -264,6 +264,27 @@
   color: var(--text-primary);
 }
 
+.boardTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  user-select: none;
+}
+
+.collapseIcon {
+  font-size: 10px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast) ease;
+}
+
+.boardHeader:hover .collapseIcon {
+  color: var(--primary);
+  transform: scale(1.2);
+}
+
 .boardFilters {
   display: flex;
   gap: var(--gap-sm);

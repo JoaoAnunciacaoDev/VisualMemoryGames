@@ -20,7 +20,7 @@ const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Quero Jogar', 'Abando
 
 export default function TierLists() {
   const navigate = useNavigate();
-  const { userId, loading } = useAuth();
+  const { loading } = useAuth();
   const { showToast } = useToast();
 
   const [tierLists, setTierLists] = useState<TierListSummary[]>([]);
@@ -31,31 +31,39 @@ export default function TierLists() {
 
   const deleteModal = useConfirmAction<string>();
 
-  const loadSources = useCallback(async (uid: string) => {
-    const [listsRes, libraryRes] = await Promise.all([
-      api.get(`/lists/user/${uid}`),
-      api.get(`/user-games/user/${uid}`),
-    ]);
-    setCustomLists(listsRes.data);
-    setLibraryGames(libraryRes.data);
-  }, []);
-
-  const loadTierLists = useCallback(async (uid: string) => {
+  const reloadTierLists = useCallback(async () => {
     try {
-      const [tierlistsRes] = await Promise.all([
-        api.get(`/tierlists/user/${uid}`),
-        loadSources(uid),
-      ]);
-      setTierLists(tierlistsRes.data);
+      const response = await api.get('/tierlists/me');
+      setTierLists(response.data);
     } catch {
       showToast('Erro ao carregar tier lists.', 'error');
     }
-  }, [loadSources, showToast]);
+  }, [showToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userId) loadTierLists(userId);
-  }, [userId, loadTierLists]);
+    let active = true;
+    Promise.all([
+      api.get('/tierlists/me'),
+      api.get('/lists/me'),
+      api.get('/user-games/me'),
+    ])
+      .then(([tierlistsRes, listsRes, libraryRes]) => {
+        if (active) {
+          setTierLists(tierlistsRes.data);
+          setCustomLists(listsRes.data);
+          setLibraryGames(libraryRes.data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          showToast('Erro ao carregar dados das tier lists.', 'error');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [showToast]);
 
   const handleCreate = async ({
     title,
@@ -118,7 +126,7 @@ export default function TierLists() {
     if (!deleteModal.target) return;
     try {
       await api.delete(`/tierlists/${deleteModal.target}`);
-      if (userId) await loadTierLists(userId);
+      await reloadTierLists();
       showToast('Tier list deletada.', 'info');
     } catch {
       showToast('Erro ao deletar tier list.', 'error');

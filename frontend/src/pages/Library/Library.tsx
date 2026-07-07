@@ -30,8 +30,8 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Library() {
-  const { userId, loading: authLoading } = useAuth();
-  const { games, loadLibrary, removeGame, loading: libraryLoading, error: libraryError } = useLibrary(userId);
+  const { loading: authLoading } = useAuth();
+  const { games, loadLibrary, removeGame, loading: libraryLoading, error: libraryError } = useLibrary();
   const {
     filtered, search, setSearch,
     statusFilter, setStatusFilter,
@@ -174,7 +174,7 @@ export default function Library() {
       )}
 
       {activeTab === 'lists' && (
-        <CustomListsTab userId={userId} libraryGames={games} onLibraryChange={loadLibrary} />
+        <CustomListsTab libraryGames={games} onLibraryChange={loadLibrary} />
       )}
 
       {activeTab === 'manual' && (

@@ -20,12 +20,11 @@ interface CustomList {
 }
 
 interface Props {
-  userId: string;
   libraryGames: LibraryGame[];
   onLibraryChange: () => void;
 }
 
-export default function CustomListsTab({ userId, libraryGames, onLibraryChange }: Props) {
+export default function CustomListsTab({ libraryGames, onLibraryChange }: Props) {
   const [lists, setLists] = useState<CustomList[]>([]);
   const [newListName, setNewListName] = useState('');
   const [expandedList, setExpandedList] = useState<string | null>(null);
@@ -41,7 +40,7 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
 
   const loadLists = useCallback(async () => {
     try {
-      const response = await api.get(`/lists/user/${userId}`);
+      const response = await api.get('/lists/me');
       const priority: Record<string, number> = {
         'favorites': 1,
         'completed_year': 2,
@@ -57,12 +56,34 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
     } catch {
       showToast('Erro ao carregar listas.', 'error');
     }
-  }, [showToast, userId]);
+  }, [showToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userId) loadLists();
-  }, [userId, loadLists]);
+    let active = true;
+    api.get('/lists/me')
+      .then((response) => {
+        if (!active) return;
+        const priority: Record<string, number> = {
+          'favorites': 1,
+          'completed_year': 2,
+          'platinized_year': 3,
+        };
+        const sorted = response.data.sort((a: CustomList, b: CustomList) => {
+          const aPriority = a.list_type ? (priority[a.list_type] ?? 4) : 4;
+          const bPriority = b.list_type ? (priority[b.list_type] ?? 4) : 4;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+          return a.name.localeCompare(b.name);
+        });
+        setLists(sorted);
+      })
+      .catch(() => {
+        if (active) showToast('Erro ao carregar listas.', 'error');
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [showToast]);
 
   const handleCreateList = async () => {
     if (!newListName.trim()) return;

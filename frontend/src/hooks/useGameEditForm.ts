@@ -82,6 +82,19 @@ export function useGameEditForm(game: LibraryGame) {
   };
 
   const handleSave = async () => {
+    // Validação de Comprimento de Anos nas Datas (evita estouro > 9999 e erros silenciosos)
+    const checkDateYear = (dateStr: string | null) => {
+      if (!dateStr) return;
+      const parts = dateStr.split('-');
+      if (parts[0] && parts[0].length > 4) {
+        throw new Error('O ano das datas não pode conter mais de 4 dígitos.');
+      }
+    };
+    checkDateYear(form.acquired_at);
+    checkDateYear(form.started_at);
+    checkDateYear(form.finished_at);
+    checkDateYear(form.platinum_at);
+
     // Validações de Jogo Manual
     if (game.is_manual) {
       if (!editTitle.trim()) {

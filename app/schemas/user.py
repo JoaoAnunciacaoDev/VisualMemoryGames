@@ -120,3 +120,4 @@ class DashboardResponse(BaseModel):
     status_distribution: Dict[str, int]
     most_played_genre: Optional[str] = None
     yearly_games: List[YearlyGames]
+    yearly_platinums: List[YearlyGames] = Field(default_factory=list)

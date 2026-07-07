@@ -4,34 +4,47 @@ import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
 
 
-export function useLibrary(userId: string) {
+export function useLibrary() {
   const [games, setGames] = useState<LibraryGame[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadLibrary = useCallback(async () => {
-    if (!userId) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get(`/user-games/user/${userId}`);
+      const response = await api.get('/user-games/me');
       setGames(response.data);
     } catch {
       setError('Erro ao carregar biblioteca.');
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    let active = true;
+    api.get('/user-games/me')
+      .then((response) => {
+        if (active) {
+          setGames(response.data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setError('Erro ao carregar biblioteca.');
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
 
-    const timeout = window.setTimeout(() => {
-      void loadLibrary();
-    }, 0);
-
-    return () => window.clearTimeout(timeout);
-  }, [userId, loadLibrary]);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     window.addEventListener('steam-synced', loadLibrary);

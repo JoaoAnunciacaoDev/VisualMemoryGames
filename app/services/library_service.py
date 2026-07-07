@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.custom_lists import CustomList
 from app.models.user import User
@@ -10,7 +10,12 @@ def remove_from_library(db_user_game: UserGame, current_user: User, db: Session)
     """Remove um jogo da biblioteca do utilizador, fazendo a limpeza de listas e do jogo manual."""
     game = db_user_game.game
 
-    lists = db.query(CustomList).filter(CustomList.user_id == current_user.id).all()
+    lists = (
+        db.query(CustomList)
+        .options(selectinload(CustomList.games))
+        .filter(CustomList.user_id == current_user.id)
+        .all()
+    )
     for lst in lists:
         if game in lst.games:
             lst.games.remove(game)

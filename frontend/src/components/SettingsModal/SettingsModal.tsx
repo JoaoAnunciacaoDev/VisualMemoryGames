@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/useToast';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
+import { useAuth } from '@/hooks/useAuth';
 import styles from './SettingsModal.module.css';
 
 interface Props {
@@ -28,10 +29,17 @@ interface AxiosErrorDetail {
 
 export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
+  const { user, reloadUser } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   
   // States para Alteração de Dados
-  const [newUsername, setNewUsername] = useState('');
+  const [newUsername, setNewUsername] = useState(user?.username || '');
+  const [prevUsername, setPrevUsername] = useState(user?.username || '');
+
+  if (user?.username !== prevUsername) {
+    setPrevUsername(user?.username || '');
+    setNewUsername(user?.username || '');
+  }
   
   // States para Alteração de Senha
   const [currentPassword, setCurrentPassword] = useState('');
@@ -198,6 +206,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     try {
       await api.put('/users/me', { username: newUsername.trim() });
       showToast('Nome de usuário alterado com sucesso!', 'success');
+      await reloadUser();
       window.dispatchEvent(new Event('user-updated'));
       setNewUsername('');
       onClose();

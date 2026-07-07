@@ -27,6 +27,11 @@ def send_verification_email(email: str, code: str):
     3. Se SMTP_HOST estiver configurado, usa o envio SMTP clássico.
     4. Se nenhum estiver configurado, apenas registra o código em modo simulação (Mock).
     """
+    # Apenas exibe o código no terminal se estiver rodando localmente (desenvolvimento)
+    # Evita vazamento de códigos nos logs de produção (ex: Render)
+    if os.getenv("ENVIRONMENT", "development") == "development" and not os.getenv("RENDER"):
+        print(f"\n[DEBUG EMAIL] Código de verificação para {email}: {code}\n")
+
     text = f"Seu código de verificação para o VisualMemory é: {code}. Ele expira em 10 minutos."
     html = f"""
     <html>
@@ -145,6 +150,11 @@ def send_verification_email(email: str, code: str):
 
 def send_password_reset_email(email: str, code: str):
     """Envia um e-mail contendo o código de redefinição de senha para o usuário."""
+    # Apenas exibe o código no terminal se estiver rodando localmente (desenvolvimento)
+    # Evita vazamento de códigos nos logs de produção (ex: Render)
+    if os.getenv("ENVIRONMENT", "development") == "development" and not os.getenv("RENDER"):
+        print(f"\n[DEBUG EMAIL] Código de redefinição de senha para {email}: {code}\n")
+
     text = (
         f"Seu código de redefinição de senha para o VisualMemory é: {code}. "
         "Ele expira em 10 minutos."

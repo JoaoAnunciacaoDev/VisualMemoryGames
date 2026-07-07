@@ -1,32 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '@/services/api';
-import { clearToken, getToken } from '@/services/auth';
-
+import { getToken } from '@/services/auth';
+import { useAuthContext } from '@/providers/AuthProvider';
 
 export function useAuth() {
+  const { user, loading, logout, reloadUser, setUser } = useAuthContext();
   const navigate = useNavigate();
   const token = getToken();
-  
-  const [userId, setUserId] = useState<string>('');
-  const [loading, setLoading] = useState(!!token);
 
   useEffect(() => {
-    if (!token) {
+    if (!loading && !token) {
       navigate('/login');
-      return;
     }
+  }, [loading, token, navigate]);
 
-    api.get('/users/me')
-      .then((res) => setUserId(res.data.id))
-      .catch(() => navigate('/login'))
-      .finally(() => setLoading(false));
-  }, [navigate, token]);
-
-  const logout = () => {
-    clearToken();
-    navigate('/login');
+  return {
+    userId: user?.id || '',
+    user,
+    loading,
+    logout,
+    reloadUser,
+    setUser,
   };
-
-  return { userId, loading, logout };
 }

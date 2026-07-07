@@ -41,7 +41,7 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
 
   const loadLists = useCallback(async () => {
     try {
-      const response = await api.get(`/lists/user/${userId}`);
+      const response = await api.get('/lists/me');
       const priority: Record<string, number> = {
         'favorites': 1,
         'completed_year': 2,
@@ -57,12 +57,11 @@ export default function CustomListsTab({ userId, libraryGames, onLibraryChange }
     } catch {
       showToast('Erro ao carregar listas.', 'error');
     }
-  }, [showToast, userId]);
+  }, [showToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userId) loadLists();
-  }, [userId, loadLists]);
+    void loadLists();
+  }, [loadLists]);
 
   const handleCreateList = async () => {
     if (!newListName.trim()) return;

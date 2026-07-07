@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth } from '@/hooks/useAuth';
+import { AuthProvider } from '@/providers/AuthProvider';
 import * as authService from '@/services/auth';
 import api from '@/services/api';
 
@@ -28,7 +29,7 @@ describe('useAuth', () => {
   it('deve redirecionar para /login se não houver token', async () => {
     vi.mocked(authService.getToken).mockReturnValue(null);
 
-    const { result } = renderHook(() => useAuth());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -41,7 +42,7 @@ describe('useAuth', () => {
     vi.mocked(authService.getToken).mockReturnValue('fake-token');
     vi.mocked(api.get).mockResolvedValue({ data: { id: 'user-123' } });
 
-    const { result } = renderHook(() => useAuth());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
 
     expect(api.get).toHaveBeenCalledWith('/users/me');
     await waitFor(() => {
@@ -55,7 +56,7 @@ describe('useAuth', () => {
     vi.mocked(authService.getToken).mockReturnValue('fake-token');
     vi.mocked(api.get).mockRejectedValue(new Error('Unauthorized'));
 
-    const { result } = renderHook(() => useAuth());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -68,7 +69,7 @@ describe('useAuth', () => {
     vi.mocked(authService.getToken).mockReturnValue('fake-token');
     vi.mocked(api.get).mockResolvedValue({ data: { id: 'user-123' } });
 
-    const { result } = renderHook(() => useAuth());
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
 
     act(() => {
       result.current.logout();

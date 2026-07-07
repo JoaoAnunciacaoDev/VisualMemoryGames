@@ -6,14 +6,15 @@ import { clearToken, isAuthenticated } from '@/services/auth';
 import { useToast } from '@/hooks/useToast';
 import api from '@/services/api';
 import { User } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
 
 export default function Header() {
   const navigate = useNavigate();
   const token = isAuthenticated();
   const { showToast } = useToast();
+  const { user, logout } = useAuth();
 
-  const [user, setUser] = useState<User | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -42,36 +43,6 @@ export default function Header() {
   }, [token, user, showToast]);
 
   useEffect(() => {
-    let active = true;
-
-    const fetchUser = () => {
-      if (token) {
-        api.get('/users/me')
-          .then((res) => {
-            if (active) setUser(res.data);
-          })
-          .catch(() => {
-            if (active) setUser(null);
-          });
-      } else {
-        setUser(null);
-      }
-    };
-
-    fetchUser();
-
-    const handleUpdate = () => {
-      fetchUser();
-    };
-
-    window.addEventListener('user-updated', handleUpdate);
-    return () => {
-      active = false;
-      window.removeEventListener('user-updated', handleUpdate);
-    };
-  }, [token]);
-
-  useEffect(() => {
     if (!dropdownOpen) return;
     const closeDropdown = () => setDropdownOpen(false);
     window.addEventListener('click', closeDropdown);
@@ -79,10 +50,8 @@ export default function Header() {
   }, [dropdownOpen]);
 
   const handleLogout = () => {
-    clearToken();
-    setUser(null);
+    logout();
     setDropdownOpen(false);
-    navigate('/login');
   };
 
   const handleAvatarClick = (e: MouseEvent) => {

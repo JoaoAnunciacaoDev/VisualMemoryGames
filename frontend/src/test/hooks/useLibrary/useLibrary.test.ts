@@ -42,17 +42,18 @@ describe('useLibrary', () => {
       expect(result.current.games).toEqual(mockGames);
     });
 
-    expect(api.get).toHaveBeenCalledWith(`/user-games/user/user-123`);
+    expect(api.get).toHaveBeenCalledWith('/user-games/me');
   });
 
-  it('não deve carregar se o userId for vazio', async () => {
+  it('deve carregar mesmo se o userId for vazio', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockGames });
     const { result } = renderHook(() => useLibrary(''));
 
     await waitFor(() => {
-      expect(result.current.games).toEqual([]);
+      expect(result.current.games).toEqual(mockGames);
     });
 
-    expect(api.get).not.toHaveBeenCalled();
+    expect(api.get).toHaveBeenCalledWith('/user-games/me');
   });
 
   it('updateGame deve atualizar um jogo e recarregar a biblioteca', async () => {

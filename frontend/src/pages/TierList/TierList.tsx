@@ -31,20 +31,20 @@ export default function TierLists() {
 
   const deleteModal = useConfirmAction<string>();
 
-  const loadSources = useCallback(async (uid: string) => {
+  const loadSources = useCallback(async () => {
     const [listsRes, libraryRes] = await Promise.all([
-      api.get(`/lists/user/${uid}`),
-      api.get(`/user-games/user/${uid}`),
+      api.get('/lists/me'),
+      api.get('/user-games/me'),
     ]);
     setCustomLists(listsRes.data);
     setLibraryGames(libraryRes.data);
   }, []);
 
-  const loadTierLists = useCallback(async (uid: string) => {
+  const loadTierLists = useCallback(async () => {
     try {
       const [tierlistsRes] = await Promise.all([
-        api.get(`/tierlists/user/${uid}`),
-        loadSources(uid),
+        api.get('/tierlists/me'),
+        loadSources(),
       ]);
       setTierLists(tierlistsRes.data);
     } catch {
@@ -53,9 +53,8 @@ export default function TierLists() {
   }, [loadSources, showToast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (userId) loadTierLists(userId);
-  }, [userId, loadTierLists]);
+    void loadTierLists();
+  }, [loadTierLists]);
 
   const handleCreate = async ({
     title,
@@ -118,7 +117,7 @@ export default function TierLists() {
     if (!deleteModal.target) return;
     try {
       await api.delete(`/tierlists/${deleteModal.target}`);
-      if (userId) await loadTierLists(userId);
+      await loadTierLists();
       showToast('Tier list deletada.', 'info');
     } catch {
       showToast('Erro ao deletar tier list.', 'error');

@@ -9,23 +9,26 @@ import Profile from './pages/Profile/Profile';
 import NotFound from './pages/NotFound/NotFound';
 import Admin from './pages/Admin/Admin';
 import { ToastProvider } from './providers/ToastProvider';
+import { AuthProvider } from './providers/AuthProvider';
 
 function App() {
   return (
       <BrowserRouter>
         <ToastProvider position="top-center">
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/tierlists" element={<TierList />} />
-              <Route path="/tierlists/:id" element={<TierListEditor />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
+          <AuthProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/tierlists" element={<TierList />} />
+                <Route path="/tierlists/:id" element={<TierListEditor />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          </AuthProvider>
         </ToastProvider>
       </BrowserRouter>
   );

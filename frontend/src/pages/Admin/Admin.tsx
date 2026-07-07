@@ -5,6 +5,7 @@ import api from '@/services/api';
 import { isAuthenticated } from '@/services/auth';
 import { useToast } from '@/hooks/useToast';
 import { User } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 import styles from './Admin.module.css';
 
 interface SystemStats {
@@ -18,6 +19,7 @@ export default function Admin() {
   const navigate = useNavigate();
   const token = isAuthenticated();
   const { showToast } = useToast();
+  const { user, loading: authLoading } = useAuth();
 
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -37,19 +39,20 @@ export default function Admin() {
       return;
     }
 
-    api.get('/users/me')
-      .then((res) => {
-        if (!res.data.is_admin) {
-          showToast('Acesso negado. Apenas administradores podem acessar esta página.', 'error');
-          navigate('/library');
-        } else {
-          setAdminChecked(true);
-        }
-      })
-      .catch(() => {
-        navigate('/login');
-      });
-  }, [token, navigate, showToast]);
+    if (authLoading) return;
+
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (!user.is_admin) {
+      showToast('Acesso negado. Apenas administradores podem acessar esta página.', 'error');
+      navigate('/library');
+    } else {
+      setAdminChecked(true);
+    }
+  }, [token, user, authLoading, navigate, showToast]);
 
   // 2. Carregar dados de usuários e estatísticas se for admin
   useEffect(() => {

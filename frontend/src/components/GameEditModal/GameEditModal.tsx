@@ -242,7 +242,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
             </label>
             <label className={styles.label}>
               Adquirido em
-              <input type="date" className={styles.input} value={form.acquired_at ?? ''} onChange={(e) => updateField('acquired_at', e.target.value)} disabled={isBusy} />
+              <input type="date" max="9999-12-31" className={styles.input} value={form.acquired_at ?? ''} onChange={(e) => updateField('acquired_at', e.target.value)} disabled={isBusy} />
             </label>
           </div>
 
@@ -251,12 +251,12 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
               <div className={styles.dateRow}>
                 <label className={styles.label}>
                   Data de início
-                  <input type="date" className={styles.input} value={form.started_at ?? ''} onChange={(e) => updateField('started_at', e.target.value)} disabled={isBusy} />
+                  <input type="date" max="9999-12-31" className={styles.input} value={form.started_at ?? ''} onChange={(e) => updateField('started_at', e.target.value)} disabled={isBusy} />
                 </label>
                 {(form.status === 'Zerado' || form.status === 'Platinado') && (
                   <label className={styles.label}>
                     Data de conclusão
-                    <input type="date" className={styles.input} value={form.finished_at ?? ''} onChange={(e) => updateField('finished_at', e.target.value)} disabled={isBusy} />
+                    <input type="date" max="9999-12-31" className={styles.input} value={form.finished_at ?? ''} onChange={(e) => updateField('finished_at', e.target.value)} disabled={isBusy} />
                   </label>
                 )}
               </div>
@@ -265,7 +265,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
                 <div className={styles.dateRow}>
                   <label className={styles.label}>
                     Platinado em
-                    <input type="date" className={styles.input} value={form.platinum_at ?? ''} onChange={(e) => updateField('platinum_at', e.target.value)} disabled={isBusy} />
+                    <input type="date" max="9999-12-31" className={styles.input} value={form.platinum_at ?? ''} onChange={(e) => updateField('platinum_at', e.target.value)} disabled={isBusy} />
                   </label>
                 </div>
               )}

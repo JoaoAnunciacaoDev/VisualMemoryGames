@@ -267,8 +267,6 @@ def get_dashboard(
                 rating=ug.rating,
                 finished_at=(
                     datetime.combine(ug.finished_at, datetime.min.time())
-                    if ug.finished_at
-                    else None
                 ),
             )
             if year not in yearly_dict:
@@ -281,8 +279,35 @@ def get_dashboard(
             yearly_dict[year],
             key=lambda x: (x.hours_played, x.rating or 0.0),
             reverse=True,
-        )[:5]
+        )
         yearly_games_list.append(YearlyGames(year=year, games=sorted_games))
+
+    platinum_dict = {}
+    for ug in user_games:
+        if ug.platinum_at:
+            year = ug.platinum_at.year
+            cover = ug.custom_cover_url or (ug.game.cover_url if ug.game else None)
+            g_data = DashboardGame(
+                title=ug.game.title if ug.game else "Jogo Desconhecido",
+                cover_url=cover,
+                hours_played=ug.hours_played or 0.0,
+                rating=ug.rating,
+                finished_at=(
+                    datetime.combine(ug.platinum_at, datetime.min.time())
+                ),
+            )
+            if year not in platinum_dict:
+                platinum_dict[year] = []
+            platinum_dict[year].append(g_data)
+
+    yearly_platinums_list = []
+    for year in sorted(platinum_dict.keys(), reverse=True):
+        sorted_platinums = sorted(
+            platinum_dict[year],
+            key=lambda x: (x.hours_played, x.rating or 0.0),
+            reverse=True,
+        )
+        yearly_platinums_list.append(YearlyGames(year=year, games=sorted_platinums))
 
     return DashboardResponse(
         username=current_user.username,
@@ -294,4 +319,5 @@ def get_dashboard(
         status_distribution=status_distribution,
         most_played_genre=most_played_genre,
         yearly_games=yearly_games_list,
+        yearly_platinums=yearly_platinums_list,
     )

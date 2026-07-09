@@ -23,9 +23,18 @@ export default function Admin() {
 
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<SystemStats | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [reloadTrigger, setReloadTrigger] = useState(0);
+
+  // Debounce do termo de busca para reduzir carga do servidor
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Modal de confirmação para exclusão permanente
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -169,8 +178,8 @@ export default function Admin() {
         <div className={styles.searchBox}>
           <Input
             placeholder="Buscar por nome ou e-mail..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
@@ -189,6 +198,8 @@ export default function Admin() {
                   <th className={styles.th}>Usuário</th>
                   <th className={styles.th}>Cargo</th>
                   <th className={styles.th}>Status</th>
+                  <th className={styles.th}>Jogos</th>
+                  <th className={styles.th}>Último Acesso</th>
                   <th className={styles.th}>Data de Cadastro</th>
                   <th className={styles.th}>Ações</th>
                 </tr>
@@ -211,6 +222,12 @@ export default function Admin() {
                       <span className={`${styles.badge} ${!u.is_deleted ? styles.activeBadge : styles.inactiveBadge}`}>
                         {!u.is_deleted ? 'Ativo' : 'Desativado'}
                       </span>
+                    </td>
+                    <td className={styles.td}>
+                      <span className={styles.gamesCount}>{u.games_count ?? 0}</span>
+                    </td>
+                    <td className={styles.td}>
+                      {u.last_active_at ? new Date(u.last_active_at).toLocaleString('pt-BR') : 'Nunca'}
                     </td>
                     <td className={styles.td}>
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '-'}

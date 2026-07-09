@@ -29,6 +29,7 @@ class User(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     user_games: Mapped[List["UserGame"]] = relationship(
         "UserGame", back_populates="user", cascade="all, delete-orphan"
@@ -42,3 +43,7 @@ class User(Base):
     steam_accounts: Mapped[List["SteamAccount"]] = relationship(
         "SteamAccount", back_populates="user", cascade="all, delete-orphan"
     )
+
+    @property
+    def games_count(self) -> int:
+        return len(self.user_games)

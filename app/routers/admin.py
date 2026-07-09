@@ -2,7 +2,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy import func
+from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
 from app.models.user import User
@@ -40,11 +41,15 @@ def get_all_users(
     admin: User = Depends(get_current_admin),
 ):
     """Lista todos os usuários com suporte a paginação e busca textual."""
-    query = db.query(User)
+    # Evita N+1 na serialização do games_count usando selectinload
+    query = db.query(User).options(selectinload(User.user_games))
 
     if search:
-        search_filter = f"%{search}%"
-        query = query.filter((User.username.like(search_filter)) | (User.email.like(search_filter)))
+        search_filter = f"%{search.strip().lower()}%"
+        query = query.filter(
+            (func.lower(User.username).like(search_filter))
+            | (func.lower(User.email).like(search_filter))
+        )
 
     # Ordenar por data de criação decrescente (mais novos primeiro)
     users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()

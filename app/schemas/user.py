@@ -66,6 +66,8 @@ class UserResponse(UserBase):
     is_admin: bool = False
     is_deleted: bool = False
     created_at: Optional[datetime] = None
+    last_active_at: Optional[datetime] = None
+    games_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

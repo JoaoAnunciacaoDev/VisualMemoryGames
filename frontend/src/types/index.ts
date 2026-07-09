@@ -96,4 +96,6 @@ export interface User {
   is_admin: boolean;
   is_deleted: boolean;
   created_at?: string;
+  last_active_at?: string;
+  games_count?: number;
 }

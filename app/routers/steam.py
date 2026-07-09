@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models.game import Game
 from app.models.steam_account import SteamAccount
 from app.models.user import User
@@ -20,6 +20,7 @@ from app.services.steam import SteamService
 router = APIRouter(prefix="/users/me/steam", tags=["Steam Integration"])
 steam_service = SteamService()
 ACTIVE_SYNC_USERS = set()
+db_session_maker = SessionLocal
 
 
 class ConnectSteamRequest(BaseModel):
@@ -205,35 +206,50 @@ async def disconnect_steam_account(
     return {"message": "Conta Steam desconectada com sucesso."}
 
 
-async def fetch_game_genres_in_background(appids: List[int], db: Session, user_id: str):
+async def fetch_game_genres_in_background(appids: List[int], user_id: str):
     """Busca gêneros e ano de lançamento de uma lista de AppIDs da Steam em segundo plano."""
     try:
         async with httpx.AsyncClient() as client:
             for appid in appids:
-                game = db.query(Game).filter(Game.steam_appid == appid).first()
-                if not game:
-                    continue
-                if game.genres and game.genres != "[]":
-                    continue
+                # 1. Abre sessão curta para verificar se precisa atualizar
+                db = db_session_maker()
+                try:
+                    game = db.query(Game).filter(Game.steam_appid == appid).first()
+                    if not game or (game.genres and game.genres != "[]"):
+                        continue
+                finally:
+                    db.close()
 
+                # 2. Faz a requisição assíncrona de rede (fora de transação de banco)
+                details = None
                 try:
                     details = await steam_service.get_game_details(appid, client=client)
-                    genres_val = "[]"
-                    release_yr = None
-                    if details:
-                        import json
-
-                        if details.get("genres"):
-                            genres_val = json.dumps(details["genres"])
-                        if details.get("release_year"):
-                            release_yr = details["release_year"]
-
-                    game.genres = genres_val
-                    if release_yr:
-                        game.release_year = release_yr
-                    db.commit()
                 except Exception as e:
-                    print(f"Erro no background task ao buscar detalhes para appid {appid}: {e}")
+                    print(f"Erro ao buscar detalhes do appid {appid}: {e}")
+
+                # 3. Abre nova sessão curta para atualizar e salvar
+                db = db_session_maker()
+                try:
+                    game = db.query(Game).filter(Game.steam_appid == appid).first()
+                    if game:
+                        genres_val = "[]"
+                        release_yr = None
+                        if details:
+                            import json
+
+                            if details.get("genres"):
+                                genres_val = json.dumps(details["genres"])
+                            if details.get("release_year"):
+                                release_yr = details["release_year"]
+
+                        game.genres = genres_val
+                        if release_yr:
+                            game.release_year = release_yr
+                        db.commit()
+                except Exception as e:
+                    print(f"Erro no background task ao salvar detalhes para appid {appid}: {e}")
+                finally:
+                    db.close()
 
                 # Sleep de 1.5 segundos para evitar 429 da Steam Store
                 await asyncio.sleep(1.5)
@@ -268,7 +284,7 @@ async def sync_steam_games(
         unique_appids = list(set(all_missing_genres_appids))
         ACTIVE_SYNC_USERS.add(str(current_user.id))
         background_tasks.add_task(
-            fetch_game_genres_in_background, unique_appids, db, str(current_user.id)
+            fetch_game_genres_in_background, unique_appids, str(current_user.id)
         )
 
     return SyncResultResponse(new_games_count=total_new, updated_games_count=total_updated)

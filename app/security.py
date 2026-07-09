@@ -49,6 +49,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
 
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if not user.last_active_at or (now - user.last_active_at).total_seconds() > 60:
+        user.last_active_at = now
+        db.commit()
+
     return user
 
 

@@ -44,9 +44,16 @@ def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     app.state.limiter.reset()
 
+    import app.routers.steam as steam_router
+
+    original_session_maker = steam_router.db_session_maker
+    steam_router.db_session_maker = TestingSessionLocal
+
     with TestClient(app) as c:
         yield c
+
     app.dependency_overrides.clear()
+    steam_router.db_session_maker = original_session_maker
 
 
 @pytest.fixture

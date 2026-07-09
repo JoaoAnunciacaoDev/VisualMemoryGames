@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getToken } from '@/services/auth';
-import { useAuthContext } from '@/providers/AuthProvider';
+import { useAuthContext } from '@/hooks/useAuthContext';
 
 export function useAuth() {
   const { user, loading, logout, reloadUser, setUser } = useAuthContext();

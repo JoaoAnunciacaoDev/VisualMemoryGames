@@ -9,7 +9,13 @@ from app.enums.game_status import GameStatus
 from app.models.game import Game
 from app.models.user import User
 from app.models.user_game import UserGame
-from app.schemas.game import LibraryGameResponse, UserGameCreate, UserGameResponse, UserGameUpdate
+from app.schemas.game import (
+    LibraryGameResponse,
+    UserGameBase,
+    UserGameCreate,
+    UserGameResponse,
+    UserGameUpdate,
+)
 from app.security import get_current_user
 from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
 from app.services.library_service import remove_from_library
@@ -119,6 +125,49 @@ def update_user_game(
     update_data = game_update.model_dump(exclude_unset=True)
 
     new_status = update_data.get("status", db_user_game.status)
+
+    validation_data = {
+        "rating": db_user_game.rating,
+        "status": db_user_game.status,
+        "started_at": db_user_game.started_at,
+        "finished_at": db_user_game.finished_at,
+        "acquired_at": db_user_game.acquired_at,
+        "platinum_at": db_user_game.platinum_at,
+        "hours_played": db_user_game.hours_played,
+        "store": db_user_game.store,
+        "custom_cover_url": db_user_game.custom_cover_url,
+        "favorite": db_user_game.favorite,
+        "notes": db_user_game.notes,
+    }
+
+    validation_data.update(update_data)
+
+    if new_status == GameStatus.WANT_TO_PLAY:
+        validation_data.update(
+            {
+                "rating": None,
+                "started_at": None,
+                "finished_at": None,
+                "platinum_at": None,
+                "hours_played": None,
+                "notes": None,
+            }
+        )
+
+    from pydantic import ValidationError
+    try:
+        UserGameBase(**validation_data)
+    except ValidationError as e:
+        error_messages = []
+        for error in e.errors():
+            msg = error.get("msg", "")
+            if msg.startswith("Value error, "):
+                msg = msg[len("Value error, "):]
+            error_messages.append(msg)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="; ".join(error_messages)
+        )
 
     if new_status == GameStatus.WANT_TO_PLAY:
         update_data.update(

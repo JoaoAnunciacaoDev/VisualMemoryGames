@@ -14,6 +14,7 @@ from app.models.email_verification import EmailVerification
 from app.models.tierlist import TierList
 from app.models.user import User
 from app.models.user_game import UserGame
+from app.routers.steam import ACTIVE_SYNC_USERS
 from app.schemas.user import (
     DashboardGame,
     DashboardResponse,
@@ -255,6 +256,8 @@ def get_dashboard(
     if genre_counts:
         most_played_genre = max(genre_counts.keys(), key=lambda g: genre_counts[g])
 
+    has_pending_genres = str(current_user.id) in ACTIVE_SYNC_USERS
+
     yearly_dict = {}
     for ug in user_games:
         if ug.finished_at:
@@ -315,6 +318,7 @@ def get_dashboard(
         status_distribution=status_distribution,
         most_played_genre=most_played_genre,
         genre_distribution=genre_counts,
+        has_pending_genres=has_pending_genres,
         yearly_games=yearly_games_list,
         yearly_platinums=yearly_platinums_list,
     )

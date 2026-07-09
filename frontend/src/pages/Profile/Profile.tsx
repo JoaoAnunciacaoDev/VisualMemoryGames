@@ -30,6 +30,7 @@ interface DashboardData {
   status_distribution: Record<string, number>;
   most_played_genre: string | null;
   genre_distribution: Record<string, number>;
+  has_pending_genres: boolean;
   yearly_games: YearlyGames[];
   yearly_platinums: YearlyGames[];
 }
@@ -46,6 +47,29 @@ export default function Profile() {
   const [boardCollapsed, setBoardCollapsed] = useState(false);
   const [platCollapsed, setPlatCollapsed] = useState(false);
   const [showGenresModal, setShowGenresModal] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [userGames, setUserGames] = useState<any[]>([]);
+  const [loadingGames, setLoadingGames] = useState(false);
+
+  const handleCloseModal = () => {
+    setShowGenresModal(false);
+    setSelectedGenre(null);
+  };
+
+  useEffect(() => {
+    if (!showGenresModal || userGames.length > 0) return;
+    setLoadingGames(true);
+    api.get('/user-games/me')
+      .then((res) => {
+        setUserGames(res.data);
+      })
+      .catch((err) => {
+        console.error('Erro ao carregar jogos da biblioteca:', err);
+      })
+      .finally(() => {
+        setLoadingGames(false);
+      });
+  }, [showGenresModal, userGames.length]);
 
   const MONTH_NAMES = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -239,6 +263,15 @@ export default function Profile() {
               <p className={styles.emptyText}>Adicione jogos com gêneros para gerar estatísticas.</p>
             </div>
           )}
+
+          {data.has_pending_genres && (
+            <div className={styles.pendingGenresNotice}>
+              <span className={styles.pendingGenresIcon}>🔄</span>
+              <span className={styles.pendingGenresText}>
+                Sincronizando gêneros e anos de lançamento da Steam em segundo plano, os dados serão atualizados gradualmente.
+              </span>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -429,59 +462,140 @@ export default function Profile() {
       {showGenresModal && (
         <Modal
           open={showGenresModal}
-          onClose={() => setShowGenresModal(false)}
+          onClose={handleCloseModal}
           maxWidth="600px"
           showCloseButton
         >
           <div className={styles.genresModalContainer}>
-            <h3 className={styles.modalHeading}>Distribuição de Gêneros</h3>
-            <p className={styles.modalSubheading}>
-              Frequência de gêneros presentes em seus {data.games_count} jogos.
-            </p>
-            <div className={`${styles.genresGrid} scrollbar-visualmemory`}>
-              {Object.entries(data.genre_distribution)
-                .sort((a, b) => b[1] - a[1])
-                .map(([genre, count]) => {
-                  const pct = data.games_count > 0 ? Math.round((count / data.games_count) * 100) : 0;
-                  const radius = 30;
-                  const circumference = 2 * Math.PI * radius;
-                  const strokeDashoffset = circumference - (pct / 100) * circumference;
+            {!selectedGenre ? (
+              <>
+                <h3 className={styles.modalHeading}>Distribuição de Gêneros</h3>
+                <p className={styles.modalSubheading}>
+                  Frequência de gêneros presentes em seus {data.games_count} jogos. Clique em um gênero para ver os jogos.
+                </p>
+                <div className={`${styles.genresGrid} scrollbar-visualmemory`}>
+                  {Object.entries(data.genre_distribution)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([genre, count]) => {
+                      const pct = data.games_count > 0 ? Math.round((count / data.games_count) * 100) : 0;
+                      const radius = 30;
+                      const circumference = 2 * Math.PI * radius;
+                      const strokeDashoffset = circumference - (pct / 100) * circumference;
 
-                  return (
-                    <div key={genre} className={styles.genreProgressCard}>
-                      <div className={styles.circularProgressWrapper}>
-                        <svg className={styles.circularSvg} width="80" height="80">
-                          <circle
-                            className={styles.circularBg}
-                            cx="40"
-                            cy="40"
-                            r={radius}
-                          />
-                          <circle
-                            className={styles.circularFill}
-                            cx="40"
-                            cy="40"
-                            r={radius}
-                            style={{
-                              strokeDasharray: circumference,
-                              strokeDashoffset: strokeDashoffset,
-                            }}
-                          />
-                        </svg>
-                        <span className={styles.percentageText}>{pct}%</span>
-                      </div>
-                      <div className={styles.genreProgressInfo}>
-                        <strong className={styles.genreProgressName}>
-                          {translateGenre(genre)}
-                        </strong>
-                        <span className={styles.genreProgressCount}>
-                          {count} {count === 1 ? 'jogo' : 'jogos'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
+                      return (
+                        <div
+                          key={genre}
+                          className={`${styles.genreProgressCard} ${styles.clickableCard}`}
+                          onClick={() => setSelectedGenre(genre)}
+                        >
+                          <div className={styles.circularProgressWrapper}>
+                            <svg className={styles.circularSvg} width="80" height="80">
+                              <circle
+                                className={styles.circularBg}
+                                cx="40"
+                                cy="40"
+                                r={radius}
+                              />
+                              <circle
+                                className={styles.circularFill}
+                                cx="40"
+                                cy="40"
+                                r={radius}
+                                style={{
+                                  strokeDasharray: circumference,
+                                  strokeDashoffset: strokeDashoffset,
+                                }}
+                              />
+                            </svg>
+                            <span className={styles.percentageText}>{pct}%</span>
+                          </div>
+                          <div className={styles.genreProgressInfo}>
+                            <strong className={styles.genreProgressName}>
+                              {translateGenre(genre)}
+                            </strong>
+                            <span className={styles.genreProgressCount}>
+                              {count} {count === 1 ? 'jogo' : 'jogos'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.genreDetailsHeader}>
+                  <button
+                    type="button"
+                    className={styles.backButton}
+                    onClick={() => setSelectedGenre(null)}
+                  >
+                    ← Voltar
+                  </button>
+                  <h3 className={styles.modalHeading}>
+                    Jogos de {translateGenre(selectedGenre)}
+                  </h3>
+                </div>
+                
+                {loadingGames ? (
+                  <div className={styles.modalLoaderContainer}>
+                    <div className={styles.loader}></div>
+                    <p>Carregando jogos...</p>
+                  </div>
+                ) : (
+                  <div className={`${styles.genreGamesList} scrollbar-visualmemory`}>
+                    {userGames
+                      .filter((ug) => {
+                        if (!ug.genres || !Array.isArray(ug.genres)) return false;
+                        return ug.genres.includes(selectedGenre);
+                      })
+                      .map((ug) => {
+                        const cover = ug.custom_cover_url || ug.cover_url;
+                        return (
+                          <div key={ug.id} className={styles.genreGameCard}>
+                            {cover ? (
+                              <img
+                                src={resolveImageUrl(cover)}
+                                alt={ug.title}
+                                className={styles.genreGameCover}
+                              />
+                            ) : (
+                              <div className={styles.genreGameCoverPlaceholder}>
+                                <span>Sem Capa</span>
+                              </div>
+                            )}
+                            <div className={styles.genreGameInfo}>
+                              <h4 className={styles.genreGameTitle} title={ug.title}>
+                                {ug.title}
+                              </h4>
+                              <div className={styles.genreGameMeta}>
+                                <span
+                                  className={styles.genreGameStatus}
+                                  style={{
+                                    color: statusColors[ug.status] || 'var(--text-secondary)',
+                                  }}
+                                >
+                                  {ug.status}
+                                </span>
+                                {ug.hours_played > 0 && (
+                                  <span className={styles.genreGameHours}>
+                                    🕒 {ug.hours_played}h
+                                  </span>
+                                )}
+                                {ug.rating !== null && (
+                                  <span className={styles.genreGameRating}>
+                                    ⭐ {ug.rating}/10
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </Modal>
       )}

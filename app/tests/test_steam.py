@@ -96,10 +96,62 @@ def test_disconnect_steam_account_success(mock_summary, client, auth_headers, db
         )
         account_id = response.json()["id"]
 
-        # Desconectar
-        del_resp = client.delete(f"/users/me/steam/accounts/{account_id}", headers=auth_headers)
-        assert del_resp.status_code == 200
-        assert del_resp.json()["message"] == "Conta Steam desconectada com sucesso."
+        # Cria jogo de teste no banco
+        game = Game(title="Steam Game A", steam_appid=111, platforms="[]", genres="[]")
+        db_session.add(game)
+        db_session.commit()
+        db_session.refresh(game)
+
+        # Adiciona à biblioteca do tester
+        from app.models.custom_lists import CustomList, custom_list_games
+        from app.models.user import User
+
+        tester = db_session.query(User).filter(User.username == "tester").first()
+        user_game = UserGame(user_id=tester.id, game_id=game.id, status="Jogando", store="STEAM")
+        db_session.add(user_game)
+
+        # Cria uma lista customizada e adiciona o jogo nela
+        c_list = CustomList(user_id=tester.id, name="Concluídos 2026")
+        c_list.games.append(game)
+        db_session.add(c_list)
+        db_session.commit()
+        db_session.refresh(c_list)
+
+        # Verifica se a associação existe
+        assoc_count_before = (
+            db_session.query(custom_list_games)
+            .filter(
+                custom_list_games.c.game_id == game.id,
+                custom_list_games.c.custom_list_id == c_list.id,
+            )
+            .count()
+        )
+        assert assoc_count_before == 1
+
+        # Desconectar COM deleção de jogos
+        with patch(
+            "app.routers.steam.steam_service.get_owned_games", return_value=[{"appid": 111}]
+        ):
+            del_resp = client.delete(
+                f"/users/me/steam/accounts/{account_id}?delete_games=true", headers=auth_headers
+            )
+            assert del_resp.status_code == 200
+            assert del_resp.json()["message"] == "Conta Steam desconectada com sucesso."
+
+        # Verifica se o jogo foi removido da biblioteca
+        ug_count = db_session.query(UserGame).filter(UserGame.user_id == tester.id).count()
+        assert ug_count == 0
+
+        # Verifica se a associação na lista customizada também foi deletada
+        assoc_count_after = (
+            db_session.query(custom_list_games)
+            .filter(
+                custom_list_games.c.game_id == game.id,
+                custom_list_games.c.custom_list_id == c_list.id,
+            )
+            .count()
+        )
+        assert assoc_count_after == 0
 
         # Verificar que a lista está vazia de novo
         list_resp = client.get("/users/me/steam/accounts", headers=auth_headers)

@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/useToast';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
+import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './SettingsModal.module.css';
 
@@ -31,6 +32,11 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
   const { user, reloadUser } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
+
+  // States para Desconexão da Steam
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
+  const [showDeleteGamesConfirm, setShowDeleteGamesConfirm] = useState(false);
+  const [pendingDisconnectAccountId, setPendingDisconnectAccountId] = useState<string | null>(null);
   
   // States para Alteração de Dados
   const [newUsername, setNewUsername] = useState(user?.username || '');
@@ -160,21 +166,25 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     }
   };
 
-  const handleDisconnectSteam = async (accountId: string) => {
-    if (
-      !window.confirm(
-        'Tem certeza que deseja desconectar esta conta Steam? Os jogos importados continuarão na sua biblioteca, mas não serão mais sincronizados.'
-      )
-    ) {
-      return;
-    }
+  const handleDisconnectSteam = (accountId: string) => {
+    setPendingDisconnectAccountId(accountId);
+    setShowDisconnectConfirm(true);
+  };
+
+  const executeDisconnectSteam = async (deleteGames: boolean) => {
+    if (!pendingDisconnectAccountId) return;
     setError('');
     try {
-      await api.delete(`/users/me/steam/accounts/${accountId}`);
+      await api.delete(
+        `/users/me/steam/accounts/${pendingDisconnectAccountId}?delete_games=${deleteGames}`
+      );
       showToast('Conta Steam desconectada com sucesso.', 'success');
       void fetchSteamAccounts();
+      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao desconectar conta Steam.'));
+    } finally {
+      setPendingDisconnectAccountId(null);
     }
   };
 
@@ -185,7 +195,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       const res = await api.post('/users/me/steam/sync');
       const { new_games_count, updated_games_count } = res.data;
       showToast(
-        `Sincronização concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
+        `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
         'success'
       );
       void fetchSteamAccounts();
@@ -265,8 +275,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   };
 
   return (
-    <Modal open onClose={() => !isSubmitting && onClose()} maxWidth="500px" showCloseButton={!isSubmitting}>
-      <div className={styles.settingsContainer}>
+    <>
+      <Modal open onClose={() => !isSubmitting && onClose()} maxWidth="500px" showCloseButton={!isSubmitting}>
+        <div className={styles.settingsContainer}>
         <div className={styles.modalHeader}>
           <h3>Configurações de Conta</h3>
         </div>
@@ -453,5 +464,45 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
         </div>
       </div>
     </Modal>
-  );
+
+    {/* Primeiro modal de confirmação: Desconectar conta */}
+    {showDisconnectConfirm && (
+      <ConfirmModal
+        isOpen={showDisconnectConfirm}
+        title="Desconectar Conta Steam"
+        message="Tem certeza que deseja desconectar esta conta Steam? Ela não será mais sincronizada."
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          setShowDisconnectConfirm(false);
+          setShowDeleteGamesConfirm(true);
+        }}
+        onCancel={() => {
+          setShowDisconnectConfirm(false);
+          setPendingDisconnectAccountId(null);
+        }}
+      />
+    )}
+
+    {/* Segundo modal de confirmação: O que fazer com os jogos */}
+    {showDeleteGamesConfirm && (
+      <ConfirmModal
+        isOpen={showDeleteGamesConfirm}
+        title="Remover Jogos Importados?"
+        message="Deseja também REMOVER todos os jogos importados desta conta da sua biblioteca? Você pode optar por manter os jogos na biblioteca ou removê-los."
+        confirmText="Remover jogos"
+        cancelText="Manter jogos na biblioteca"
+        isDestructive
+        onConfirm={() => {
+          setShowDeleteGamesConfirm(false);
+          void executeDisconnectSteam(true);
+        }}
+        onCancel={() => {
+          setShowDeleteGamesConfirm(false);
+          void executeDisconnectSteam(false);
+        }}
+      />
+    )}
+  </>
+);
 }

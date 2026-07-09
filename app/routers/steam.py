@@ -4,7 +4,7 @@ from datetime import date, datetime
 from typing import List
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -19,6 +19,7 @@ from app.services.steam import SteamService
 
 router = APIRouter(prefix="/users/me/steam", tags=["Steam Integration"])
 steam_service = SteamService()
+ACTIVE_SYNC_USERS = set()
 
 
 class ConnectSteamRequest(BaseModel):
@@ -130,10 +131,13 @@ async def connect_steam_account(
 
 
 @router.delete("/accounts/{account_id}")
-def disconnect_steam_account(
-    account_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+async def disconnect_steam_account(
+    account_id: str,
+    delete_games: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Desvincula uma conta Steam conectada."""
+    """Desvincula uma conta Steam conectada e opcionalmente remove seus jogos."""
     account = (
         db.query(SteamAccount)
         .filter(SteamAccount.id == account_id, SteamAccount.user_id == current_user.id)
@@ -144,14 +148,106 @@ def disconnect_steam_account(
             status_code=status.HTTP_404_NOT_FOUND, detail="Conta Steam não encontrada."
         )
 
+    if delete_games:
+        from app.models.custom_lists import CustomList, custom_list_games
+        from app.models.tierlist import TierCategory, TierItem, TierList
+
+        # Tenta obter os appids vinculados a essa conta Steam para remover apenas eles
+        appids_to_remove = []
+        try:
+            steam_games = await steam_service.get_owned_games(account.steam_id)
+            if steam_games:
+                appids_to_remove = [g["appid"] for g in steam_games if g.get("appid")]
+        except Exception as e:
+            print(f"Erro ao obter jogos da Steam para remoção: {e}")
+
+        if appids_to_remove:
+            game_ids_query = db.query(Game.id).filter(Game.steam_appid.in_(appids_to_remove))
+        else:
+            game_ids_query = (
+                db.query(Game.id)
+                .join(UserGame)
+                .filter(UserGame.user_id == current_user.id, UserGame.store == "STEAM")
+            )
+
+        # Deleta as associações em Custom Lists
+        db.execute(
+            custom_list_games.delete().where(
+                custom_list_games.c.game_id.in_(game_ids_query),
+                custom_list_games.c.custom_list_id.in_(
+                    db.query(CustomList.id).filter(CustomList.user_id == current_user.id)
+                ),
+            )
+        )
+
+        # Deleta os itens em Tier Lists
+        db.query(TierItem).filter(
+            TierItem.game_id.in_(game_ids_query),
+            TierItem.category_id.in_(
+                db.query(TierCategory.id).join(TierList).filter(TierList.user_id == current_user.id)
+            ),
+        ).delete(synchronize_session=False)
+
+        # Deleta os registros em UserGame (Biblioteca)
+        if appids_to_remove:
+            db.query(UserGame).filter(
+                UserGame.user_id == current_user.id,
+                UserGame.game_id.in_(game_ids_query),
+            ).delete(synchronize_session=False)
+        else:
+            db.query(UserGame).filter(
+                UserGame.user_id == current_user.id,
+                UserGame.store == "STEAM",
+            ).delete(synchronize_session=False)
+
     db.delete(account)
     db.commit()
     return {"message": "Conta Steam desconectada com sucesso."}
 
 
+async def fetch_game_genres_in_background(appids: List[int], db: Session, user_id: str):
+    """Busca gêneros e ano de lançamento de uma lista de AppIDs da Steam em segundo plano."""
+    try:
+        async with httpx.AsyncClient() as client:
+            for appid in appids:
+                game = db.query(Game).filter(Game.steam_appid == appid).first()
+                if not game:
+                    continue
+                if game.genres and game.genres != "[]":
+                    continue
+
+                try:
+                    details = await steam_service.get_game_details(appid, client=client)
+                    genres_val = "[]"
+                    release_yr = None
+                    if details:
+                        import json
+
+                        if details.get("genres"):
+                            genres_val = json.dumps(details["genres"])
+                        if details.get("release_year"):
+                            release_yr = details["release_year"]
+
+                    game.genres = genres_val
+                    if release_yr:
+                        game.release_year = release_yr
+                    db.commit()
+                except Exception as e:
+                    print(f"Erro no background task ao buscar detalhes para appid {appid}: {e}")
+
+                # Sleep de 1.5 segundos para evitar 429 da Steam Store
+                await asyncio.sleep(1.5)
+    except Exception as e:
+        print(f"Erro geral no background task: {e}")
+    finally:
+        ACTIVE_SYNC_USERS.discard(str(user_id))
+
+
 @router.post("/sync", response_model=SyncResultResponse)
 async def sync_steam_games(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Sincroniza todos os jogos de todas as contas Steam conectadas do usuário."""
     accounts = db.query(SteamAccount).filter(SteamAccount.user_id == current_user.id).all()
@@ -160,19 +256,29 @@ async def sync_steam_games(
 
     total_new = 0
     total_updated = 0
+    all_missing_genres_appids = []
 
     for account in accounts:
-        new_cnt, upd_cnt = await sync_single_account(account, db)
+        new_cnt, upd_cnt, missing_ids = await sync_single_account(account, db)
         total_new += new_cnt
         total_updated += upd_cnt
+        all_missing_genres_appids.extend(missing_ids)
+
+    if all_missing_genres_appids:
+        unique_appids = list(set(all_missing_genres_appids))
+        ACTIVE_SYNC_USERS.add(str(current_user.id))
+        background_tasks.add_task(
+            fetch_game_genres_in_background, unique_appids, db, str(current_user.id)
+        )
 
     return SyncResultResponse(new_games_count=total_new, updated_games_count=total_updated)
 
 
-async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, int]:
+async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, int, List[int]]:
     """Auxiliar para sincronizar uma conta Steam individual e salvar no banco."""
     new_games_count = 0
     updated_games_count = 0
+    missing_genres_appids = []
 
     try:
         steam_games = await steam_service.get_owned_games(account.steam_id)
@@ -180,35 +286,19 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
         recent_games = await steam_service.get_recently_played_games(account.steam_id)
     except Exception as e:
         print(f"Erro ao sincronizar conta Steam {account.steam_id}: {e}")
-        return 0, 0
+        return 0, 0, []
 
     if not steam_games:
-        return 0, 0
+        return 0, 0, []
 
     # Conjunto de appids jogados recentemente
     recent_appids = {g.get("appid") for g in recent_games if g.get("appid")}
 
-    # Busca os jogos existentes no banco para determinar quais precisam de detalhes (gêneros/ano)
-    existing_games = (
-        db.query(Game.steam_appid, Game.genres).filter(Game.steam_appid.isnot(None)).all()
-    )
-    appids_with_genres = {appid for appid, genres in existing_games if genres and genres != "[]"}
-    existing_appids = {appid for appid, _ in existing_games}
-
-    appids_to_fetch = [
-        sg["appid"]
-        for sg in steam_games
-        if sg.get("appid")
-        and (sg["appid"] not in existing_appids or sg["appid"] not in appids_with_genres)
-    ][:40]
-
     # Busca as conquistas concorrentemente para todos os jogos com tempo de jogo
     games_to_check = [g for g in steam_games if g.get("playtime_forever", 0) > 0]
     platinized_game_dates = {}
-    app_details = {}
 
     sem_plat = asyncio.Semaphore(10)
-    sem_details = asyncio.Semaphore(3)  # concorrência menor para evitar 429 na Steam Store
 
     async with httpx.AsyncClient() as client:
         # Define tarefas para conquistas
@@ -222,18 +312,8 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                 elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
                     platinized_game_dates[appid] = plat_date
 
-        # Define tarefas para buscar gêneros e ano
-        async def fetch_details(appid: int):
-            async with sem_details:
-                details = await steam_service.get_game_details(appid, client=client)
-                if details:
-                    app_details[appid] = details
-                await asyncio.sleep(0.15)
-
         plat_tasks = [check_platinum(g["appid"]) for g in games_to_check]
-        details_tasks = [fetch_details(appid) for appid in appids_to_fetch]
-
-        await asyncio.gather(*plat_tasks, *details_tasks)
+        await asyncio.gather(*plat_tasks)
 
     for sg in steam_games:
         appid = sg.get("appid")
@@ -249,21 +329,12 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
 
             if game:
                 game.steam_appid = appid
-                details = app_details.get(appid)
-                if details:
-                    import json
-
-                    if not game.genres or game.genres == "[]":
-                        game.genres = json.dumps(details.get("genres", []))
-                    if not game.release_year and details.get("release_year"):
-                        game.release_year = details.get("release_year")
+                # Se o jogo associado não possui gêneros, adiciona para buscar em background
+                if not game.genres or game.genres == "[]":
+                    missing_genres_appids.append(appid)
                 db.flush()
             else:
                 cover = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
-                details = app_details.get(appid, {})
-                genres_list = details.get("genres", [])
-                release_yr = details.get("release_year")
-
                 import json
 
                 game = Game(
@@ -271,27 +342,18 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                     steam_appid=appid,
                     cover_url=cover,
                     platforms=json.dumps(["PC"]),
-                    genres=json.dumps(genres_list),
-                    release_year=release_yr,
+                    genres="[]",
+                    release_year=None,
                     is_manual=False,
                 )
                 db.add(game)
                 db.flush()
+                # Adiciona para buscar em background
+                missing_genres_appids.append(appid)
         else:
             # Se o jogo já existe no banco por steam_appid, mas não possui gêneros ou ano
-            details = app_details.get(appid)
-            if details:
-                import json
-
-                has_updates = False
-                if not game.genres or game.genres == "[]":
-                    game.genres = json.dumps(details.get("genres", []))
-                    has_updates = True
-                if not game.release_year and details.get("release_year"):
-                    game.release_year = details.get("release_year")
-                    has_updates = True
-                if has_updates:
-                    db.flush()
+            if not game.genres or game.genres == "[]":
+                missing_genres_appids.append(appid)
 
         # 2. Verifica se o usuário já tem o jogo na biblioteca
         user_game = (
@@ -353,4 +415,4 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
     account.last_sync_at = datetime.utcnow()
     db.commit()
 
-    return new_games_count, updated_games_count
+    return new_games_count, updated_games_count, missing_genres_appids

@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/useToast';
 import { User } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import styles from './Admin.module.css';
+import { formatDateTime, formatDate } from '@/utils/date';
 
 interface SystemStats {
   total_users: number;
@@ -227,10 +228,10 @@ export default function Admin() {
                       <span className={styles.gamesCount}>{u.games_count ?? 0}</span>
                     </td>
                     <td className={styles.td}>
-                      {u.last_active_at ? new Date(u.last_active_at).toLocaleString('pt-BR') : 'Nunca'}
+                      {u.last_active_at ? formatDateTime(u.last_active_at) : 'Nunca'}
                     </td>
                     <td className={styles.td}>
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '-'}
+                      {formatDate(u.created_at)}
                     </td>
                     <td className={styles.td}>
                       <div className={styles.actions}>

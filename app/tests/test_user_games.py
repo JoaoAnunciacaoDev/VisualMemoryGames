@@ -71,7 +71,8 @@ def test_cannot_edit_other_user_game(client, auth_headers, second_user_headers, 
 
 
 def test_invalid_date_relationships(client, auth_headers, setup_game):
-    """Testa se a API bloqueia relacionamentos de data inválidos (ex: platina antes de aquisição)."""
+    """Testa se a API bloqueia relacionamentos de data
+    inválidos (ex: platina antes de aquisição)."""
     ug_response = client.post("/user-games/", json={"game_id": setup_game}, headers=auth_headers)
     ug_id = ug_response.json()["id"]
 
@@ -86,4 +87,5 @@ def test_invalid_date_relationships(client, auth_headers, setup_game):
     )
 
     assert response.status_code == 400
-    assert "A data de platina não pode ser anterior à data de aquisição" in response.json()["detail"]
+    assert ("A data de platina não pode ser anterior "
+            "à data de aquisição" in response.json()["detail"])

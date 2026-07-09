@@ -9,7 +9,13 @@ from app.enums.game_status import GameStatus
 from app.models.game import Game
 from app.models.user import User
 from app.models.user_game import UserGame
-from app.schemas.game import LibraryGameResponse, UserGameBase, UserGameCreate, UserGameResponse, UserGameUpdate
+from app.schemas.game import (
+    LibraryGameResponse,
+    UserGameBase,
+    UserGameCreate,
+    UserGameResponse,
+    UserGameUpdate,
+)
 from app.security import get_current_user
 from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
 from app.services.library_service import remove_from_library

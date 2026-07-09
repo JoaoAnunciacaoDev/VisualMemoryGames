@@ -86,7 +86,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
         if (typeof detail === 'string') {
           message = detail;
         } else if (Array.isArray(detail)) {
-          message = detail.map((d: any) => d.msg || '').join('\n');
+          message = detail.map((d: { msg?: string }) => d.msg || '').join('\n');
         } else if (err.response?.data?.message) {
           message = err.response.data.message;
         } else if (err.message) {

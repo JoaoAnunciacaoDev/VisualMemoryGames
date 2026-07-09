@@ -3,43 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Shared/Button/Button';
 import SettingsModal from '@/components/SettingsModal/SettingsModal';
 import { isAuthenticated } from '@/services/auth';
-import { useToast } from '@/hooks/useToast';
-import api from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
 
 export default function Header() {
   const navigate = useNavigate();
   const token = isAuthenticated();
-  const { showToast } = useToast();
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-
-  useEffect(() => {
-    if (!token || !user) return;
-
-    const hasSyncedThisSession = sessionStorage.getItem('steam_synced_session');
-    if (hasSyncedThisSession) return;
-
-    sessionStorage.setItem('steam_synced_session', 'true');
-
-    api.post('/users/me/steam/sync')
-      .then((res) => {
-        const { new_games_count } = res.data;
-        if (new_games_count > 0) {
-          showToast(
-            `Sincronização Steam: ${new_games_count} novo(s) jogo(s) adicionado(s) à sua biblioteca!`,
-            'success'
-          );
-          window.dispatchEvent(new Event('steam-synced'));
-        }
-      })
-      .catch((err) => {
-        console.error('Erro na sincronização automática da Steam:', err);
-      });
-  }, [token, user, showToast]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -91,10 +64,11 @@ export default function Header() {
             <div className={styles.avatarContainer}>
               <button
                 type="button"
-                className={styles.avatar}
+                className={`${styles.avatar} ${loading ? styles.avatarLoading : ''}`}
                 onClick={handleAvatarClick}
+                disabled={loading}
               >
-                {getInitial()}
+                {loading ? '' : getInitial()}
               </button>
 
               {dropdownOpen && (

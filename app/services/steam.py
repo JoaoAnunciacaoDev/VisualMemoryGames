@@ -161,3 +161,43 @@ class SteamService:
                     return await fetch(c)
                 except Exception:
                     return None
+
+    async def get_game_details(self, appid: int, client: httpx.AsyncClient = None) -> dict:
+        """Busca gêneros e ano de lançamento do jogo direto da loja da Steam."""
+        url = "https://store.steampowered.com/api/appdetails"
+        params = {"appids": appid, "l": "english"}
+
+        async def fetch(c: httpx.AsyncClient) -> dict:
+            response = await c.get(url, params=params, timeout=5.0)
+            if response.status_code != 200:
+                return {}
+            data = response.json()
+            app_data = data.get(str(appid), {})
+            if not app_data.get("success"):
+                return {}
+
+            info = app_data.get("data", {})
+            genres_list = info.get("genres", [])
+            genres = [g.get("description") for g in genres_list if g.get("description")]
+
+            release_year = None
+            release_info = info.get("release_date", {})
+            date_str = release_info.get("date")
+            if date_str:
+                import re
+
+                match = re.search(r"\b(19\d\d|20\d\d)\b", date_str)
+                if match:
+                    release_year = int(match.group(1))
+
+            return {"genres": genres, "release_year": release_year}
+
+        try:
+            if client is not None:
+                return await fetch(client)
+            else:
+                async with httpx.AsyncClient() as c:
+                    return await fetch(c)
+        except Exception as e:
+            print(f"Erro ao buscar detalhes da loja Steam para appid {appid}: {e}")
+            return {}

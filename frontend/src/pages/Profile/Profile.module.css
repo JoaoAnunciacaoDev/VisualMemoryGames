@@ -478,3 +478,101 @@
     grid-template-columns: 1fr;
   }
 }
+
+.viewGenresButton {
+  margin-top: var(--gap-md);
+  align-self: center;
+  width: auto;
+}
+
+.genresModalContainer {
+  padding: 24px;
+}
+
+.modalHeading {
+  margin: 0 0 var(--gap-xs) 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+.modalSubheading {
+  margin: 0 0 var(--gap-lg) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.genresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--gap-md);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.genreProgressCard {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: var(--gap-md);
+  border-radius: var(--border-radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.genreProgressCard:hover {
+  border-color: rgba(222, 29, 106, 0.4);
+  background: rgba(222, 29, 106, 0.02);
+}
+
+.circularProgressWrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.circularSvg {
+  transform: rotate(-90deg);
+}
+
+.circularBg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 6;
+}
+
+.circularFill {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease-out;
+}
+
+.percentageText {
+  position: absolute;
+  font-size: var(--font-size-xs);
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.genreProgressInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.genreProgressName {
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+}
+
+.genreProgressCount {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}

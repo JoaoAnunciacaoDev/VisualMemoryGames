@@ -265,9 +265,7 @@ def get_dashboard(
                 cover_url=cover,
                 hours_played=ug.hours_played or 0.0,
                 rating=ug.rating,
-                finished_at=(
-                    datetime.combine(ug.finished_at, datetime.min.time())
-                ),
+                finished_at=(datetime.combine(ug.finished_at, datetime.min.time())),
             )
             if year not in yearly_dict:
                 yearly_dict[year] = []
@@ -292,9 +290,7 @@ def get_dashboard(
                 cover_url=cover,
                 hours_played=ug.hours_played or 0.0,
                 rating=ug.rating,
-                finished_at=(
-                    datetime.combine(ug.platinum_at, datetime.min.time())
-                ),
+                finished_at=(datetime.combine(ug.platinum_at, datetime.min.time())),
             )
             if year not in platinum_dict:
                 platinum_dict[year] = []
@@ -318,6 +314,7 @@ def get_dashboard(
         tierlists_count=tierlists_count,
         status_distribution=status_distribution,
         most_played_genre=most_played_genre,
+        genre_distribution=genre_counts,
         yearly_games=yearly_games_list,
         yearly_platinums=yearly_platinums_list,
     )

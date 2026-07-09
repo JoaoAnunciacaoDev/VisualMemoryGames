@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
-import Card from '@/components/Shared/Card/Card';
-import PageTitle from '@/components/Shared/PageTitle/PageTitle';
+import { Card, PageTitle, Button, Modal } from '@/components/Shared';
 import { translateGenre } from '@/utils/genres';
 import { resolveImageUrl } from '@/services/media';
 import styles from './Profile.module.css';
@@ -30,6 +29,7 @@ interface DashboardData {
   tierlists_count: number;
   status_distribution: Record<string, number>;
   most_played_genre: string | null;
+  genre_distribution: Record<string, number>;
   yearly_games: YearlyGames[];
   yearly_platinums: YearlyGames[];
 }
@@ -45,6 +45,7 @@ export default function Profile() {
   const [selectedPlatMonth, setSelectedPlatMonth] = useState<string>('all');
   const [boardCollapsed, setBoardCollapsed] = useState(false);
   const [platCollapsed, setPlatCollapsed] = useState(false);
+  const [showGenresModal, setShowGenresModal] = useState(false);
 
   const MONTH_NAMES = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -222,6 +223,15 @@ export default function Profile() {
               <p className={styles.genreDesc}>
                 Este é o gênero mais proeminente e jogado em sua biblioteca do VisualMemory.
               </p>
+              {data.genre_distribution && Object.keys(data.genre_distribution).length > 0 && (
+                <Button
+                  variant="ghost"
+                  className={styles.viewGenresButton}
+                  onClick={() => setShowGenresModal(true)}
+                >
+                  Ver todos os gêneros
+                </Button>
+              )}
             </div>
           ) : (
             <div className={styles.genreHighlight}>
@@ -416,6 +426,65 @@ export default function Profile() {
         </Card>
       </section>
 
+      {showGenresModal && (
+        <Modal
+          open={showGenresModal}
+          onClose={() => setShowGenresModal(false)}
+          maxWidth="600px"
+          showCloseButton
+        >
+          <div className={styles.genresModalContainer}>
+            <h3 className={styles.modalHeading}>Distribuição de Gêneros</h3>
+            <p className={styles.modalSubheading}>
+              Frequência de gêneros presentes em seus {data.games_count} jogos.
+            </p>
+            <div className={`${styles.genresGrid} scrollbar-visualmemory`}>
+              {Object.entries(data.genre_distribution)
+                .sort((a, b) => b[1] - a[1])
+                .map(([genre, count]) => {
+                  const pct = data.games_count > 0 ? Math.round((count / data.games_count) * 100) : 0;
+                  const radius = 30;
+                  const circumference = 2 * Math.PI * radius;
+                  const strokeDashoffset = circumference - (pct / 100) * circumference;
+
+                  return (
+                    <div key={genre} className={styles.genreProgressCard}>
+                      <div className={styles.circularProgressWrapper}>
+                        <svg className={styles.circularSvg} width="80" height="80">
+                          <circle
+                            className={styles.circularBg}
+                            cx="40"
+                            cy="40"
+                            r={radius}
+                          />
+                          <circle
+                            className={styles.circularFill}
+                            cx="40"
+                            cy="40"
+                            r={radius}
+                            style={{
+                              strokeDasharray: circumference,
+                              strokeDashoffset: strokeDashoffset,
+                            }}
+                          />
+                        </svg>
+                        <span className={styles.percentageText}>{pct}%</span>
+                      </div>
+                      <div className={styles.genreProgressInfo}>
+                        <strong className={styles.genreProgressName}>
+                          {translateGenre(genre)}
+                        </strong>
+                        <span className={styles.genreProgressCount}>
+                          {count} {count === 1 ? 'jogo' : 'jogos'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

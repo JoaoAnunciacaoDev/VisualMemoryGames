@@ -188,55 +188,110 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
     # Conjunto de appids jogados recentemente
     recent_appids = {g.get("appid") for g in recent_games if g.get("appid")}
 
+    # Busca os jogos existentes no banco para determinar quais precisam de detalhes (gêneros/ano)
+    existing_games = (
+        db.query(Game.steam_appid, Game.genres).filter(Game.steam_appid.isnot(None)).all()
+    )
+    appids_with_genres = {appid for appid, genres in existing_games if genres and genres != "[]"}
+    existing_appids = {appid for appid, _ in existing_games}
+
+    appids_to_fetch = [
+        sg["appid"]
+        for sg in steam_games
+        if sg.get("appid")
+        and (sg["appid"] not in existing_appids or sg["appid"] not in appids_with_genres)
+    ][:40]
+
     # Busca as conquistas concorrentemente para todos os jogos com tempo de jogo
     games_to_check = [g for g in steam_games if g.get("playtime_forever", 0) > 0]
-    sem = asyncio.Semaphore(10)
+    platinized_game_dates = {}
+    app_details = {}
+
+    sem_plat = asyncio.Semaphore(10)
+    sem_details = asyncio.Semaphore(3)  # concorrência menor para evitar 429 na Steam Store
 
     async with httpx.AsyncClient() as client:
-
-        async def check_platinum(appid: int) -> tuple[int, date | None]:
-            async with sem:
+        # Define tarefas para conquistas
+        async def check_platinum(appid: int):
+            async with sem_plat:
                 plat_date = await steam_service.is_game_platinized(
                     account.steam_id, appid, client=client
                 )
-                return appid, plat_date
+                if plat_date is True:
+                    platinized_game_dates[appid] = datetime.utcnow().date()
+                elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
+                    platinized_game_dates[appid] = plat_date
 
-        tasks = [check_platinum(g["appid"]) for g in games_to_check]
-        results = await asyncio.gather(*tasks)
-        platinized_game_dates = {}
-        for appid, plat_date in results:
-            if plat_date is True:
-                platinized_game_dates[appid] = datetime.utcnow().date()
-            elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
-                platinized_game_dates[appid] = plat_date
+        # Define tarefas para buscar gêneros e ano
+        async def fetch_details(appid: int):
+            async with sem_details:
+                details = await steam_service.get_game_details(appid, client=client)
+                if details:
+                    app_details[appid] = details
+                await asyncio.sleep(0.15)
+
+        plat_tasks = [check_platinum(g["appid"]) for g in games_to_check]
+        details_tasks = [fetch_details(appid) for appid in appids_to_fetch]
+
+        await asyncio.gather(*plat_tasks, *details_tasks)
 
     for sg in steam_games:
         appid = sg.get("appid")
         name = sg.get("name")
-        playtime_forever = sg.get("playtime_forever", 0)  # em minutos
+        playtime_forever = sg.get("playtime_forever", 0)
         hours = round(playtime_forever / 60, 1)
 
         # 1. Verifica se o jogo existe pelo steam_appid
         game = db.query(Game).filter(Game.steam_appid == appid).first()
         if not game:
-            # Tenta encontrar jogo já cadastrado com o mesmo título (case-insensitive)
             if name:
                 game = db.query(Game).filter(func.lower(Game.title) == name.lower().strip()).first()
 
             if game:
                 game.steam_appid = appid
+                details = app_details.get(appid)
+                if details:
+                    import json
+
+                    if not game.genres or game.genres == "[]":
+                        game.genres = json.dumps(details.get("genres", []))
+                    if not game.release_year and details.get("release_year"):
+                        game.release_year = details.get("release_year")
                 db.flush()
             else:
                 cover = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
+                details = app_details.get(appid, {})
+                genres_list = details.get("genres", [])
+                release_yr = details.get("release_year")
+
+                import json
+
                 game = Game(
                     title=name or f"Steam App {appid}",
                     steam_appid=appid,
                     cover_url=cover,
-                    platforms="PC",
+                    platforms=json.dumps(["PC"]),
+                    genres=json.dumps(genres_list),
+                    release_year=release_yr,
                     is_manual=False,
                 )
                 db.add(game)
-                db.flush()  # Gera ID
+                db.flush()
+        else:
+            # Se o jogo já existe no banco por steam_appid, mas não possui gêneros ou ano
+            details = app_details.get(appid)
+            if details:
+                import json
+
+                has_updates = False
+                if not game.genres or game.genres == "[]":
+                    game.genres = json.dumps(details.get("genres", []))
+                    has_updates = True
+                if not game.release_year and details.get("release_year"):
+                    game.release_year = details.get("release_year")
+                    has_updates = True
+                if has_updates:
+                    db.flush()
 
         # 2. Verifica se o usuário já tem o jogo na biblioteca
         user_game = (

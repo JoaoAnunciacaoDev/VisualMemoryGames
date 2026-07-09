@@ -89,6 +89,18 @@
   box-shadow: 0 0 10px rgba(222, 29, 106, 0.4);
 }
 
+.avatarLoading {
+  background: var(--border) !important;
+  cursor: default;
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+  100% { opacity: 0.6; }
+}
+
 .dropdown {
   position: absolute;
   top: 100%;

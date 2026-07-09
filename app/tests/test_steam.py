@@ -226,14 +226,17 @@ def test_sync_steam_games_success(
     assert portal_ug.hours_played == 10.0
     assert portal_ug.status == "Jogando"
     assert portal_ug.store == "STEAM"
+    assert portal_ug.acquired_at is None
 
     l4d_ug = db_session.query(UserGame).join(Game).filter(Game.steam_appid == 500).first()
     assert l4d_ug.hours_played == 20.0
     assert l4d_ug.status == "Platinado"
+    assert l4d_ug.acquired_at is None
 
     hl2_ug = db_session.query(UserGame).join(Game).filter(Game.steam_appid == 600).first()
     assert hl2_ug.hours_played == 0.0
     assert hl2_ug.status == "Quero Jogar"
+    assert hl2_ug.acquired_at is None
 
 
 def test_safe_load_json_list():

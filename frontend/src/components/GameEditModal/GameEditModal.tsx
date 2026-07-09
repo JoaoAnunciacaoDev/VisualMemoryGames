@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import Input from '@/components/Shared/Input/Input';
@@ -79,7 +80,21 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
       const payload = await handleSave();
       await onSave(payload);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao salvar alterações.';
+      let message = 'Erro ao salvar alterações.';
+      if (axios.isAxiosError(err)) {
+        const detail = err.response?.data?.detail;
+        if (typeof detail === 'string') {
+          message = detail;
+        } else if (Array.isArray(detail)) {
+          message = detail.map((d: any) => d.msg || '').join('\n');
+        } else if (err.response?.data?.message) {
+          message = err.response.data.message;
+        } else if (err.message) {
+          message = err.message;
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
       showToast(message, 'error');
     } finally {
       setIsSaving(false);

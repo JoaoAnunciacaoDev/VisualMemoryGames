@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/useToast';
 import { Card, PageTitle, Button, Modal } from '@/components/Shared';
 import { translateGenre } from '@/utils/genres';
 import { resolveImageUrl } from '@/services/media';
+import { LibraryGame } from '@/types';
 import styles from './Profile.module.css';
 
 interface DashboardGame {
@@ -48,7 +49,7 @@ export default function Profile() {
   const [platCollapsed, setPlatCollapsed] = useState(false);
   const [showGenresModal, setShowGenresModal] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [userGames, setUserGames] = useState<any[]>([]);
+  const [userGames, setUserGames] = useState<LibraryGame[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
 
   const handleCloseModal = () => {
@@ -58,17 +59,20 @@ export default function Profile() {
 
   useEffect(() => {
     if (!showGenresModal || userGames.length > 0) return;
-    setLoadingGames(true);
-    api.get('/user-games/me')
-      .then((res) => {
+
+    const fetchGames = async () => {
+      setLoadingGames(true);
+      try {
+        const res = await api.get('/user-games/me');
         setUserGames(res.data);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error('Erro ao carregar jogos da biblioteca:', err);
-      })
-      .finally(() => {
+      } finally {
         setLoadingGames(false);
-      });
+      }
+    };
+
+    void fetchGames();
   }, [showGenresModal, userGames.length]);
 
   const MONTH_NAMES = [

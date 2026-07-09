@@ -193,7 +193,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     setError('');
     try {
       const res = await api.post('/users/me/steam/sync');
-      const { new_games_count, updated_games_count } = res.data;
+      const { new_games_count } = res.data;
       showToast(
         `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
         'success'

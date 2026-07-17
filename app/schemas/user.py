@@ -119,6 +119,7 @@ class DashboardResponse(BaseModel):
     games_count: int
     lists_count: int
     tierlists_count: int
+    favorites_count: int = 0
     status_distribution: Dict[str, int]
     most_played_genre: Optional[str] = None
     genre_distribution: Dict[str, int] = Field(default_factory=dict)

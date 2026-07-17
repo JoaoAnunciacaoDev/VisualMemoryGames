@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 
-SECRET_KEY = os.getenv("SECRET_KEY", "chave_insegura_remover")
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 if not SECRET_KEY:
     if os.getenv("ENVIRONMENT") == "development":
         SECRET_KEY = "dev-secret-key-for-development-only"

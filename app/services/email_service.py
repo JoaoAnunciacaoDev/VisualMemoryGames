@@ -18,20 +18,122 @@ resend.api_key = os.getenv("RESEND_API_KEY", "")
 RESEND_FROM = os.getenv("RESEND_FROM", "VisualMemory <onboarding@resend.dev>")
 
 
+def _send_email(
+    to_email: str,
+    subject: str,
+    text_content: str,
+    html_content: str,
+    debug_code: str = None,
+    email_type: str = "verificação",
+):
+    if (
+        os.getenv("ENVIRONMENT", "development") == "development"
+        and not os.getenv("RENDER")
+        and debug_code
+    ):
+        print(f"\n[DEBUG EMAIL] Código de {email_type} para {to_email}: {debug_code}\n")
+
+    # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
+    if brevo_api_key:
+        try:
+            response = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={
+                    "api-key": brevo_api_key,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+                json={
+                    "sender": {"name": "VisualMemory", "email": BREVO_SENDER_EMAIL},
+                    "to": [{"email": to_email}],
+                    "subject": subject,
+                    "htmlContent": html_content,
+                    "textContent": text_content,
+                },
+                timeout=10,
+            )
+            if response.status_code in (200, 201, 202):
+                logger.info(f"[BREVO SUCCESS] E-mail de {email_type} enviado para {to_email}")
+                print(f"[BREVO SUCCESS] E-mail de {email_type} enviado para {to_email}")
+                return
+            else:
+                logger.error(
+                    f"[BREVO ERROR] Falha no envio. Status: {response.status_code}, "
+                    f"Detalhes: {response.text}"
+                )
+                print(f"[BREVO ERROR] Status: {response.status_code}, Detalhes: {response.text}")
+        except Exception as e:
+            logger.error(f"Erro ao enviar via Brevo API para {to_email}: {e}")
+            print(f"[BREVO ERROR] Falha na conexão com a API Brevo: {e}")
+
+    # 2. Tentar por Resend
+    if resend.api_key:
+        try:
+            params: resend.Emails.SendParams = {
+                "from": RESEND_FROM,
+                "to": [to_email],
+                "subject": subject,
+                "text": text_content,
+                "html": html_content,
+            }
+            response = resend.Emails.send(params)
+            logger.info(
+                f"[RESEND SUCCESS] E-mail de {email_type} enviado para {to_email}. "
+                f"ID: {response.get('id')}"
+            )
+            print(f"[RESEND SUCCESS] E-mail de {email_type} enviado para {to_email}")
+            return
+        except Exception as e:
+            logger.error(f"Erro ao enviar via Resend para {to_email}: {e}")
+            print(f"[RESEND ERROR] Erro ao enviar: {e}")
+
+    # 3. Tentar por SMTP clássico
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = os.getenv("SMTP_PORT")
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+
+    if smtp_host and smtp_port and smtp_user and smtp_password:
+        try:
+            smtp_port_int = int(smtp_port)
+            message = MIMEMultipart("alternative")
+            message["Subject"] = subject
+            message["From"] = os.getenv("SMTP_FROM", smtp_user)
+            message["To"] = to_email
+
+            part1 = MIMEText(text_content, "plain", "utf-8")
+            part2 = MIMEText(html_content, "html", "utf-8")
+            message.attach(part1)
+            message.attach(part2)
+
+            if smtp_port_int == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port_int) as server:
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(smtp_user, to_email, message.as_string())
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port_int) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(smtp_user, to_email, message.as_string())
+
+            logger.info(f"[SMTP SUCCESS] E-mail de {email_type} enviado para {to_email}")
+            print(f"[SMTP SUCCESS] E-mail de {email_type} enviado para {to_email}")
+            return
+        except Exception as e:
+            logger.error(f"Erro ao enviar via SMTP para {to_email}: {e}")
+            print(f"[SMTP ERROR] Erro ao enviar via SMTP: {e}")
+
+    # 4. Fallback (Modo Simulado / Mock)
+    if debug_code:
+        logger.info(f"[MOCK EMAIL] Código de {email_type} para {to_email}: {debug_code}")
+        print("\n==================================================")
+        print(f"[MOCK EMAIL] Enviado código de {email_type} para {to_email}")
+        print(f"CÓDIGO: {debug_code}")
+        print("==================================================\n")
+
+
 def send_verification_email(email: str, code: str):
-    """Envia um e-mail contendo o código de verificação para o usuário.
-
-    Decide o método de envio automaticamente com base nas variáveis disponíveis:
-    1. Se BREVO_API_KEY estiver configurado, envia via API HTTP do Brevo (Recomendado para Render).
-    2. Se RESEND_API_KEY estiver configurado, usa a API do Resend.
-    3. Se SMTP_HOST estiver configurado, usa o envio SMTP clássico.
-    4. Se nenhum estiver configurado, apenas registra o código em modo simulação (Mock).
-    """
-    # Apenas exibe o código no terminal se estiver rodando localmente (desenvolvimento)
-    # Evita vazamento de códigos nos logs de produção (ex: Render)
-    if os.getenv("ENVIRONMENT", "development") == "development" and not os.getenv("RENDER"):
-        print(f"\n[DEBUG EMAIL] Código de verificação para {email}: {code}\n")
-
+    """Envia um e-mail contendo o código de verificação para o usuário."""
     text = f"Seu código de verificação para o VisualMemory é: {code}. Ele expira em 10 minutos."
     html = f"""
     <html>
@@ -49,112 +151,11 @@ def send_verification_email(email: str, code: str):
       </body>
     </html>
     """
-
-    # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
-    if brevo_api_key:
-        try:
-            response = requests.post(
-                "https://api.brevo.com/v3/smtp/email",
-                headers={
-                    "api-key": brevo_api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                json={
-                    "sender": {"name": "VisualMemory", "email": BREVO_SENDER_EMAIL},
-                    "to": [{"email": email}],
-                    "subject": "Código de Verificação - VisualMemory",
-                    "htmlContent": html,
-                    "textContent": text,
-                },
-                timeout=10,
-            )
-            if response.status_code in (200, 201, 202):
-                logger.info(f"[BREVO SUCCESS] E-mail de verificação enviado para {email}")
-                print(f"[BREVO SUCCESS] E-mail de verificação enviado para {email}")
-                return
-            else:
-                logger.error(
-                    f"[BREVO ERROR] Falha no envio. Status: {response.status_code}, "
-                    f"Detalhes: {response.text}"
-                )
-                print(f"[BREVO ERROR] Status: {response.status_code}, Detalhes: {response.text}")
-        except Exception as e:
-            logger.error(f"Erro ao enviar via Brevo API para {email}: {e}")
-            print(f"[BREVO ERROR] Falha na conexão com a API Brevo: {e}")
-
-    # 2. Tentar por Resend
-    if resend.api_key:
-        try:
-            params: resend.Emails.SendParams = {
-                "from": RESEND_FROM,
-                "to": [email],
-                "subject": "Código de Verificação - VisualMemory",
-                "text": text,
-                "html": html,
-            }
-            response = resend.Emails.send(params)
-            logger.info(
-                f"[RESEND SUCCESS] E-mail de verificação enviado para {email}. "
-                f"ID: {response.get('id')}"
-            )
-            print(f"[RESEND SUCCESS] E-mail de verificação enviado para {email}")
-            return
-        except Exception as e:
-            logger.error(f"Erro ao enviar via Resend para {email}: {e}")
-            print(f"[RESEND ERROR] Erro ao enviar: {e}")
-
-    # 3. Tentar por SMTP clássico
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_port = os.getenv("SMTP_PORT")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-
-    if smtp_host and smtp_port and smtp_user and smtp_password:
-        try:
-            smtp_port_int = int(smtp_port)
-            message = MIMEMultipart("alternative")
-            message["Subject"] = "Código de Verificação - VisualMemory"
-            message["From"] = os.getenv("SMTP_FROM", smtp_user)
-            message["To"] = email
-
-            part1 = MIMEText(text, "plain", "utf-8")
-            part2 = MIMEText(html, "html", "utf-8")
-            message.attach(part1)
-            message.attach(part2)
-
-            if smtp_port_int == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port_int) as server:
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
-            else:
-                with smtplib.SMTP(smtp_host, smtp_port_int) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
-
-            logger.info(f"[SMTP SUCCESS] E-mail de verificação enviado para {email}")
-            print(f"[SMTP SUCCESS] E-mail de verificação enviado para {email}")
-            return
-        except Exception as e:
-            logger.error(f"Erro ao enviar via SMTP para {email}: {e}")
-            print(f"[SMTP ERROR] Erro ao enviar via SMTP: {e}")
-
-    # 4. Fallback (Modo Simulado / Mock)
-    logger.info(f"[MOCK EMAIL] Código de verificação para {email}: {code}")
-    print("\n==================================================")
-    print(f"[MOCK EMAIL] Enviado código de verificação para {email}")
-    print(f"CÓDIGO: {code}")
-    print("==================================================\n")
+    _send_email(email, "Código de Verificação - VisualMemory", text, html, code, "verificação")
 
 
 def send_password_reset_email(email: str, code: str):
     """Envia um e-mail contendo o código de redefinição de senha para o usuário."""
-    # Apenas exibe o código no terminal se estiver rodando localmente (desenvolvimento)
-    # Evita vazamento de códigos nos logs de produção (ex: Render)
-    if os.getenv("ENVIRONMENT", "development") == "development" and not os.getenv("RENDER"):
-        print(f"\n[DEBUG EMAIL] Código de redefinição de senha para {email}: {code}\n")
-
     text = (
         f"Seu código de redefinição de senha para o VisualMemory é: {code}. "
         "Ele expira em 10 minutos."
@@ -176,100 +177,6 @@ def send_password_reset_email(email: str, code: str):
       </body>
     </html>
     """
-
-    # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
-    if brevo_api_key:
-        try:
-            response = requests.post(
-                "https://api.brevo.com/v3/smtp/email",
-                headers={
-                    "api-key": brevo_api_key,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                },
-                json={
-                    "sender": {"name": "VisualMemory", "email": BREVO_SENDER_EMAIL},
-                    "to": [{"email": email}],
-                    "subject": "Recuperação de Senha - VisualMemory",
-                    "htmlContent": html,
-                    "textContent": text,
-                },
-                timeout=10,
-            )
-            if response.status_code in (200, 201, 202):
-                logger.info(f"[BREVO SUCCESS] E-mail de redefinição enviado para {email}")
-                print(f"[BREVO SUCCESS] E-mail de redefinição enviado para {email}")
-                return
-            else:
-                logger.error(
-                    f"[BREVO ERROR] Falha no envio. Status: {response.status_code}, "
-                    f"Detalhes: {response.text}"
-                )
-                print(f"[BREVO ERROR] Status: {response.status_code}, Detalhes: {response.text}")
-        except Exception as e:
-            logger.error(f"Erro ao enviar via Brevo API para {email}: {e}")
-            print(f"[BREVO ERROR] Falha na conexão com a API Brevo: {e}")
-
-    # 2. Tentar por Resend
-    if resend.api_key:
-        try:
-            params: resend.Emails.SendParams = {
-                "from": RESEND_FROM,
-                "to": [email],
-                "subject": "Recuperação de Senha - VisualMemory",
-                "text": text,
-                "html": html,
-            }
-            response = resend.Emails.send(params)
-            logger.info(
-                f"[RESEND SUCCESS] E-mail de redefinição enviado para {email}. "
-                f"ID: {response.get('id')}"
-            )
-            print(f"[RESEND SUCCESS] E-mail de redefinição de senha enviado para {email}")
-            return
-        except Exception as e:
-            logger.error(f"Erro ao enviar via Resend para {email}: {e}")
-            print(f"[RESEND ERROR] Erro ao enviar: {e}")
-
-    # 3. Tentar por SMTP clássico
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_port = os.getenv("SMTP_PORT")
-    smtp_user = os.getenv("SMTP_USER")
-    smtp_password = os.getenv("SMTP_PASSWORD")
-
-    if smtp_host and smtp_port and smtp_user and smtp_password:
-        try:
-            smtp_port_int = int(smtp_port)
-            message = MIMEMultipart("alternative")
-            message["Subject"] = "Recuperação de Senha - VisualMemory"
-            message["From"] = os.getenv("SMTP_FROM", smtp_user)
-            message["To"] = email
-
-            part1 = MIMEText(text, "plain", "utf-8")
-            part2 = MIMEText(html, "html", "utf-8")
-            message.attach(part1)
-            message.attach(part2)
-
-            if smtp_port_int == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port_int) as server:
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
-            else:
-                with smtplib.SMTP(smtp_host, smtp_port_int) as server:
-                    server.starttls()
-                    server.login(smtp_user, smtp_password)
-                    server.sendmail(smtp_user, email, message.as_string())
-
-            logger.info(f"[SMTP SUCCESS] E-mail de redefinição enviado para {email}")
-            print(f"[SMTP SUCCESS] E-mail de redefinição de senha enviado para {email}")
-            return
-        except Exception as e:
-            logger.error(f"Erro ao enviar via SMTP para {email}: {e}")
-            print(f"[SMTP ERROR] Erro ao enviar via SMTP: {e}")
-
-    # 4. Fallback (Modo Simulado / Mock)
-    logger.info(f"[MOCK EMAIL] Código de redefinição de senha para {email}: {code}")
-    print("\n==================================================")
-    print(f"[MOCK EMAIL] Enviado código de redefinição de senha para {email}")
-    print(f"CÓDIGO: {code}")
-    print("==================================================\n")
+    _send_email(
+        email, "Recuperação de Senha - VisualMemory", text, html, code, "redefinição de senha"
+    )

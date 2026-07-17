@@ -28,6 +28,7 @@ interface DashboardData {
   games_count: number;
   lists_count: number;
   tierlists_count: number;
+  favorites_count: number;
   status_distribution: Record<string, number>;
   most_played_genre: string | null;
   genre_distribution: Record<string, number>;
@@ -202,6 +203,10 @@ export default function Profile() {
         <Card className={styles.statCard}>
           <span className={styles.statValue}>{data.tierlists_count}</span>
           <span className={styles.statLabel}>Tier Lists</span>
+        </Card>
+        <Card className={styles.statCard}>
+          <span className={styles.statValue}>{data.favorites_count}</span>
+          <span className={styles.statLabel}>Jogos Favoritos</span>
         </Card>
       </div>
 

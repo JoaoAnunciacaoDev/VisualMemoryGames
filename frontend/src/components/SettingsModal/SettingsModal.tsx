@@ -6,6 +6,7 @@ import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import { useAuth } from '@/hooks/useAuth';
+import { formatDateTime } from '@/utils/date';
 import styles from './SettingsModal.module.css';
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
   onLogout: () => void;
 }
 
-type Tab = 'profile' | 'password' | 'deactivate' | 'steam';
+type Tab = 'profile' | 'password' | 'deactivate' | 'integrations';
 
 interface PydanticErrorDetail {
   msg?: string;
@@ -37,6 +38,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [showDeleteGamesConfirm, setShowDeleteGamesConfirm] = useState(false);
   const [pendingDisconnectAccountId, setPendingDisconnectAccountId] = useState<string | null>(null);
+  const [disconnectProvider, setDisconnectProvider] = useState<'steam' | 'itch' | null>(null);
   
   // States para Alteração de Dados
   const [newUsername, setNewUsername] = useState(user?.username || '');
@@ -117,6 +119,17 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [steamUrl, setSteamUrl] = useState('');
   const [isFetchingSteam, setIsFetchingSteam] = useState(false);
 
+  // States para Itch.io
+  interface ItchAccount {
+    id: string;
+    itch_id: string;
+    username: string;
+    avatar_url: string | null;
+    last_sync_at: string | null;
+  }
+  const [itchAccounts, setItchAccounts] = useState<ItchAccount[]>([]);
+  const [isFetchingItch, setIsFetchingItch] = useState(false);
+
   const fetchSteamAccounts = useCallback(async () => {
     try {
       const res = await api.get('/users/me/steam/accounts');
@@ -126,8 +139,17 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     }
   }, []);
 
+  const fetchItchAccounts = useCallback(async () => {
+    try {
+      const res = await api.get('/users/me/itch/accounts');
+      setItchAccounts(res.data);
+    } catch (err) {
+      console.error('Erro ao buscar contas Itch.io:', err);
+    }
+  }, []);
+
   useEffect(() => {
-    if (activeTab !== 'steam') return;
+    if (activeTab !== 'integrations') return;
 
     let active = true;
     api.get('/users/me/steam/accounts')
@@ -136,6 +158,14 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       })
       .catch((err) => {
         console.error('Erro ao buscar contas Steam:', err);
+      });
+      
+    api.get('/users/me/itch/accounts')
+      .then((res) => {
+        if (active) setItchAccounts(res.data);
+      })
+      .catch((err) => {
+        console.error('Erro ao buscar contas Itch.io:', err);
       });
 
     return () => {
@@ -168,6 +198,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
 
   const handleDisconnectSteam = (accountId: string) => {
     setPendingDisconnectAccountId(accountId);
+    setDisconnectProvider('steam');
     setShowDisconnectConfirm(true);
   };
 
@@ -204,6 +235,91 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setError(parseError(err, 'Erro ao sincronizar contas Steam.'));
     } finally {
       setIsFetchingSteam(false);
+    }
+  };
+
+  const handleSyncSingleSteam = async (accountId: string) => {
+    setIsFetchingSteam(true);
+    setError('');
+    try {
+      const res = await api.post(`/users/me/steam/accounts/${accountId}/sync`);
+      const { new_games_count } = res.data;
+      showToast(
+        `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
+        'success'
+      );
+      void fetchSteamAccounts();
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao sincronizar conta Steam.'));
+    } finally {
+      setIsFetchingSteam(false);
+    }
+  };
+
+  const handleConnectItch = () => {
+    const clientId = import.meta.env.VITE_ITCH_CLIENT_ID;
+    if (!clientId) {
+      setError('A integração com Itch.io não está configurada neste ambiente.');
+      return;
+    }
+    const redirectUri = `${window.location.origin}/settings/integrations/itch/callback`;
+    const authUrl = `https://itch.io/user/oauth?client_id=${clientId}&scope=profile:me%20profile:owned%20profile:games&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    window.location.href = authUrl;
+  };
+
+  const handleDisconnectItch = (accountId: string) => {
+    setPendingDisconnectAccountId(accountId);
+    setDisconnectProvider('itch');
+    setShowDisconnectConfirm(true);
+  };
+
+  const executeDisconnectItch = async (deleteGames: boolean) => {
+    if (!pendingDisconnectAccountId) return;
+    setError('');
+    try {
+      await api.delete(
+        `/users/me/itch/accounts/${pendingDisconnectAccountId}?delete_games=${deleteGames}`
+      );
+      showToast('Conta Itch.io desconectada com sucesso.', 'success');
+      void fetchItchAccounts();
+      window.dispatchEvent(new Event('itch-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao desconectar conta Itch.io.'));
+    } finally {
+      setPendingDisconnectAccountId(null);
+    }
+  };
+
+  const handleSyncItch = async (accountId: string) => {
+    setIsFetchingItch(true);
+    setError('');
+    try {
+      const res = await api.post(`/users/me/itch/accounts/${accountId}/sync`);
+      const { new_games_count } = res.data;
+      showToast(`Sincronização concluída! ${new_games_count} novos jogos adicionados.`, 'success');
+      void fetchItchAccounts();
+      window.dispatchEvent(new Event('itch-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao sincronizar conta Itch.io.'));
+    } finally {
+      setIsFetchingItch(false);
+    }
+  };
+
+  const handleSyncAllItch = async () => {
+    setIsFetchingItch(true);
+    setError('');
+    try {
+      const res = await api.post('/users/me/itch/sync');
+      const { new_games_count } = res.data;
+      showToast(`Sincronização concluída! ${new_games_count} novos jogos adicionados.`, 'success');
+      void fetchItchAccounts();
+      window.dispatchEvent(new Event('itch-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao sincronizar contas Itch.io.'));
+    } finally {
+      setIsFetchingItch(false);
     }
   };
 
@@ -276,7 +392,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
 
   return (
     <>
-      <Modal open onClose={() => !isSubmitting && onClose()} maxWidth="500px" showCloseButton={!isSubmitting}>
+      <Modal open onClose={() => !isSubmitting && onClose()} maxWidth="500px" showCloseButton={!isSubmitting} className="scrollbar-visualmemory">
         <div className={styles.settingsContainer}>
         <div className={styles.modalHeader}>
           <h3>Configurações de Conta</h3>
@@ -309,11 +425,11 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
           </button>
           <button
             type="button"
-            className={`${styles.tabButton} ${activeTab === 'steam' ? styles.activeTab : ''}`}
-            onClick={() => { setActiveTab('steam'); setError(''); }}
+            className={`${styles.tabButton} ${activeTab === 'integrations' ? styles.activeTab : ''}`}
+            onClick={() => { setActiveTab('integrations'); setError(''); }}
             disabled={isSubmitting}
           >
-            Contas Steam
+            Integrações
           </button>
         </div>
 
@@ -409,56 +525,113 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
             </form>
           )}
 
-          {activeTab === 'steam' && (
-            <div className={styles.steamTabContent}>
-              <p className={styles.helpText}>
-                Conecte uma ou mais contas Steam para importar e sincronizar seus jogos automaticamente. 
-                <strong> Nota:</strong> O perfil e os "Detalhes do Jogo" devem estar definidos como <strong>Públicos</strong> nas configurações da Steam.
-              </p>
+          {activeTab === 'integrations' && (
+            <div className={styles.integrationsTabContent}>
+              <div className={styles.integrationSection}>
+                <h3>Steam</h3>
+                <p className={styles.helpText}>
+                  Conecte uma ou mais contas Steam para importar e sincronizar seus jogos automaticamente. 
+                  <strong> Nota:</strong> O perfil e os "Detalhes do Jogo" devem estar definidos como <strong>Públicos</strong> nas configurações da Steam.
+                </p>
 
-              <form onSubmit={handleConnectSteam} className={styles.steamForm}>
-                <div className={styles.inputRow}>
-                  <Input
-                    placeholder="URL do perfil Steam ou ID (ex: 7656119...)"
-                    value={steamUrl}
-                    onChange={(e) => setSteamUrl(e.target.value)}
-                    disabled={isFetchingSteam}
-                    required
-                  />
-                  <Button type="submit" disabled={isFetchingSteam || !steamUrl.trim()}>
-                    {isFetchingSteam ? 'Conectando...' : 'Conectar'}
-                  </Button>
-                </div>
-              </form>
-
-              {steamAccounts.length > 0 ? (
-                <div className={styles.steamAccountsList}>
-                  <div className={styles.steamListHeader}>
-                    <h4>Contas Conectadas ({steamAccounts.length})</h4>
-                    <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingSteam} onClick={handleSyncSteam}>
-                      🔄 Sincronizar Tudo
+                <form onSubmit={handleConnectSteam} className={styles.integrationForm}>
+                  <div className={styles.inputRow}>
+                    <Input
+                      placeholder="URL do perfil Steam ou ID (ex: 7656119...)"
+                      value={steamUrl}
+                      onChange={(e) => setSteamUrl(e.target.value)}
+                      disabled={isFetchingSteam}
+                      required
+                    />
+                    <Button type="submit" disabled={isFetchingSteam || !steamUrl.trim()}>
+                      {isFetchingSteam ? 'Conectando...' : 'Conectar'}
                     </Button>
                   </div>
-                  
-                  {steamAccounts.map((acc) => (
-                    <div key={acc.id} className={acc.avatar_url ? styles.steamAccountCard : `${styles.steamAccountCard} ${styles.steamAccountCardNoAvatar}`}>
-                      <img src={acc.avatar_url || 'https://avatars.githubusercontent.com/u/0?v=4'} alt={acc.persona_name || ''} className={acc.avatar_url ? styles.steamAvatar : styles.steamAvatarPlaceholder} />
-                      <div className={styles.steamAccountInfo}>
-                        <strong>{acc.persona_name || 'Usuário Steam'}</strong>
-                        <span>ID: {acc.steam_id}</span>
-                        {acc.last_sync_at && (
-                          <small>Sincronizado em: {new Date(acc.last_sync_at).toLocaleString()}</small>
-                        )}
-                      </div>
-                      <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectSteam(acc.id)}>
-                        Desconectar
+                </form>
+
+                {steamAccounts.length > 0 ? (
+                  <div className={styles.accountsList}>
+                    <div className={styles.listHeader}>
+                      <h4>Contas Conectadas ({steamAccounts.length})</h4>
+                      <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingSteam} onClick={handleSyncSteam}>
+                        🔄 Sincronizar Tudo
                       </Button>
                     </div>
-                  ))}
+                    
+                    {steamAccounts.map((acc) => (
+                      <div key={acc.id} className={acc.avatar_url ? styles.accountCard : `${styles.accountCard} ${styles.accountCardNoAvatar}`}>
+                        <img src={acc.avatar_url || 'https://avatars.githubusercontent.com/u/0?v=4'} alt={acc.persona_name || ''} className={acc.avatar_url ? styles.accountAvatar : styles.accountAvatarPlaceholder} />
+                        <div className={styles.accountInfo}>
+                          <strong>{acc.persona_name || 'Usuário Steam'}</strong>
+                          <span>ID: {acc.steam_id}</span>
+                          {acc.last_sync_at && (
+                            <small>Sincronizado em: {formatDateTime(acc.last_sync_at)}</small>
+                          )}
+                        </div>
+                        <div className={styles.accountActions}>
+                          <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingSteam} onClick={() => handleSyncSingleSteam(acc.id)}>
+                            🔄
+                          </Button>
+                          <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectSteam(acc.id)}>
+                            Desconectar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.noAccounts}>Nenhuma conta Steam vinculada ainda.</div>
+                )}
+              </div>
+
+              <hr className={styles.integrationDivider} />
+
+              <div className={styles.integrationSection}>
+                <h3>Itch.io</h3>
+                <p className={styles.helpText}>
+                  Conecte sua conta Itch.io para sincronizar sua biblioteca. O redirecionamento utilizará o fluxo seguro do OAuth da itch.io.
+                </p>
+
+                <div className={styles.integrationAction}>
+                  <Button onClick={handleConnectItch} disabled={isFetchingItch}>
+                    Conectar Itch.io via OAuth
+                  </Button>
                 </div>
-              ) : (
-                <div className={styles.noAccounts}>Nenhuma conta Steam vinculada ainda.</div>
-              )}
+
+                {itchAccounts.length > 0 ? (
+                  <div className={styles.accountsList}>
+                    <div className={styles.listHeader}>
+                      <h4>Contas Conectadas ({itchAccounts.length})</h4>
+                      <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingItch} onClick={handleSyncAllItch}>
+                        🔄 Sincronizar Tudo
+                      </Button>
+                    </div>
+                    
+                    {itchAccounts.map((acc) => (
+                      <div key={acc.id} className={acc.avatar_url ? styles.accountCard : `${styles.accountCard} ${styles.accountCardNoAvatar}`}>
+                        <img src={acc.avatar_url || 'https://avatars.githubusercontent.com/u/0?v=4'} alt={acc.username || ''} className={acc.avatar_url ? styles.accountAvatar : styles.accountAvatarPlaceholder} />
+                        <div className={styles.accountInfo}>
+                          <strong>{acc.username || 'Usuário Itch'}</strong>
+                          <span>ID: {acc.itch_id}</span>
+                          {acc.last_sync_at && (
+                            <small>Sincronizado em: {formatDateTime(acc.last_sync_at)}</small>
+                          )}
+                        </div>
+                        <div className={styles.accountActions}>
+                          <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingItch} onClick={() => handleSyncItch(acc.id)}>
+                            🔄
+                          </Button>
+                          <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectItch(acc.id)}>
+                            Desconectar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.noAccounts}>Nenhuma conta Itch.io vinculada ainda.</div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -469,8 +642,8 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     {showDisconnectConfirm && (
       <ConfirmModal
         isOpen={showDisconnectConfirm}
-        title="Desconectar Conta Steam"
-        message="Tem certeza que deseja desconectar esta conta Steam? Ela não será mais sincronizada."
+        title={`Desconectar Conta ${disconnectProvider === 'steam' ? 'Steam' : 'Itch.io'}`}
+        message={`Tem certeza que deseja desconectar esta conta ${disconnectProvider === 'steam' ? 'Steam' : 'Itch.io'}? Ela não será mais sincronizada.`}
         confirmText="Confirmar"
         cancelText="Cancelar"
         onConfirm={() => {
@@ -480,6 +653,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
         onCancel={() => {
           setShowDisconnectConfirm(false);
           setPendingDisconnectAccountId(null);
+          setDisconnectProvider(null);
         }}
       />
     )}
@@ -494,12 +668,14 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
         cancelText="Manter jogos na biblioteca"
         isDestructive
         onConfirm={() => {
+          if (disconnectProvider === 'steam') executeDisconnectSteam(true);
+          else if (disconnectProvider === 'itch') executeDisconnectItch(true);
           setShowDeleteGamesConfirm(false);
-          void executeDisconnectSteam(true);
         }}
         onCancel={() => {
+          if (disconnectProvider === 'steam') executeDisconnectSteam(false);
+          else if (disconnectProvider === 'itch') executeDisconnectItch(false);
           setShowDeleteGamesConfirm(false);
-          void executeDisconnectSteam(false);
         }}
       />
     )}

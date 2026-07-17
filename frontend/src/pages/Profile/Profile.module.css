@@ -86,7 +86,7 @@
 /* Stats Cards Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--gap-md);
 }
 
@@ -413,6 +413,9 @@
 @media (max-width: 900px) {
   .detailsSection {
     grid-template-columns: 1fr;
+  }
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

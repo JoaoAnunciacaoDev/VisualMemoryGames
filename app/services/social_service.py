@@ -94,16 +94,15 @@ def get_followers(user_id: str, current_user: User, db: Session) -> List[UserPub
         .filter(Follow.following_id == user_id)
         .all()
     )
-    
     results = []
     for f in followers:
         u = db.query(User).filter(User.id == f.follower_id).first()
         if not u:
             continue
-            
         followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
         following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
-        is_following = db.query(Follow).filter(Follow.follower_id == current_user.id, Follow.following_id == u.id).first() is not None
+        is_following = db.query(Follow).filter(
+            Follow.follower_id == current_user.id, Follow.following_id == u.id).first() is not None
 
         results.append(
             UserPublicProfile(
@@ -129,16 +128,16 @@ def get_following(user_id: str, current_user: User, db: Session) -> List[UserPub
         .filter(Follow.follower_id == user_id)
         .all()
     )
-    
     results = []
     for f in following:
         u = db.query(User).filter(User.id == f.following_id).first()
         if not u:
             continue
-            
         followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
         following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
-        is_following = db.query(Follow).filter(Follow.follower_id == current_user.id, Follow.following_id == u.id).first() is not None
+        is_following = db.query(Follow).filter(
+            Follow.follower_id == current_user.id, Follow.following_id == u.id
+        ).first() is not None
 
         results.append(
             UserPublicProfile(

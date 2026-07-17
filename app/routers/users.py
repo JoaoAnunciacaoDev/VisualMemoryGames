@@ -237,6 +237,7 @@ def get_dashboard(
 
     lists_count = db.query(CustomList).filter(CustomList.user_id == current_user.id).count()
     tierlists_count = db.query(TierList).filter(TierList.user_id == current_user.id).count()
+    favorites_count = sum(1 for ug in user_games if ug.favorite)
 
     status_distribution_query = (
         db.query(UserGame.status, func.count(UserGame.id))
@@ -322,6 +323,7 @@ def get_dashboard(
         games_count=games_count,
         lists_count=lists_count,
         tierlists_count=tierlists_count,
+        favorites_count=favorites_count,
         status_distribution=status_distribution,
         most_played_genre=most_played_genre,
         genre_distribution=genre_counts,

@@ -15,6 +15,7 @@ from app.models.steam_account import SteamAccount
 from app.models.user import User
 from app.models.user_game import UserGame
 from app.security import get_current_user
+from app.services.custom_list_service import cleanup_empty_auto_lists
 from app.services.steam import SteamService
 
 router = APIRouter(prefix="/users/me/steam", tags=["Steam Integration"])
@@ -203,6 +204,9 @@ async def disconnect_steam_account(
 
     db.delete(account)
     db.commit()
+
+    cleanup_empty_auto_lists(current_user.id, db)
+
     return {"message": "Conta Steam desconectada com sucesso."}
 
 

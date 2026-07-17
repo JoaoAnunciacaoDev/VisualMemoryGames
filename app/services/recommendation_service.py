@@ -1,9 +1,9 @@
+import concurrent.futures
 import json
 import random
-import concurrent.futures
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Optional, Set
 
-from sqlalchemy import or_
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 
@@ -13,7 +13,8 @@ from app.services.game_provider import get_games_by_genres_rawg
 
 
 def parse_json_list(field) -> List:
-    """Deserializa com segurança campos JSON que podem vir como string ou lista dependendo do driver do banco."""
+    """Deserializa com segurança campos JSON que podem vir
+    como string ou lista dependendo do driver do banco."""
     if not field:
         return []
     if isinstance(field, list):
@@ -119,8 +120,8 @@ class RecommendationService:
 
         clauses = []
         for g in genres:
-            clauses.append(Game.genres.ilike(f'%"{g}"%'))
-            clauses.append(Game.genres.ilike(f'%{g}%'))
+            clauses.append(cast(Game.genres, String).ilike(f'%"{g}"%'))
+            clauses.append(cast(Game.genres, String).ilike(f'%{g}%'))
 
         query = self.db.query(Game).filter(Game.id.in_(owned_by_others_subq))
         if excludes:

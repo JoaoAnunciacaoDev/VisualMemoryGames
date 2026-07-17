@@ -26,6 +26,7 @@ from app.schemas.user import (
     UserRegisterInitiate,
     UserResponse,
     UserUpdate,
+    UserVisibilityUpdate,
     YearlyGames,
 )
 from app.security import get_current_user
@@ -185,6 +186,18 @@ def update_me(
     return current_user
 
 
+@router.patch("/me/visibility", response_model=UserResponse)
+def update_visibility(
+    visibility_update: UserVisibilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.is_public = visibility_update.is_public
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
 @router.put("/me/password", status_code=status.HTTP_200_OK)
 def change_password(
     pwd_change: UserPasswordChange,
@@ -227,21 +240,56 @@ def get_dashboard(
     current_user: User = Depends(get_current_user),
 ):
     """Gera dados estatísticos e histórico de jogos do usuário atual para a página de perfil."""
+    return get_user_dashboard(str(current_user.id), db, current_user)
+
+
+@router.get("/{user_id}/dashboard", response_model=DashboardResponse)
+def get_public_dashboard(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Verificar se o usuário é público ou se é admin
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    from app.models.follow import Follow
+
+    is_following = (
+        db.query(Follow)
+        .filter(Follow.follower_id == current_user.id, Follow.following_id == user_id)
+        .first()
+        is not None
+    )
+
+    if (
+        not target_user.is_public
+        and not current_user.is_admin
+        and not is_following
+        and target_user.id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="Perfil privado.")
+
+    return get_user_dashboard(user_id, db, target_user)
+
+
+def get_user_dashboard(user_id: str, db: Session, target_user: User):
     user_games = (
         db.query(UserGame)
         .options(joinedload(UserGame.game))
-        .filter(UserGame.user_id == current_user.id)
+        .filter(UserGame.user_id == user_id)
         .all()
     )
     games_count = len(user_games)
 
-    lists_count = db.query(CustomList).filter(CustomList.user_id == current_user.id).count()
-    tierlists_count = db.query(TierList).filter(TierList.user_id == current_user.id).count()
+    lists_count = db.query(CustomList).filter(CustomList.user_id == user_id).count()
+    tierlists_count = db.query(TierList).filter(TierList.user_id == user_id).count()
     favorites_count = sum(1 for ug in user_games if ug.favorite)
 
     status_distribution_query = (
         db.query(UserGame.status, func.count(UserGame.id))
-        .filter(UserGame.user_id == current_user.id)
+        .filter(UserGame.user_id == user_id)
         .group_by(UserGame.status)
         .all()
     )
@@ -264,7 +312,7 @@ def get_dashboard(
     if genre_counts:
         most_played_genre = max(genre_counts.keys(), key=lambda g: genre_counts[g])
 
-    has_pending_genres = str(current_user.id) in ACTIVE_SYNC_USERS
+    has_pending_genres = str(user_id) in ACTIVE_SYNC_USERS
 
     yearly_dict = {}
     for ug in user_games:
@@ -316,10 +364,14 @@ def get_dashboard(
         )
         yearly_platinums_list.append(YearlyGames(year=year, games=sorted_platinums))
 
+    from app.models.follow import Follow
+    followers_count = db.query(Follow).filter(Follow.following_id == target_user.id).count()
+    following_count = db.query(Follow).filter(Follow.follower_id == target_user.id).count()
+
     return DashboardResponse(
-        username=current_user.username,
-        email=current_user.email,
-        created_at=current_user.created_at,
+        username=target_user.username,
+        email=target_user.email,
+        created_at=target_user.created_at,
         games_count=games_count,
         lists_count=lists_count,
         tierlists_count=tierlists_count,
@@ -328,6 +380,8 @@ def get_dashboard(
         most_played_genre=most_played_genre,
         genre_distribution=genre_counts,
         has_pending_genres=has_pending_genres,
+        followers_count=followers_count,
+        following_count=following_count,
         yearly_games=yearly_games_list,
         yearly_platinums=yearly_platinums_list,
     )

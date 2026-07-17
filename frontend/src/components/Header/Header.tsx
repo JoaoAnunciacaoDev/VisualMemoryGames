@@ -55,6 +55,9 @@ export default function Header() {
               <Button variant="ghost" onClick={() => navigate('/recommendations')}>
                 Recomendações
               </Button>
+              <Button variant="ghost" onClick={() => navigate('/social')}>
+                Social
+              </Button>
               {user?.is_admin && (
                 <Button variant="ghost" onClick={() => navigate('/admin')}>
                   Admin

@@ -6,8 +6,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 
 class UserBase(BaseModel):
-    username: str = Field(min_length=3, max_length=30)
+    username: str = Field(min_length=3, max_length=50)
     email: EmailStr
+    is_public: Optional[bool] = False
 
     @field_validator("username")
     @classmethod
@@ -64,12 +65,17 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: str
     is_admin: bool = False
+    is_public: bool = False
     is_deleted: bool = False
     created_at: Optional[datetime] = None
     last_active_at: Optional[datetime] = None
     games_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserVisibilityUpdate(BaseModel):
+    is_public: bool
 
 
 class UserPasswordChange(BaseModel):
@@ -124,5 +130,7 @@ class DashboardResponse(BaseModel):
     most_played_genre: Optional[str] = None
     genre_distribution: Dict[str, int] = Field(default_factory=dict)
     has_pending_genres: bool = False
+    followers_count: int = 0
+    following_count: int = 0
     yearly_games: List[YearlyGames]
     yearly_platinums: List[YearlyGames] = Field(default_factory=list)

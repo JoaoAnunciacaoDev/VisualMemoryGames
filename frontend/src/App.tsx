@@ -7,6 +7,7 @@ import TierList from './pages/TierList/TierList';
 import TierListEditor from './pages/TierListEditor/TierListEditor';
 import Recommendations from './pages/Recommendations/Recommendations';
 import Profile from './pages/Profile/Profile';
+import Social from './pages/Social/Social';
 import NotFound from './pages/NotFound/NotFound';
 import Admin from './pages/Admin/Admin';
 import ItchCallback from './pages/ItchCallback/ItchCallback';
@@ -26,7 +27,9 @@ function App() {
                 <Route path="/tierlists" element={<TierList />} />
                 <Route path="/tierlists/:id" element={<TierListEditor />} />
                 <Route path="/recommendations" element={<Recommendations />} />
+                <Route path="/social" element={<Social />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/profile/:userId" element={<Profile />} />
                 <Route path="/settings/integrations/itch/callback" element={<ItchCallback />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />

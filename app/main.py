@@ -21,6 +21,7 @@ from app.routers import (
     games,
     itch,
     recommendation,
+    social,
     steam,
     tierlists,
     user_games,
@@ -70,6 +71,7 @@ app.include_router(steam.router)
 app.include_router(itch.router)
 app.include_router(admin.router)
 app.include_router(recommendation.router)
+app.include_router(social.router)
 
 
 @app.get("/")

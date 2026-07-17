@@ -20,6 +20,8 @@ dependencies = [
     "boto3 (>=1.43.37,<2.0.0)",
     "psycopg2-binary (>=2.9.12,<3.0.0)",
     "resend (>=2.32.2,<3.0.0)",
+    "requests (>=2.34.2,<3.0.0)",
+    "ruff (>=0.15.22,<0.16.0)",
 ]
 
 [tool.poetry]

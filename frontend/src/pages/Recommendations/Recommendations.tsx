@@ -44,7 +44,7 @@ export default function Recommendations() {
       <h1 className={styles.pageTitle}>Para Você</h1>
       
       {categories.length === 0 ? (
-        <p>Ainda não temos recomendações suficientes. Adicione mais jogos à sua biblioteca, dê notas e favorites para gerarmos seu perfil!</p>
+        <p>Ainda não temos recomendações suficientes. Adicione mais jogos à sua biblioteca, dê notas e favorite para gerarmos seu perfil!</p>
       ) : (
         categories.map((category, index) => (
           <RecommendationCarousel 

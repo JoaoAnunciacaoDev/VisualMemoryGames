@@ -27,6 +27,7 @@ class User(Base):
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 

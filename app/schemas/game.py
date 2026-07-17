@@ -131,9 +131,6 @@ class UserGameBase(BaseModel):
         if self.started_at and self.finished_at and self.started_at > self.finished_at:
             raise ValueError("A data de início não pode ser posterior à data de conclusão.")
 
-        if self.platinum_at and self.acquired_at and self.platinum_at < self.acquired_at:
-            raise ValueError("A data de platina não pode ser anterior à data de aquisição.")
-
         if self.platinum_at and self.started_at and self.platinum_at < self.started_at:
             raise ValueError("A data de platina não pode ser anterior à data de início.")
 

@@ -52,6 +52,7 @@ def search_games_on_rawg(query: str) -> List[Dict]:
             detail="Não foi possível comunicar com o serviço de busca de jogos.",
         ) from e
 
+
 def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     """Busca jogos na API externa da RAWG pelos gêneros."""
     url = f"{BASE_URL}/games"
@@ -85,6 +86,7 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     except Exception:
         return []
 
+
 def get_game_details_rawg(external_id: int) -> Dict:
     """Busca os detalhes expandidos de um jogo (sinopse, nota, trailer) na RAWG."""
     url_details = f"{BASE_URL}/games/{external_id}"
@@ -102,31 +104,29 @@ def get_game_details_rawg(external_id: int) -> Dict:
             if res_movies.status_code == 200:
                 movies = res_movies.json().get("results", [])
                 if movies and len(movies) > 0:
-                    trailer_url = movies[0].get("data", {}).get("max") or movies[0].get("data", {}).get("480")
+                    trailer_url = movies[0].get("data", {}).get("max") or movies[0].get(
+                        "data", {}
+                    ).get("480")
 
             res_stores = client.get(f"{BASE_URL}/games/{external_id}/stores", params=params)
             stores = []
             if res_stores.status_code == 200:
                 store_results = res_stores.json().get("results", [])
-                
                 # Para cruzar com os nomes bonitos, podemos olhar details.get("stores")
                 # Mas a rota /stores ja devolve url e store_id.
                 # Precisamos cruzar pelo ID da loja para pegar o nome
                 store_names = {}
-                for s in (details.get("stores") or []):
+                for s in details.get("stores") or []:
                     st = s.get("store", {})
                     if "id" in st:
                         store_names[st["id"]] = st.get("name")
-                        
                 for st_data in store_results:
                     st_id = st_data.get("store_id")
                     url = st_data.get("url")
                     if st_id and url:
-                        stores.append({
-                            "id": st_id,
-                            "name": store_names.get(st_id, "Loja"),
-                            "url": url
-                        })
+                        stores.append(
+                            {"id": st_id, "name": store_names.get(st_id, "Loja"), "url": url}
+                        )
 
             return {
                 "synopsis": details.get("description_raw"),

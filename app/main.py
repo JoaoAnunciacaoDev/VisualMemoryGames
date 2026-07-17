@@ -20,11 +20,11 @@ from app.routers import (
     custom_lists,  # noqa: F811
     games,
     itch,
+    recommendation,
     steam,
     tierlists,
     user_games,
     users,
-    recommendation,
 )  # noqa: F811
 from app.routers.auth import cleanup_deleted_users
 

@@ -17,9 +17,11 @@ class ItchAccount(Base):
     __tablename__ = "itch_accounts"
 
     id: Mapped[str] = mapped_column(
-        String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+        String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True
+    )
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     itch_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     username: Mapped[str] = mapped_column(String, nullable=False)
     avatar_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)

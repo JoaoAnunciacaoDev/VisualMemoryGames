@@ -1,7 +1,8 @@
 from unittest.mock import patch
+
 from app.models.game import Game
-from app.models.user_game import UserGame
 from app.models.user import User
+from app.models.user_game import UserGame
 
 
 def test_get_recommendations(client, db_session, auth_headers):

@@ -128,7 +128,7 @@ export default function TierListEditor() {
     setNewTierColor('#cccccc');
   };
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) return <p className="loading-center">Carregando...</p>;
 
   if (error) {
     return (

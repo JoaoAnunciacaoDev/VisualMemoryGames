@@ -1,5 +1,6 @@
 import os
-from datetime import date, datetime
+import re
+from datetime import date, datetime, timezone
 
 import httpx
 from fastapi import HTTPException
@@ -148,7 +149,7 @@ class SteamService:
             max_unlock = max(unlock_times) if unlock_times else 0
             if max_unlock > 0:
                 return datetime.fromtimestamp(max_unlock).date()
-            return datetime.utcnow().date()
+            return datetime.now(timezone.utc).date()
 
         if client is not None:
             try:
@@ -184,8 +185,6 @@ class SteamService:
             release_info = info.get("release_date", {})
             date_str = release_info.get("date")
             if date_str:
-                import re
-
                 match = re.search(r"\b(19\d\d|20\d\d)\b", date_str)
                 if match:
                     release_year = int(match.group(1))

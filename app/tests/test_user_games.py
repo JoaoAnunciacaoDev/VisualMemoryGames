@@ -87,5 +87,6 @@ def test_invalid_date_relationships(client, auth_headers, setup_game):
     )
 
     assert response.status_code == 400
-    assert ("A data de platina não pode ser anterior "
-            "à data de aquisição" in response.json()["detail"])
+    assert (
+        "A data de platina não pode ser anterior à data de aquisição" in response.json()["detail"]
+    )

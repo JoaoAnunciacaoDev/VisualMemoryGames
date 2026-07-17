@@ -1,14 +1,16 @@
 import json
 import os
 import random
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List
 
-import bcrypt
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
+from app.limiter import limiter
 from app.models.custom_lists import CustomList
 from app.models.email_verification import EmailVerification
 from app.models.tierlist import TierList
@@ -27,14 +29,16 @@ from app.schemas.user import (
     YearlyGames,
 )
 from app.security import get_current_user
-from app.services.auth_service import get_password_hash
+from app.services.auth_service import get_password_hash, verify_password
 from app.services.email_service import send_verification_email
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/register/initiate", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 def initiate_registration(
+    request: Request,
     user_init: UserRegisterInitiate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -188,9 +192,7 @@ def change_password(
     current_user: User = Depends(get_current_user),
 ):
     """Muda a senha do usuário autenticado após validar a senha atual."""
-    if not bcrypt.checkpw(
-        pwd_change.current_password.encode("utf-8"), current_user.password_hash.encode("utf-8")
-    ):
+    if not verify_password(pwd_change.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta."
         )
@@ -207,13 +209,11 @@ def deactivate_account(
     current_user: User = Depends(get_current_user),
 ):
     """Solicita exclusão da conta (desativação temporária por 15 dias)."""
-    if not bcrypt.checkpw(
-        del_req.password.encode("utf-8"), current_user.password_hash.encode("utf-8")
-    ):
+    if not verify_password(del_req.password, current_user.password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha incorreta.")
 
     current_user.is_deleted = True
-    current_user.deleted_at = datetime.utcnow()
+    current_user.deleted_at = datetime.now(timezone.utc)
     db.commit()
     return {
         "message": "Conta desativada com sucesso. "
@@ -238,19 +238,26 @@ def get_dashboard(
     lists_count = db.query(CustomList).filter(CustomList.user_id == current_user.id).count()
     tierlists_count = db.query(TierList).filter(TierList.user_id == current_user.id).count()
 
-    status_distribution = {}
-    for ug in user_games:
-        status_distribution[ug.status] = status_distribution.get(ug.status, 0) + 1
+    status_distribution_query = (
+        db.query(UserGame.status, func.count(UserGame.id))
+        .filter(UserGame.user_id == current_user.id)
+        .group_by(UserGame.status)
+        .all()
+    )
+    status_distribution = {status: count for status, count in status_distribution_query}
 
-    genre_counts = {}
+    genre_counts = Counter()
     for ug in user_games:
         if ug.game and ug.game.genres:
-            try:
-                genres_list = json.loads(ug.game.genres)
-                for g in genres_list:
-                    genre_counts[g] = genre_counts.get(g, 0) + 1
-            except Exception:
-                pass
+            genres_list = ug.game.genres if isinstance(ug.game.genres, list) else []
+            if not genres_list and isinstance(ug.game.genres, str):
+                try:
+                    genres_list = json.loads(ug.game.genres)
+                except Exception:
+                    pass
+            genre_counts.update(genres_list)
+
+    genre_counts = dict(genre_counts)
 
     most_played_genre = None
     if genre_counts:

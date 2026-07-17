@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -27,8 +27,8 @@ class Game(Base):
     title: Mapped[str] = mapped_column(String, nullable=False)
     cover_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     release_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    platforms: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    genres: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    platforms: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
+    genres: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)
     is_manual: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_by: Mapped[Optional[str]] = mapped_column(
         String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True

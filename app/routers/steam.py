@@ -1,6 +1,6 @@
 import asyncio
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List
 
 import httpx
@@ -215,7 +215,7 @@ async def fetch_game_genres_in_background(appids: List[int], user_id: str):
                 db = db_session_maker()
                 try:
                     game = db.query(Game).filter(Game.steam_appid == appid).first()
-                    if not game or (game.genres and game.genres != "[]"):
+                    if not game or (game.genres and game.genres != [] and game.genres != "[]"):
                         continue
                 finally:
                     db.close()
@@ -232,13 +232,11 @@ async def fetch_game_genres_in_background(appids: List[int], user_id: str):
                 try:
                     game = db.query(Game).filter(Game.steam_appid == appid).first()
                     if game:
-                        genres_val = "[]"
+                        genres_val = []
                         release_yr = None
                         if details:
-                            import json
-
                             if details.get("genres"):
-                                genres_val = json.dumps(details["genres"])
+                                genres_val = details["genres"]
                             if details.get("release_year"):
                                 release_yr = details["release_year"]
 
@@ -324,7 +322,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                     account.steam_id, appid, client=client
                 )
                 if plat_date is True:
-                    platinized_game_dates[appid] = datetime.utcnow().date()
+                    platinized_game_dates[appid] = datetime.now(timezone.utc).date()
                 elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
                     platinized_game_dates[appid] = plat_date
 
@@ -346,19 +344,17 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             if game:
                 game.steam_appid = appid
                 # Se o jogo associado não possui gêneros, adiciona para buscar em background
-                if not game.genres or game.genres == "[]":
+                if not game.genres or game.genres == [] or game.genres == "[]":
                     missing_genres_appids.append(appid)
                 db.flush()
             else:
                 cover = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
-                import json
-
                 game = Game(
                     title=name or f"Steam App {appid}",
                     steam_appid=appid,
                     cover_url=cover,
-                    platforms=json.dumps(["PC"]),
-                    genres="[]",
+                    platforms=["PC"],
+                    genres=[],
                     release_year=None,
                     is_manual=False,
                 )
@@ -367,8 +363,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                 # Adiciona para buscar em background
                 missing_genres_appids.append(appid)
         else:
-            # Se o jogo já existe no banco por steam_appid, mas não possui gêneros ou ano
-            if not game.genres or game.genres == "[]":
+            if not game.genres or game.genres == [] or game.genres == "[]":
                 missing_genres_appids.append(appid)
 
         # 2. Verifica se o usuário já tem o jogo na biblioteca
@@ -428,7 +423,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             if has_changes:
                 updated_games_count += 1
 
-    account.last_sync_at = datetime.utcnow()
+    account.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
 
     return new_games_count, updated_games_count, missing_genres_appids

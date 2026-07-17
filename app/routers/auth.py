@@ -2,7 +2,6 @@ import os
 import random
 from datetime import datetime, timedelta, timezone
 
-import bcrypt
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -13,19 +12,15 @@ from app.models.password_reset import PasswordReset
 from app.models.user import User
 from app.schemas.password_reset import PasswordResetConfirm, PasswordResetInitiate
 from app.security import create_access_token
-from app.services.auth_service import get_password_hash
+from app.services.auth_service import get_password_hash, verify_password
 from app.services.email_service import send_password_reset_email
 
 router = APIRouter(tags=["Auth"])
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
-
-
 def cleanup_deleted_users(db: Session):
     """Exclui permanentemente contas marcadas como is_deleted há mais de 15 dias."""
-    limit_date = datetime.utcnow() - timedelta(days=15)
+    limit_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=15)
     expired_users = db.query(User).filter(User.is_deleted, User.deleted_at < limit_date).all()
     for u in expired_users:
         db.delete(u)
@@ -41,7 +36,6 @@ def login(
     db: Session = Depends(get_db),
 ):
     """Rota para autenticar o usuário e gerar o Token JWT."""
-    cleanup_deleted_users(db)
 
     user = (
         db.query(User)
@@ -68,7 +62,9 @@ def login(
 
 
 @router.post("/password-reset/initiate", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 def initiate_password_reset(
+    request: Request,
     init_data: PasswordResetInitiate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
@@ -107,7 +103,9 @@ def initiate_password_reset(
 
 
 @router.post("/password-reset/confirm", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
 def confirm_password_reset(
+    request: Request,
     confirm_data: PasswordResetConfirm,
     db: Session = Depends(get_db),
 ):

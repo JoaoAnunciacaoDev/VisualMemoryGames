@@ -24,6 +24,7 @@ from app.routers import (
     tierlists,
     user_games,
     users,
+    recommendation,
 )  # noqa: F811
 from app.routers.auth import cleanup_deleted_users
 
@@ -68,6 +69,7 @@ app.include_router(custom_lists.router)
 app.include_router(steam.router)
 app.include_router(itch.router)
 app.include_router(admin.router)
+app.include_router(recommendation.router)
 
 
 @app.get("/")

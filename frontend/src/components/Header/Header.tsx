@@ -52,6 +52,9 @@ export default function Header() {
               <Button variant="ghost" onClick={() => navigate('/tierlists')}>
                 TierLists
               </Button>
+              <Button variant="ghost" onClick={() => navigate('/recommendations')}>
+                Recomendações
+              </Button>
               {user?.is_admin && (
                 <Button variant="ghost" onClick={() => navigate('/admin')}>
                   Admin

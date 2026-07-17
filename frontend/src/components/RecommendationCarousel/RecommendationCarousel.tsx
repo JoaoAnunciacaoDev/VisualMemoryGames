@@ -3,7 +3,7 @@ import styles from './RecommendationCarousel.module.css';
 import api from '@/services/api';
 import Button from '@/components/Shared/Button/Button';
 
-interface RecommendationGame {
+export interface RecommendationGame {
   id: number;
   external_id: number;
   title: string;

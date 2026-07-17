@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import styles from './Recommendations.module.css';
-import RecommendationCarousel from '@/components/RecommendationCarousel/RecommendationCarousel';
+import RecommendationCarousel, { RecommendationGame } from '@/components/RecommendationCarousel/RecommendationCarousel';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 
 interface RecommendationCategory {
   title: string;
-  games: any[];
+  games: RecommendationGame[];
 }
 
 export default function Recommendations() {
@@ -28,7 +28,7 @@ export default function Recommendations() {
     };
 
     fetchRecommendations();
-  }, []);
+  }, [showToast]);
 
   if (loading) { 
     return (

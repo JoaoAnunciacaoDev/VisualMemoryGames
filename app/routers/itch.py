@@ -37,9 +37,6 @@ class ItchAccountResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class SyncResultResponse(BaseModel):
-    new_games_count: int
-    updated_games_count: int
 
 
 @router.get("/accounts", response_model=List[ItchAccountResponse])
@@ -67,7 +64,7 @@ async def connect_itch_account(
     if not itch_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Não foi possível obter os dados do perfil com este token."
+            detail="Não foi possível obter os dados do perfil com este token.",
         )
 
     # Verifica se já está conectado
@@ -160,17 +157,16 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
 
         title = game_data.get("title")
         cover_url = game_data.get("cover_url")
-        url = game_data.get("url")
 
         # Verifica se o jogo já existe globalmente no banco por um identificador
         # (Neste momento a tabela Game não tem um campo itch_id, usaremos external_id)
         game_id_int = int(game_id_itch) if str(game_id_itch).isdigit() else None
-        
+
         if game_id_int:
             game_db = db.query(Game).filter(Game.external_id == game_id_int).first()
         else:
             game_db = db.query(Game).filter(Game.title == title).first()
-            
+
         if not game_db:
             game_db = Game(
                 title=title,
@@ -192,7 +188,7 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
             user_game = UserGame(
                 user_id=account.user_id,
                 game_id=game_db.id,
-                status="Quero Jogar", # Valor padrão
+                status="Quero Jogar",  # Valor padrão
                 store="ITCH",
             )
             db.add(user_game)

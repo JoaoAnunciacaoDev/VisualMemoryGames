@@ -1,20 +1,27 @@
-import uuid
+from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, String
-from sqlalchemy.orm import relationship
+import uuid
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class ItchAccount(Base):
     __tablename__ = "itch_accounts"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
-    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    itch_id = Column(String, nullable=False, index=True)
-    username = Column(String, nullable=False)
-    avatar_url = Column(String, nullable=True)
-    last_sync_at = Column(DateTime, nullable=True)
-    access_token = Column(String, nullable=False)  # Guarda o token de acesso à API
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    itch_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    username: Mapped[str] = mapped_column(String, nullable=False)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    last_sync_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    access_token: Mapped[str] = mapped_column(String, nullable=False)
 
-    user = relationship("User", back_populates="itch_accounts")
+    user: Mapped["User"] = relationship("User", back_populates="itch_accounts")

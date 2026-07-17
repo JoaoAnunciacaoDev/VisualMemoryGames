@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
@@ -7,8 +7,8 @@ import styles from './ItchCallback.module.css';
 export default function ItchCallback() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [status, setStatus] = useState('Processando autenticação...');
   const hasFetched = useRef(false);
+  const status = 'Processando autenticação...';
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -34,9 +34,10 @@ export default function ItchCallback() {
         window.dispatchEvent(new Event('itch-synced'));
         
         navigate('/profile');
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(err);
-        const msg = err.response?.data?.detail || 'Erro ao conectar conta Itch.io.';
+        const errorObj = err as { response?: { data?: { detail?: string } } };
+        const msg = errorObj.response?.data?.detail || 'Erro ao conectar conta Itch.io.';
         showToast(msg, 'error');
         navigate('/profile');
       }

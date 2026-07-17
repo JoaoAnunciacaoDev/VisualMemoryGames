@@ -135,7 +135,14 @@ export default function TierLists() {
     }
   };
 
-  if (loading) return <p className="loading-center">Carregando tier lists...</p>;
+  if (loading) {
+    return (
+      <div className={styles.loaderContainer}>
+        <div className={styles.loader}></div>
+        <p>Carregando tier lists...</p>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

@@ -37,8 +37,6 @@ class ItchAccountResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-
-
 @router.get("/accounts", response_model=List[ItchAccountResponse])
 def get_connected_accounts(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)

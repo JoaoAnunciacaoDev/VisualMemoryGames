@@ -5,6 +5,7 @@ import Login from './pages/Login/Login';
 import Library from './pages/Library/Library';
 import TierList from './pages/TierList/TierList';
 import TierListEditor from './pages/TierListEditor/TierListEditor';
+import Recommendations from './pages/Recommendations/Recommendations';
 import Profile from './pages/Profile/Profile';
 import NotFound from './pages/NotFound/NotFound';
 import Admin from './pages/Admin/Admin';
@@ -24,6 +25,7 @@ function App() {
                 <Route path="/library" element={<Library />} />
                 <Route path="/tierlists" element={<TierList />} />
                 <Route path="/tierlists/:id" element={<TierListEditor />} />
+                <Route path="/recommendations" element={<Recommendations />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings/integrations/itch/callback" element={<ItchCallback />} />
                 <Route path="/admin" element={<Admin />} />

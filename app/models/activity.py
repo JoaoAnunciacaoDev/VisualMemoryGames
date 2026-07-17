@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from app.database import Base
 
@@ -27,5 +27,5 @@ class Activity(Base):
         DateTime, default=lambda: datetime.now(timezone.utc), index=True
     )
 
-    user = relationship("User", backref="activities")
-    game = relationship("Game", backref="activities")
+    user = relationship("User", backref=backref("activities", cascade="all, delete-orphan"))
+    game = relationship("Game", backref=backref("activities", cascade="all, delete-orphan"))

@@ -11,7 +11,7 @@ def test_update_visibility(client: TestClient, db_session, auth_headers):
     tester = db_session.query(User).filter_by(username="tester").first()
 
     # Por padrão is_public é False
-    assert tester.is_public
+    assert not tester.is_public
 
     # Atualiza para True
     response = client.patch(

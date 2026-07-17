@@ -8,6 +8,7 @@ import TierListEditor from './pages/TierListEditor/TierListEditor';
 import Profile from './pages/Profile/Profile';
 import NotFound from './pages/NotFound/NotFound';
 import Admin from './pages/Admin/Admin';
+import ItchCallback from './pages/ItchCallback/ItchCallback';
 import { ToastProvider } from './providers/ToastProvider';
 import { AuthProvider } from './providers/AuthProvider';
 
@@ -24,6 +25,7 @@ function App() {
                 <Route path="/tierlists" element={<TierList />} />
                 <Route path="/tierlists/:id" element={<TierListEditor />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/settings/integrations/itch/callback" element={<ItchCallback />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

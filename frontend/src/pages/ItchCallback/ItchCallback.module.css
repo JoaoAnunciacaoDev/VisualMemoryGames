@@ -1,0 +1,23 @@
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.messageCard {
+  background: var(--bg-card);
+  padding: var(--gap-xl);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+.messageCard h2 {
+  margin-bottom: var(--gap-sm);
+  color: var(--primary-color);
+}
+
+.messageCard p {
+  color: var(--text-secondary);
+}

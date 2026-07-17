@@ -292,6 +292,36 @@ async def sync_steam_games(
     return SyncResultResponse(new_games_count=total_new, updated_games_count=total_updated)
 
 
+@router.post("/accounts/{account_id}/sync", response_model=SyncResultResponse)
+async def sync_single_steam_account_endpoint(
+    account_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sincroniza os jogos de uma conta Steam específica."""
+    account = (
+        db.query(SteamAccount)
+        .filter(SteamAccount.id == account_id, SteamAccount.user_id == current_user.id)
+        .first()
+    )
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conta Steam não encontrada."
+        )
+
+    new_cnt, upd_cnt, missing_ids = await sync_single_account(account, db)
+
+    if missing_ids:
+        unique_appids = list(set(missing_ids))
+        ACTIVE_SYNC_USERS.add(str(current_user.id))
+        background_tasks.add_task(
+            fetch_game_genres_in_background, unique_appids, str(current_user.id)
+        )
+
+    return SyncResultResponse(new_games_count=new_cnt, updated_games_count=upd_cnt)
+
+
 async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, int, List[int]]:
     """Auxiliar para sincronizar uma conta Steam individual e salvar no banco."""
     new_games_count = 0

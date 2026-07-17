@@ -13,12 +13,13 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import SessionLocal
 from app.limiter import limiter
-from app.models import custom_lists, game, tierlist, user, user_game  # noqa: F401
+from app.models import custom_lists, game, itch_account, tierlist, user, user_game  # noqa: F401
 from app.routers import (
     admin,
     auth,
     custom_lists,  # noqa: F811
     games,
+    itch,
     steam,
     tierlists,
     user_games,
@@ -65,6 +66,7 @@ app.include_router(user_games.router)
 app.include_router(tierlists.router)
 app.include_router(custom_lists.router)
 app.include_router(steam.router)
+app.include_router(itch.router)
 app.include_router(admin.router)
 
 

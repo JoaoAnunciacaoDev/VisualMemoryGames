@@ -18,9 +18,9 @@ class SteamAccount(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    steam_id: Mapped[str] = mapped_column(String, nullable=False)
+    steam_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     persona_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     last_sync_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

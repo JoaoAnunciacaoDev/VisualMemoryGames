@@ -155,6 +155,7 @@ def update_user_game(
         )
 
     from pydantic import ValidationError
+
     try:
         UserGameBase(**validation_data)
     except ValidationError as e:
@@ -162,11 +163,10 @@ def update_user_game(
         for error in e.errors():
             msg = error.get("msg", "")
             if msg.startswith("Value error, "):
-                msg = msg[len("Value error, "):]
+                msg = msg[len("Value error, ") :]
             error_messages.append(msg)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="; ".join(error_messages)
+            status_code=status.HTTP_400_BAD_REQUEST, detail="; ".join(error_messages)
         )
 
     if new_status == GameStatus.WANT_TO_PLAY:

@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, DateTime, String, func, select
+from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.custom_lists import CustomList
-    from app.models.steam_account import SteamAccount
     from app.models.tierlist import TierList
     from app.models.user_game import UserGame
 
@@ -24,7 +23,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=True
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=True
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -40,10 +39,18 @@ class User(Base):
     custom_lists: Mapped[List["CustomList"]] = relationship(
         "CustomList", back_populates="user", cascade="all, delete-orphan"
     )
-    steam_accounts: Mapped[List["SteamAccount"]] = relationship(
+    # Relacionamento com as contas conectadas
+    steam_accounts = relationship(
         "SteamAccount", back_populates="user", cascade="all, delete-orphan"
     )
+    itch_accounts = relationship("ItchAccount", back_populates="user", cascade="all, delete-orphan")
 
-    @property
-    def games_count(self) -> int:
-        return len(self.user_games)
+
+from app.models.user_game import UserGame  # noqa: E402
+
+User.games_count = column_property(
+    select(func.count(UserGame.id))
+    .where(UserGame.user_id == User.id)
+    .correlate_except(UserGame)
+    .scalar_subquery()
+)

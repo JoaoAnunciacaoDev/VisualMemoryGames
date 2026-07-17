@@ -41,8 +41,8 @@ def create_game(
         title=game.title,
         cover_url=game.cover_url,
         release_year=game.release_year,
-        platforms=json.dumps(game.platforms),
-        genres=json.dumps(game.genres),
+        platforms=game.platforms,
+        genres=game.genres,
         is_manual=False,
     )
 
@@ -97,8 +97,8 @@ async def create_manual_game(
         title=title.strip(),
         cover_url=final_cover_url,
         release_year=release_year,
-        platforms=platforms,
-        genres=genres,
+        platforms=json.loads(platforms),
+        genres=json.loads(genres),
         is_manual=True,
         created_by=str(current_user.id),
     )
@@ -156,12 +156,12 @@ async def update_manual_game(
     if cover_file and cover_file.filename:
         final_cover_url = await save_upload_file(cover_file)
 
-    setattr(game, "title", title.strip())
-    setattr(game, "release_year", release_year)
-    setattr(game, "platforms", platforms)
-    setattr(game, "genres", genres)
+    game.title = title.strip()
+    game.release_year = release_year
+    game.platforms = json.loads(platforms)
+    game.genres = json.loads(genres)
     if final_cover_url:
-        setattr(game, "cover_url", final_cover_url)
+        game.cover_url = final_cover_url
 
     db.commit()
     db.refresh(game)

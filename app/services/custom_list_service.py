@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import cast
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.custom_lists import CustomList
 from app.models.user_game import UserGame
@@ -115,4 +115,22 @@ def sync_user_game_on_list_removal(lst: CustomList, user_game: UserGame, db: Ses
     elif list_type == "platinized_year":
         setattr(user_game, "platinum_at", None)
 
+    db.commit()
+
+
+def cleanup_empty_auto_lists(user_id: str, db: Session) -> None:
+    """Limpa listas automáticas (exceto Favoritos) que não têm mais nenhum jogo associado."""
+    lists = (
+        db.query(CustomList)
+        .options(selectinload(CustomList.games))
+        .filter(
+            CustomList.user_id == user_id,
+            CustomList.is_system.is_(True),
+            CustomList.list_type != "favorites",
+        )
+        .all()
+    )
+    for lst in lists:
+        if len(lst.games) == 0:
+            db.delete(lst)
     db.commit()

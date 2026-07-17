@@ -18,7 +18,7 @@ class TierList(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
 
@@ -36,7 +36,7 @@ class TierCategory(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     tierlist_id: Mapped[str] = mapped_column(
-        String, ForeignKey("tierlists.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("tierlists.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -56,10 +56,10 @@ class TierItem(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     category_id: Mapped[str] = mapped_column(
-        String, ForeignKey("tier_categories.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("tier_categories.id", ondelete="CASCADE"), nullable=False, index=True
     )
     game_id: Mapped[str] = mapped_column(
-        String, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("games.id", ondelete="CASCADE"), nullable=False, index=True
     )
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 

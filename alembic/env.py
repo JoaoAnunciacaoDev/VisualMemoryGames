@@ -9,7 +9,7 @@ from alembic import context
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import Base
-from app.models import user, game, user_game, tierlist, custom_lists, email_verification, password_reset, steam_account  # noqa
+from app.models import user, game, user_game, tierlist, custom_lists, email_verification, password_reset, steam_account, itch_account  # noqa
 
 target_metadata = Base.metadata
 
@@ -31,6 +31,7 @@ def run_migrations_offline():
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -50,6 +51,7 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            render_as_batch=True,
         )
         with context.begin_transaction():
             context.run_migrations()

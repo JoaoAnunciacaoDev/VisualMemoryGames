@@ -106,7 +106,7 @@ def update_tierlist(
 ):
     tierlist: TierList = get_owned_or_raise(TierList, tierlist_id, str(current_user.id), db)
     if data.title is not None:
-        setattr(tierlist, "title", data.title)
+        tierlist.title = data.title
     db.commit()
     db.refresh(tierlist)
     return tierlist
@@ -185,14 +185,16 @@ def reorder_categories(
 ):
     get_owned_or_raise(TierList, tierlist_id, str(current_user.id), db)
 
+    categories = (
+        db.query(TierCategory)
+        .filter(TierCategory.id.in_(data.category_ids), TierCategory.tierlist_id == tierlist_id)
+        .all()
+    )
+
+    cat_dict = {str(c.id): c for c in categories}
     for index, category_id in enumerate(data.category_ids):
-        category = (
-            db.query(TierCategory)
-            .filter(TierCategory.id == category_id, TierCategory.tierlist_id == tierlist_id)
-            .first()
-        )
-        if category:
-            setattr(category, "order_index", index)
+        if category_id in cat_dict:
+            cat_dict[category_id].order_index = index
     db.commit()
     return {"ok": True}
 
@@ -252,7 +254,7 @@ def move_item(
 
     get_category_and_tierlist_or_raise(str(item.category_id), str(current_user.id), db)
 
-    setattr(item, "category_id", data.target_category_id)
+    item.category_id = data.target_category_id
     db.commit()
     return {"ok": True}
 
@@ -288,9 +290,11 @@ def reorder_items(
 ):
     get_category_and_tierlist_or_raise(category_id, str(current_user.id), db)
 
+    items = db.query(TierItem).filter(TierItem.id.in_(data.item_ids)).all()
+    item_dict = {str(i.id): i for i in items}
+
     for index, item_id in enumerate(data.item_ids):
-        item = db.query(TierItem).filter(TierItem.id == item_id).first()
-        if item:
-            setattr(item, "order_index", index)
+        if item_id in item_dict:
+            item_dict[item_id].order_index = index
     db.commit()
     return {"ok": True}

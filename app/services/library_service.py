@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.custom_lists import CustomList
 from app.models.user import User
 from app.models.user_game import UserGame
+from app.services.custom_list_service import cleanup_empty_auto_lists
 
 
 def remove_from_library(db_user_game: UserGame, current_user: User, db: Session) -> None:
@@ -19,8 +20,8 @@ def remove_from_library(db_user_game: UserGame, current_user: User, db: Session)
     for lst in lists:
         if game in lst.games:
             lst.games.remove(game)
-            if bool(lst.is_system) and len(lst.games) == 0:
-                db.delete(lst)
+
+    cleanup_empty_auto_lists(current_user.id, db)
 
     if game.is_manual:
         if str(game.created_by) != str(current_user.id):

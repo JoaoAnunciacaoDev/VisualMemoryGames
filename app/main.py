@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -24,8 +25,6 @@ from app.routers import (
     users,
 )  # noqa: F811
 from app.routers.auth import cleanup_deleted_users
-
-
 
 
 @asynccontextmanager

@@ -26,12 +26,12 @@ def upgrade() -> None:
                existing_type=sa.VARCHAR(),
                type_=sa.JSON(),
                existing_nullable=True,
-               postgresql_using='platforms::json')
+               postgresql_using="(CASE WHEN platforms LIKE '[%' THEN replace(platforms, '''', '\"')::json ELSE json_build_array(platforms) END)")
         batch_op.alter_column('genres',
                existing_type=sa.VARCHAR(),
                type_=sa.JSON(),
                existing_nullable=True,
-               postgresql_using='genres::json')
+               postgresql_using="(CASE WHEN genres LIKE '[%' THEN replace(genres, '''', '\"')::json ELSE json_build_array(genres) END)")
 
     with op.batch_alter_table('tier_items', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_tier_items_game_id'), ['game_id'], unique=False)

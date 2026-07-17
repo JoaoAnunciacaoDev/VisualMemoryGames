@@ -586,7 +586,7 @@ export default function Profile() {
                                 >
                                   {ug.status}
                                 </span>
-                                {ug.hours_played > 0 && (
+                                {ug.hours_played != null && ug.hours_played > 0 && (
                                   <span className={styles.genreGameHours}>
                                     🕒 {ug.hours_played}h
                                   </span>

@@ -45,8 +45,15 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f('ix_activities_id'), ['id'], unique=False)
         batch_op.create_index(batch_op.f('ix_activities_user_id'), ['user_id'], unique=False)
 
-    with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('is_public', sa.Boolean(), server_default='0', nullable=False))
+    op.add_column(
+        "users",
+        sa.Column(
+            "is_public",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false()
+        )
+    )
 
     # ### end Alembic commands ###
 

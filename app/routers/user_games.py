@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import get_owned_or_raise
 from app.enums.game_status import GameStatus
+from app.models.activity import Activity
 from app.models.game import Game
 from app.models.user import User
 from app.models.user_game import UserGame
@@ -56,6 +57,11 @@ def add_game_to_library(
     )
 
     db.add(new_entry)
+
+    # Gerar atividade de adição
+    activity = Activity(user_id=current_user.id, game_id=user_game.game_id, action_type="ADDED")
+    db.add(activity)
+
     db.commit()
     db.refresh(new_entry)
 
@@ -181,8 +187,38 @@ def update_user_game(
             }
         )
 
+    old_status = db_user_game.status
+    old_rating = db_user_game.rating
+    old_platinum = db_user_game.platinum_at
+
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
+
+    # Verificar atividades
+    if old_status != db_user_game.status:
+        db.add(
+            Activity(
+                user_id=str(current_user.id),
+                game_id=db_user_game.game_id,
+                action_type="UPDATED_STATUS",
+                context=db_user_game.status,
+            )
+        )
+    if old_rating != db_user_game.rating and db_user_game.rating is not None:
+        db.add(
+            Activity(
+                user_id=str(current_user.id),
+                game_id=db_user_game.game_id,
+                action_type="RATED",
+                context=str(db_user_game.rating),
+            )
+        )
+    if old_platinum != db_user_game.platinum_at and db_user_game.platinum_at is not None:
+        db.add(
+            Activity(
+                user_id=str(current_user.id), game_id=db_user_game.game_id, action_type="PLATINUM"
+            )
+        )
 
     if "favorite" in update_data:
         fav_list = get_or_create_favorites_list(str(db_user_game.user_id), db)

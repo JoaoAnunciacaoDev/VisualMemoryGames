@@ -731,3 +731,22 @@
   gap: var(--gap-md);
   color: var(--text-secondary);
 }
+
+.followStats {
+  display: flex;
+  gap: var(--gap-md);
+  margin-top: var(--gap-sm);
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.followStatItem {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.followStatItem strong {
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+}
+

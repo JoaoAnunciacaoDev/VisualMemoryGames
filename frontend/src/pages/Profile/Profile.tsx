@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { Card, PageTitle, Button, Modal } from '@/components/Shared';
@@ -7,6 +7,7 @@ import { translateGenre } from '@/utils/genres';
 import { resolveImageUrl } from '@/services/media';
 import { LibraryGame } from '@/types';
 import styles from './Profile.module.css';
+import FollowListModal from './FollowListModal';
 
 interface DashboardGame {
   title: string;
@@ -33,11 +34,14 @@ interface DashboardData {
   most_played_genre: string | null;
   genre_distribution: Record<string, number>;
   has_pending_genres: boolean;
+  followers_count: number;
+  following_count: number;
   yearly_games: YearlyGames[];
   yearly_platinums: YearlyGames[];
 }
 
 export default function Profile() {
+  const { userId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -52,6 +56,7 @@ export default function Profile() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [userGames, setUserGames] = useState<LibraryGame[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
+  const [followModal, setFollowModal] = useState<{isOpen: boolean, type: 'followers' | 'following'}>({ isOpen: false, type: 'followers' });
 
   const handleCloseModal = () => {
     setShowGenresModal(false);
@@ -64,7 +69,8 @@ export default function Profile() {
     const fetchGames = async () => {
       setLoadingGames(true);
       try {
-        const res = await api.get('/user-games/me');
+        const endpoint = userId ? `/user-games/user/${userId}` : '/user-games/me';
+        const res = await api.get(endpoint);
         setUserGames(res.data);
       } catch (err) {
         console.error('Erro ao carregar jogos da biblioteca:', err);
@@ -74,7 +80,7 @@ export default function Profile() {
     };
 
     void fetchGames();
-  }, [showGenresModal, userGames.length]);
+  }, [showGenresModal, userGames.length, userId]);
 
   const MONTH_NAMES = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -82,7 +88,11 @@ export default function Profile() {
   ];
 
   useEffect(() => {
-    api.get('/users/me/dashboard')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    const endpoint = userId ? `/users/${userId}/dashboard` : '/users/me/dashboard';
+    
+    api.get(endpoint)
       .then((res) => {
         const d: DashboardData = res.data;
         setData(d);
@@ -93,14 +103,18 @@ export default function Profile() {
           setSelectedPlatYear(d.yearly_platinums[0].year);
         }
       })
-      .catch(() => {
-        showToast('Erro ao carregar dados do perfil.', 'error');
+      .catch((err) => {
+        if (err.response?.status === 403) {
+          showToast('Perfil privado ou você não tem permissão.', 'error');
+        } else {
+          showToast('Erro ao carregar dados do perfil.', 'error');
+        }
         navigate('/library');
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [navigate, showToast]);
+  }, [navigate, showToast, userId]);
 
   const getFilteredBoardGames = () => {
     if (!data) return [];
@@ -187,8 +201,32 @@ export default function Profile() {
           <p className={styles.joinedText}>
             Membro desde {formatDate(data.created_at)}
           </p>
+          <div className={styles.followStats}>
+            <span 
+              className={styles.followStatItem} 
+              onClick={() => setFollowModal({ isOpen: true, type: 'followers' })}
+              style={{ cursor: 'pointer' }}
+            >
+              <strong>{data.followers_count}</strong> seguidores
+            </span>
+            <span 
+              className={styles.followStatItem}
+              onClick={() => setFollowModal({ isOpen: true, type: 'following' })}
+              style={{ cursor: 'pointer' }}
+            >
+              <strong>{data.following_count}</strong> seguindo
+            </span>
+          </div>
         </div>
       </section>
+
+      {followModal.isOpen && (
+        <FollowListModal 
+          userId={userId || 'me'} 
+          type={followModal.type} 
+          onClose={() => setFollowModal({ isOpen: false, type: 'followers' })} 
+        />
+      )}
 
       {/* Grade de Estatísticas Principais */}
       <div className={styles.statsGrid}>

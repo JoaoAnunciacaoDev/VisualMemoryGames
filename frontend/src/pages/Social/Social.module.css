@@ -1,0 +1,259 @@
+.socialContainer {
+  padding: var(--gap-xl);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: var(--font-size-xxl);
+  margin-bottom: var(--gap-xl);
+  color: var(--text);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--gap-lg);
+  margin-bottom: var(--gap-xl);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabBtn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  padding: var(--gap-md) 0;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--transition-fast);
+}
+
+.tabBtn:hover {
+  color: var(--text);
+}
+
+.tabBtn.active {
+  color: var(--primary);
+}
+
+.tabBtn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary);
+}
+
+.content {
+  min-height: 500px;
+}
+
+.feedLayout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+}
+
+.mainFeed h2, .sidebarFeed h2 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--gap-lg);
+  color: var(--text);
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+.activityCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.actHeader {
+  font-size: var(--font-size-md);
+}
+
+.username {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.username a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.username a:hover {
+  text-decoration: underline;
+}
+
+.actionText {
+  color: var(--muted);
+}
+
+.gameTitle {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.actCover {
+  width: 100%;
+  max-height: 250px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+}
+
+.actDate {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.sidebarFeed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+.releaseCard {
+  display: flex;
+  gap: var(--gap-md);
+  background: var(--surface);
+  padding: var(--gap-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.releaseCover {
+  width: 60px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.releaseInfo h4 {
+  margin: 0 0 5px 0;
+  font-size: var(--font-size-md);
+  color: var(--text);
+}
+
+.releaseInfo p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.releaseGenres {
+  margin-top: 5px !important;
+  color: var(--primary) !important;
+  font-weight: 500;
+}
+
+.searchForm {
+  display: flex;
+  gap: var(--gap-md);
+  margin-bottom: var(--gap-xl);
+}
+
+.searchInput {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  padding: var(--gap-md) var(--gap-lg);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--font-size-md);
+}
+
+.searchBtn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0 var(--gap-xl);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.searchBtn:hover {
+  background: rgba(var(--primary-rgb), 0.8);
+}
+
+.userList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.userCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: var(--gap-lg);
+  border-radius: var(--radius-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.usernameLink {
+  color: var(--text);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.usernameLink:hover {
+  color: var(--primary);
+}
+
+.stats {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.followBtn {
+  background: var(--text);
+  color: var(--bg);
+  border: none;
+  padding: var(--gap-sm) var(--gap-lg);
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+
+.followBtn:hover {
+  opacity: 0.9;
+}
+
+.followBtn.following {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.followBtn.following:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.empty {
+  color: var(--muted);
+  font-style: italic;
+}

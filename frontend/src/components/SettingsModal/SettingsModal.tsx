@@ -43,10 +43,14 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   // States para Alteração de Dados
   const [newUsername, setNewUsername] = useState(user?.username || '');
   const [prevUsername, setPrevUsername] = useState(user?.username || '');
+  const [isPublic, setIsPublic] = useState(user?.is_public ?? false);
+  const [prevIsPublic, setPrevIsPublic] = useState(user?.is_public ?? false);
 
-  if (user?.username !== prevUsername) {
+  if (user?.username !== prevUsername || user?.is_public !== prevIsPublic) {
     setPrevUsername(user?.username || '');
     setNewUsername(user?.username || '');
+    setPrevIsPublic(user?.is_public ?? false);
+    setIsPublic(user?.is_public ?? false);
   }
   
   // States para Alteração de Senha
@@ -323,21 +327,25 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     }
   };
 
-  const handleUpdateUsername = async (e: SyntheticEvent) => {
+  const handleUpdateProfile = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!newUsername.trim()) return;
     setIsSubmitting(true);
     setError('');
 
     try {
-      await api.put('/users/me', { username: newUsername.trim() });
-      showToast('Nome de usuário alterado com sucesso!', 'success');
+      if (newUsername.trim() !== user?.username) {
+        await api.put('/users/me', { username: newUsername.trim() });
+      }
+      if (isPublic !== user?.is_public) {
+        await api.patch('/users/me/visibility', { is_public: isPublic });
+      }
+      showToast('Perfil atualizado com sucesso!', 'success');
       await reloadUser();
       window.dispatchEvent(new Event('user-updated'));
-      setNewUsername('');
       onClose();
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao alterar nome de usuário.'));
+      setError(parseError(err, 'Erro ao atualizar perfil.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -437,7 +445,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
           {error && <p className={styles.error}>{error}</p>}
 
           {activeTab === 'profile' && (
-            <form onSubmit={handleUpdateUsername} className={styles.form}>
+            <form onSubmit={handleUpdateProfile} className={styles.form}>
               <p className={styles.helpText}>Escolha um novo nome de usuário único para sua conta.</p>
               <label className={styles.label}>
                 Novo Nome de Usuário
@@ -450,6 +458,22 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                   maxLength={30}
                 />
               </label>
+
+              <div className={styles.visibilityToggle}>
+                <label className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={isPublic}
+                    onChange={(e) => setIsPublic(e.target.checked)}
+                    disabled={isSubmitting}
+                  />
+                  <span>Tornar meu perfil público</span>
+                </label>
+                <p className={styles.helpTextSmall}>
+                  Perfis públicos podem ser encontrados na aba Social e seus seguidores verão suas atividades.
+                </p>
+              </div>
+
               <Button type="submit" disabled={isSubmitting} fullWidth>
                 {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
               </Button>

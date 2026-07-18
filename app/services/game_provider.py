@@ -8,6 +8,21 @@ RAWG_API_KEY = os.getenv("RAWG_API_KEY")
 BASE_URL = "https://api.rawg.io/api"
 
 
+def _is_nsfw(item: Dict) -> bool:
+    forbidden_tags = {
+        "nsfw",
+        "hentai",
+        "eroge",
+        "sexual-content",
+        "nudity",
+        "adult",
+        "sexual-themes",
+    }
+    tags = {t.get("slug", "").lower() for t in (item.get("tags") or [])}
+    genres_slug = {g.get("slug", "").lower() for g in (item.get("genres") or [])}
+    return bool(forbidden_tags.intersection(tags) or forbidden_tags.intersection(genres_slug))
+
+
 def search_games_on_rawg(query: str) -> List[Dict]:
     """Busca jogos na API externa da RAWG pelo nome."""
 
@@ -56,10 +71,11 @@ def search_games_on_rawg(query: str) -> List[Dict]:
 def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     """Busca jogos na API externa da RAWG pelos gêneros."""
     url = f"{BASE_URL}/games"
+    # Pede mais para caso tenhamos que filtrar
     params = {
         "key": RAWG_API_KEY,
         "genres": genres,
-        "page_size": page_size,
+        "page_size": page_size + 10,
         "ordering": "-added",
     }
 
@@ -71,6 +87,8 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
 
         results = []
         for item in data.get("results", []):
+            if _is_nsfw(item):
+                continue
             released = item.get("released")
             results.append(
                 {
@@ -82,6 +100,8 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
                     "genres": [g["name"] for g in (item.get("genres") or [])],
                 }
             )
+            if len(results) == page_size:
+                break
         return results
     except Exception:
         return []
@@ -112,9 +132,6 @@ def get_game_details_rawg(external_id: int) -> Dict:
             stores = []
             if res_stores.status_code == 200:
                 store_results = res_stores.json().get("results", [])
-                # Para cruzar com os nomes bonitos, podemos olhar details.get("stores")
-                # Mas a rota /stores ja devolve url e store_id.
-                # Precisamos cruzar pelo ID da loja para pegar o nome
                 store_names = {}
                 for s in details.get("stores") or []:
                     st = s.get("store", {})
@@ -137,3 +154,45 @@ def get_game_details_rawg(external_id: int) -> Dict:
             }
     except Exception:
         return {}
+
+
+def get_weekly_releases_rawg() -> List[Dict]:
+    """Busca os lançamentos dos últimos 7 dias."""
+    from datetime import datetime, timedelta
+
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=7)
+    dates_str = f"{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}"
+
+    url = f"{BASE_URL}/games"
+    params = {
+        "key": RAWG_API_KEY,
+        "dates": dates_str,
+        "ordering": "-added",
+        "page_size": 20,
+    }
+
+    try:
+        with httpx.Client(timeout=10) as client:
+            response = client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+        results = []
+        for item in data.get("results", []):
+            if _is_nsfw(item):
+                continue
+            released = item.get("released")
+            results.append(
+                {
+                    "title": item["name"],
+                    "cover_url": item.get("background_image"),
+                    "release_date": released,
+                    "genres": [g["name"] for g in (item.get("genres") or [])],
+                }
+            )
+            if len(results) == 10:
+                break
+        return results
+    except Exception:
+        return []

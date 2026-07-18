@@ -20,6 +20,7 @@ from app.routers import (
     custom_lists,  # noqa: F811
     games,
     itch,
+    patch_notes,
     recommendation,
     social,
     steam,
@@ -72,6 +73,7 @@ app.include_router(itch.router)
 app.include_router(admin.router)
 app.include_router(recommendation.router)
 app.include_router(social.router)
+app.include_router(patch_notes.router)
 
 
 @app.get("/")

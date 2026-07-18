@@ -365,6 +365,7 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User):
         yearly_platinums_list.append(YearlyGames(year=year, games=sorted_platinums))
 
     from app.models.follow import Follow
+
     followers_count = db.query(Follow).filter(Follow.following_id == target_user.id).count()
     following_count = db.query(Follow).filter(Follow.follower_id == target_user.id).count()
 

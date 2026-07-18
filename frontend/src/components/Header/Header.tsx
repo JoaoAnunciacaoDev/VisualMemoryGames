@@ -5,6 +5,8 @@ import SettingsModal from '@/components/SettingsModal/SettingsModal';
 import { isAuthenticated } from '@/services/auth';
 import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
+import api from '@/services/api';
+import { FaBullhorn } from 'react-icons/fa';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -13,6 +15,26 @@ export default function Header() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const checkUnread = async () => {
+      try {
+        const res = await api.get('/patch-notes/unread');
+        setHasUnread(res.data.unread);
+      } catch (err) {
+        console.error('Erro ao verificar patch notes não lidos:', err);
+      }
+    };
+
+    checkUnread();
+
+    const handleRead = () => setHasUnread(false);
+    window.addEventListener('patches-read', handleRead);
+    return () => window.removeEventListener('patches-read', handleRead);
+  }, [token]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -67,41 +89,52 @@ export default function Header() {
           )}
 
           {token ? (
-            <div className={styles.avatarContainer}>
+            <div className={styles.navActions}>
               <button
                 type="button"
-                className={`${styles.avatar} ${loading ? styles.avatarLoading : ''}`}
-                onClick={handleAvatarClick}
-                disabled={loading}
+                className={`${styles.megaphoneBtn} ${hasUnread ? styles.hasUnread : ''}`}
+                onClick={() => navigate('/patch-notes')}
+                title="Patch Notes"
               >
-                {loading ? '' : getInitial()}
+                <FaBullhorn />
               </button>
 
-              {dropdownOpen && (
-                <div className={styles.dropdown}>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => navigate('/profile')}
-                  >
-                    Ver Perfil
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={() => setSettingsOpen(true)}
-                  >
-                    Configurações
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.dropdownItem}
-                    onClick={handleLogout}
-                  >
-                    Sair
-                  </button>
-                </div>
-              )}
+              <div className={styles.avatarContainer}>
+                <button
+                  type="button"
+                  className={`${styles.avatar} ${loading ? styles.avatarLoading : ''}`}
+                  onClick={handleAvatarClick}
+                  disabled={loading}
+                >
+                  {loading ? '' : getInitial()}
+                </button>
+
+                {dropdownOpen && (
+                  <div className={styles.dropdown}>
+                    <button
+                      type="button"
+                      className={styles.dropdownItem}
+                      onClick={() => navigate('/profile')}
+                    >
+                      Ver Perfil
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropdownItem}
+                      onClick={() => setSettingsOpen(true)}
+                    >
+                      Configurações
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.dropdownItem}
+                      onClick={handleLogout}
+                    >
+                      Sair
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <Button variant="ghost" onClick={() => navigate('/login')}>

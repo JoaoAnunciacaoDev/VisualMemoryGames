@@ -15,9 +15,7 @@ def search_users(query: str, current_user: User, db: Session) -> List[UserPublic
     """Busca usuários públicos pelo nome."""
     users = (
         db.query(User)
-        .filter(
-            User.is_public, User.id != current_user.id, User.username.ilike(f"%{query}%")
-        )
+        .filter(User.is_public, User.id != current_user.id, User.username.ilike(f"%{query}%"))
         .limit(20)
         .all()
     )
@@ -89,11 +87,7 @@ def get_followers(user_id: str, current_user: User, db: Session) -> List[UserPub
     if not profile:
         return []
 
-    followers = (
-        db.query(Follow)
-        .filter(Follow.following_id == user_id)
-        .all()
-    )
+    followers = db.query(Follow).filter(Follow.following_id == user_id).all()
     results = []
     for f in followers:
         u = db.query(User).filter(User.id == f.follower_id).first()
@@ -101,8 +95,12 @@ def get_followers(user_id: str, current_user: User, db: Session) -> List[UserPub
             continue
         followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
         following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
-        is_following = db.query(Follow).filter(
-            Follow.follower_id == current_user.id, Follow.following_id == u.id).first() is not None
+        is_following = (
+            db.query(Follow)
+            .filter(Follow.follower_id == current_user.id, Follow.following_id == u.id)
+            .first()
+            is not None
+        )
 
         results.append(
             UserPublicProfile(
@@ -123,11 +121,7 @@ def get_following(user_id: str, current_user: User, db: Session) -> List[UserPub
     if not profile:
         return []
 
-    following = (
-        db.query(Follow)
-        .filter(Follow.follower_id == user_id)
-        .all()
-    )
+    following = db.query(Follow).filter(Follow.follower_id == user_id).all()
     results = []
     for f in following:
         u = db.query(User).filter(User.id == f.following_id).first()
@@ -135,9 +129,12 @@ def get_following(user_id: str, current_user: User, db: Session) -> List[UserPub
             continue
         followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
         following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
-        is_following = db.query(Follow).filter(
-            Follow.follower_id == current_user.id, Follow.following_id == u.id
-        ).first() is not None
+        is_following = (
+            db.query(Follow)
+            .filter(Follow.follower_id == current_user.id, Follow.following_id == u.id)
+            .first()
+            is not None
+        )
 
         results.append(
             UserPublicProfile(
@@ -204,13 +201,11 @@ def get_feed(current_user: User, db: Session) -> FeedResponse:
     activities = []
     if following_ids:
         from datetime import datetime, timedelta, timezone
+
         fifteen_days_ago = datetime.now(timezone.utc) - timedelta(days=15)
         raw_activities = (
             db.query(Activity)
-            .filter(
-                Activity.user_id.in_(following_ids),
-                Activity.created_at >= fifteen_days_ago
-            )
+            .filter(Activity.user_id.in_(following_ids), Activity.created_at >= fifteen_days_ago)
             .order_by(Activity.created_at.desc())
             .limit(20)
             .all()

@@ -10,6 +10,7 @@ import Profile from './pages/Profile/Profile';
 import Social from './pages/Social/Social';
 import NotFound from './pages/NotFound/NotFound';
 import Admin from './pages/Admin/Admin';
+import PatchNotes from './pages/PatchNotes/PatchNotes';
 import ItchCallback from './pages/ItchCallback/ItchCallback';
 import { ToastProvider } from './providers/ToastProvider';
 import { AuthProvider } from './providers/AuthProvider';
@@ -32,6 +33,7 @@ function App() {
                 <Route path="/profile/:userId" element={<Profile />} />
                 <Route path="/settings/integrations/itch/callback" element={<ItchCallback />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/patch-notes" element={<PatchNotes />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>

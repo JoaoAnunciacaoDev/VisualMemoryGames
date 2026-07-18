@@ -30,6 +30,7 @@ class User(Base):
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_read_patches_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     user_games: Mapped[List["UserGame"]] = relationship(
         "UserGame", back_populates="user", cascade="all, delete-orphan"

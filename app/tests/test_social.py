@@ -134,14 +134,17 @@ def test_get_feed_and_activity_creation(client: TestClient, db_session, auth_hea
     # Releases do RAWG devem estar presentes (depende do mock se estiver mockado)
     assert "rawg_releases" in data
 
+
 def test_get_followers_and_following(client: TestClient, db_session, auth_headers):
     tester = db_session.query(User).filter_by(username="tester").first()
 
     # Criar user2 e user3
     user2 = User(
-        username="followuser2", email="follow2@example.com", password_hash="123", is_public=True)
+        username="followuser2", email="follow2@example.com", password_hash="123", is_public=True
+    )
     user3 = User(
-        username="followuser3", email="follow3@example.com", password_hash="123", is_public=True)
+        username="followuser3", email="follow3@example.com", password_hash="123", is_public=True
+    )
     db_session.add_all([user2, user3])
     db_session.commit()
     db_session.refresh(user2)

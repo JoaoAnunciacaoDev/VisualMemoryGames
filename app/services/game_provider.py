@@ -10,8 +10,14 @@ BASE_URL = "https://api.rawg.io/api"
 
 def _is_nsfw(item: Dict) -> bool:
     forbidden_tags = {
-        "nsfw", "hentai", "eroge", "sexual-content", "nudity", "adult", "sexual-themes"
-        }
+        "nsfw",
+        "hentai",
+        "eroge",
+        "sexual-content",
+        "nudity",
+        "adult",
+        "sexual-themes",
+    }
     tags = {t.get("slug", "").lower() for t in (item.get("tags") or [])}
     genres_slug = {g.get("slug", "").lower() for g in (item.get("genres") or [])}
     return bool(forbidden_tags.intersection(tags) or forbidden_tags.intersection(genres_slug))

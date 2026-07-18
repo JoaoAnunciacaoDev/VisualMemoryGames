@@ -13,8 +13,8 @@ class Activity(Base):
     user_id: Mapped[str] = mapped_column(
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    game_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
+    game_id: Mapped[str] = mapped_column(
+        String, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
     )
 
     # action_type could be 'ADDED', 'UPDATED_STATUS', 'RATED', 'PLATINUM'

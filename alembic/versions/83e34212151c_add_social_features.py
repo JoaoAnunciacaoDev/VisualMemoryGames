@@ -32,7 +32,7 @@ def upgrade() -> None:
     op.create_table('activities',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.String(), nullable=False),
-    sa.Column('game_id', sa.Integer(), nullable=False),
+    sa.Column('game_id', sa.String(), nullable=False),
     sa.Column('action_type', sa.String(), nullable=False),
     sa.Column('context', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),

@@ -45,7 +45,7 @@ test.describe('Profile & Settings Flow', () => {
     await page.click('button:has-text("Salvar Alterações")');
 
     // Confirmar toast de sucesso e atualização do avatar/nome
-    await expect(page.locator('text=Nome de usuário alterado com sucesso')).toBeVisible();
+    await expect(page.locator('text=Perfil atualizado com sucesso!')).toBeVisible();
     await expect(avatarBtn).toBeVisible();
 
     // 5. Mudar a senha nas configurações

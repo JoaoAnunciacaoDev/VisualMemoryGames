@@ -9,7 +9,12 @@ from app.models.custom_lists import CustomList, CustomListGame
 from app.models.game import Game
 from app.models.user import User
 from app.models.user_game import UserGame
-from app.schemas.custom_lists import CustomListCreate, CustomListResponse, CustomListUpdate, ReorderGamesRequest
+from app.schemas.custom_lists import (
+    CustomListCreate,
+    CustomListResponse,
+    CustomListUpdate,
+    ReorderGamesRequest,
+)
 from app.security import get_current_user
 from app.services.custom_list_service import (
     get_or_create_favorites_list,

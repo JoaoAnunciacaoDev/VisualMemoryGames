@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { resolveImageUrl, getBestGameCover } from '@/services/media';
+import { getBestGameCover } from '@/services/media';
 import Modal from '@/components/Shared/Modal/Modal';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';

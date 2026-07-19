@@ -4,10 +4,10 @@ import uuid
 from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String
+from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from sqlalchemy.ext.associationproxy import association_proxy, AssociationProxy
 
 if TYPE_CHECKING:
     from app.models.custom_lists import CustomList, CustomListGame

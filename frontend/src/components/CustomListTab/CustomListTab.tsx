@@ -223,12 +223,6 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
     }
   };
 
-  const handleGameItemKeyDown = (event: KeyboardEvent<HTMLDivElement>, gameId: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      setSelectedGameId((prev) => (prev === gameId ? null : gameId));
-    }
-  };
 
   return (
     <div className={styles.container}>

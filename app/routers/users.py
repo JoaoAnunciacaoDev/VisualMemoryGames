@@ -387,7 +387,11 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
                 cover_url=cover,
                 hours_played=ug.hours_played or 0.0,
                 rating=ug.rating,
-                finished_at=(datetime.combine(ug.finished_at, datetime.min.time())) if ug.finished_at else None,
+                finished_at=(
+                    datetime.combine(ug.finished_at, datetime.min.time())
+                    if ug.finished_at
+                    else None
+                ),
             )
             favorite_games_list.append(g_data)
 

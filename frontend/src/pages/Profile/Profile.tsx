@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, PageTitle, Button, Modal, Loader } from '@/components/Shared';
 import { translateGenre } from '@/utils/genres';
-import { resolveImageUrl, getBestGameCover } from '@/services/media';
+import { getBestGameCover } from '@/services/media';
 import { LibraryGame } from '@/types';
 import styles from './Profile.module.css';
 import FollowListModal from './FollowListModal';
@@ -45,7 +45,6 @@ interface DashboardData {
 
 export default function Profile() {
   const { userId } = useParams<{ userId?: string }>();
-  const navigate = useNavigate();
   const { showToast } = useToast();
   const { user: currentUser } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -121,14 +120,18 @@ export default function Profile() {
   ];
 
   useEffect(() => {
-    setData(null);
-    setUserGames([]);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    const endpoint = userId ? `/users/${userId}/dashboard` : '/users/me/dashboard';
-    
-    api.get(endpoint)
-      .then((res) => {
+    let active = true;
+    const loadData = async () => {
+      await Promise.resolve();
+      if (!active) return;
+      setData(null);
+      setUserGames([]);
+      setLoading(true);
+      
+      const endpoint = userId ? `/users/${userId}/dashboard` : '/users/me/dashboard';
+      try {
+        const res = await api.get(endpoint);
+        if (!active) return;
         const d: DashboardData = res.data;
         setData(d);
         if (d.yearly_games && d.yearly_games.length > 0) {
@@ -137,18 +140,25 @@ export default function Profile() {
         if (d.yearly_platinums && d.yearly_platinums.length > 0) {
           setSelectedPlatYear(d.yearly_platinums[0].year);
         }
-      })
-      .catch((err) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        if (!active) return;
         if (err.response?.status === 403) {
           showToast('Perfil privado ou você não tem permissão.', 'error');
         } else {
           showToast('Erro ao carregar dados do perfil.', 'error');
         }
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [navigate, showToast, userId]);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [userId, showToast]);
 
   const getFilteredBoardGames = () => {
     if (!data) return [];

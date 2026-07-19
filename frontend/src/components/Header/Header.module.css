@@ -42,7 +42,7 @@
 }
 
 /* ===== Mobile ===== */
-@media (max-width: 600px) {
+@media (max-width: 860px) {
   .header {
     flex-direction: column;
     justify-content: center;
@@ -67,6 +67,8 @@
   display: inline-flex;
   gap: var(--gap-sm);
   margin-right: var(--gap-sm);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .avatarContainer {

@@ -257,3 +257,38 @@
   color: var(--muted);
   font-style: italic;
 }
+
+/* ===== Mobile Responsive ===== */
+@media (max-width: 768px) {
+  .socialContainer {
+    padding: var(--gap-md);
+  }
+  
+  .feedLayout {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  
+  .searchForm {
+    flex-direction: column;
+    gap: var(--gap-sm);
+  }
+  
+  .searchBtn {
+    padding: var(--gap-md) var(--gap-lg);
+    width: 100%;
+  }
+  
+  .userCard {
+    flex-direction: column;
+    gap: var(--gap-md);
+    align-items: stretch;
+    text-align: center;
+  }
+  
+  .followBtn {
+    align-self: center;
+    width: 100%;
+    max-width: 200px;
+  }
+}

@@ -1,7 +1,7 @@
 <h1 align="center">🎮 VisualMemory</h1>
 
 <p align="center">
-  <em>Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e criação de tier lists personalizadas.</em>
+  <em>Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e Itch.io e criação de tier lists personalizadas.</em>
 </p>
 
 <p align="center">

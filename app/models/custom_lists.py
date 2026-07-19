@@ -3,8 +3,9 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, Column, ForeignKey, String, Table
+from sqlalchemy import Boolean, Column, ForeignKey, String, Table, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.ext.associationproxy import association_proxy, AssociationProxy
 
 from app.database import Base
 
@@ -22,7 +23,16 @@ custom_list_games = Table(
         primary_key=True,
     ),
     Column("game_id", String, ForeignKey("games.id", ondelete="CASCADE"), primary_key=True),
+    Column("order_index", Integer, nullable=False, default=0, server_default="0"),
 )
+
+
+class CustomListGame(Base):
+    __table__ = custom_list_games
+
+    # Relationships
+    custom_list: Mapped["CustomList"] = relationship("CustomList", back_populates="list_games")
+    game: Mapped["Game"] = relationship("Game")
 
 
 class CustomList(Base):
@@ -37,6 +47,11 @@ class CustomList(Base):
     list_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="custom_lists")
-    games: Mapped[List["Game"]] = relationship(
-        "Game", secondary=custom_list_games, back_populates="custom_lists"
+
+    list_games: Mapped[List["CustomListGame"]] = relationship(
+        "CustomListGame", back_populates="custom_list", cascade="all, delete-orphan"
+    )
+
+    games: AssociationProxy[List["Game"]] = association_proxy(
+        "list_games", "game", creator=lambda game: CustomListGame(game=game)
     )

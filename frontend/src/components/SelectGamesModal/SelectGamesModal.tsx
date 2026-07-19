@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { resolveImageUrl } from '@/services/media';
+import { resolveImageUrl, getBestGameCover } from '@/services/media';
 import Modal from '@/components/Shared/Modal/Modal';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
@@ -71,8 +71,8 @@ export default function SelectGamesModal({ games, alreadyInList, onConfirm, onCl
                 aria-pressed={isSelected}
                 aria-label={`${isSelected ? 'Desselecionar' : 'Selecionar'} ${game.title}`}
               >
-                {game.cover_url ? (
-                  <img src={resolveImageUrl(game.cover_url) ?? ''} alt={game.title} className={styles.cover} />
+                {getBestGameCover(game) ? (
+                  <img src={getBestGameCover(game)} alt={game.title} className={styles.cover} />
                 ) : (
                   <div className={styles.noCover}>
                     {game.title.substring(0, 2).toUpperCase()}

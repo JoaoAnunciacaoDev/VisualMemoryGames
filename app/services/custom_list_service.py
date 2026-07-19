@@ -122,7 +122,7 @@ def cleanup_empty_auto_lists(user_id: str, db: Session) -> None:
     """Limpa listas automáticas (exceto Favoritos) que não têm mais nenhum jogo associado."""
     lists = (
         db.query(CustomList)
-        .options(selectinload(CustomList.games))
+        .options(selectinload(CustomList.list_games))
         .filter(
             CustomList.user_id == user_id,
             CustomList.is_system.is_(True),

@@ -7,7 +7,9 @@ class GameInList(BaseModel):
     id: str
     title: str
     cover_url: Optional[str] = None
+    custom_cover_url: Optional[str] = None
     external_id: Optional[int] = None
+    order_index: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -43,3 +45,7 @@ class CustomListUpdate(BaseModel):
         if not v.strip():
             raise ValueError("O nome da lista não pode estar vazio")
         return v.strip()
+
+
+class ReorderGamesRequest(BaseModel):
+    game_ids: List[str]

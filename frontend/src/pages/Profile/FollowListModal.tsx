@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/services/api';
 import styles from './FollowListModal.module.css';
+import { Loader } from '@/components/Shared';
 
 interface UserPublicProfile {
   id: string;
@@ -67,9 +68,9 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ userId, type, onClose
     }
   };
 
-  const handleUserClick = (targetId: string) => {
+  const handleUserClick = (username: string) => {
     onClose();
-    navigate(`/profile/${targetId}`);
+    navigate(`/profile/${username}`);
   };
 
   const title = type === 'followers' ? 'Seguidores' : 'Seguindo';
@@ -84,7 +85,7 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ userId, type, onClose
         
         <div className={styles.modalBody}>
           {loading ? (
-            <div className={styles.loading}>Carregando...</div>
+            <Loader minHeight="200px" />
           ) : error ? (
             <div className={styles.error}>{error}</div>
           ) : users.length === 0 ? (
@@ -93,7 +94,7 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ userId, type, onClose
             <div className={styles.userList}>
               {users.map(u => (
                 <div key={u.id} className={styles.userCard}>
-                  <div className={styles.userInfo} onClick={() => handleUserClick(u.id)}>
+                  <div className={styles.userInfo} onClick={() => handleUserClick(u.username)}>
                     <div className={styles.userAvatar}>
                       {u.username.charAt(0).toUpperCase()}
                     </div>

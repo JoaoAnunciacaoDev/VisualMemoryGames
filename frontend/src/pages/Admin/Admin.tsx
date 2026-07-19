@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageTitle, Button, Input } from '@/components/Shared';
+import { PageTitle, Button, Input, Loader } from '@/components/Shared';
 import api from '@/services/api';
 import { isAuthenticated } from '@/services/auth';
 import { useToast } from '@/hooks/useToast';
@@ -188,7 +188,7 @@ export default function Admin() {
       {/* Tabela de Usuários */}
       <div className={styles.tableContainer}>
         {loading ? (
-          <p className={styles.emptyText}>Carregando lista de usuários...</p>
+          <Loader message="Carregando lista de usuários..." />
         ) : users.length === 0 ? (
           <p className={styles.emptyText}>Nenhum usuário correspondente encontrado.</p>
         ) : (

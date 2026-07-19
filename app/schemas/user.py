@@ -134,3 +134,5 @@ class DashboardResponse(BaseModel):
     following_count: int = 0
     yearly_games: List[YearlyGames]
     yearly_platinums: List[YearlyGames] = Field(default_factory=list)
+    favorite_games: List[DashboardGame] = Field(default_factory=list)
+    is_following: bool = False

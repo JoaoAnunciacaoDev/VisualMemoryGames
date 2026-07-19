@@ -15,6 +15,9 @@
 }
 
 .logo {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
   font-size: var(--font-size-lg);
   font-weight: bold;
   cursor: pointer;
@@ -24,6 +27,12 @@
   padding: 0;
   flex-shrink: 0;
   line-height: 1.2;
+}
+
+.logoIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .nav {

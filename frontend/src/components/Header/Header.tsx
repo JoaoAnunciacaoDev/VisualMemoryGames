@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
 import api from '@/services/api';
 import { FaBullhorn } from 'react-icons/fa';
+import logoIcon from '@/assets/VisualMemoryIcon.png';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ export default function Header() {
     <>
       <header className={styles.header}>
         <button type="button" className={styles.logo} onClick={() => navigate('/')}>
+          <img src={logoIcon} alt="VisualMemory Logo" className={styles.logoIcon} />
           VisualMemory
         </button>
         <nav className={styles.nav}>

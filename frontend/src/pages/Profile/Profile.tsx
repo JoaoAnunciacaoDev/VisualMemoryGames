@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
-import { Card, PageTitle, Button, Modal } from '@/components/Shared';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, PageTitle, Button, Modal, Loader } from '@/components/Shared';
 import { translateGenre } from '@/utils/genres';
-import { resolveImageUrl } from '@/services/media';
+import { resolveImageUrl, getBestGameCover } from '@/services/media';
 import { LibraryGame } from '@/types';
 import styles from './Profile.module.css';
 import FollowListModal from './FollowListModal';
@@ -12,6 +13,7 @@ import FollowListModal from './FollowListModal';
 interface DashboardGame {
   title: string;
   cover_url: string | null;
+  custom_cover_url: string | null;
   hours_played: number;
   rating: number | null;
   finished_at: string | null;
@@ -38,13 +40,17 @@ interface DashboardData {
   following_count: number;
   yearly_games: YearlyGames[];
   yearly_platinums: YearlyGames[];
+  favorite_games: DashboardGame[];
 }
 
 export default function Profile() {
   const { userId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user: currentUser } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
+
+  const isOwnProfile = !userId || (currentUser && (userId.toLowerCase() === currentUser.id.toLowerCase() || userId.toLowerCase() === currentUser.username.toLowerCase()));
   const [loading, setLoading] = useState(true);
   const [selectedBoardYear, setSelectedBoardYear] = useState<number>(new Date().getFullYear());
   const [selectedBoardMonth, setSelectedBoardMonth] = useState<string>('all');
@@ -52,11 +58,38 @@ export default function Profile() {
   const [selectedPlatMonth, setSelectedPlatMonth] = useState<string>('all');
   const [boardCollapsed, setBoardCollapsed] = useState(false);
   const [platCollapsed, setPlatCollapsed] = useState(false);
+  const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
   const [showGenresModal, setShowGenresModal] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [userGames, setUserGames] = useState<LibraryGame[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
   const [followModal, setFollowModal] = useState<{isOpen: boolean, type: 'followers' | 'following'}>({ isOpen: false, type: 'followers' });
+
+  const handleFollowToggle = async () => {
+    if (!data) return;
+    try {
+      const url = `/social/users/${data.username}/follow`;
+      if (data.is_following) {
+        await api.delete(url);
+        setData(prev => prev ? { 
+          ...prev, 
+          is_following: false,
+          followers_count: prev.followers_count - 1 
+        } : null);
+        showToast('Deixou de seguir o usuário.', 'info');
+      } else {
+        await api.post(url);
+        setData(prev => prev ? { 
+          ...prev, 
+          is_following: true,
+          followers_count: prev.followers_count + 1 
+        } : null);
+        showToast('Seguindo o usuário!', 'success');
+      }
+    } catch {
+      showToast('Erro ao atualizar status de seguir.', 'error');
+    }
+  };
 
   const handleCloseModal = () => {
     setShowGenresModal(false);
@@ -88,6 +121,8 @@ export default function Profile() {
   ];
 
   useEffect(() => {
+    setData(null);
+    setUserGames([]);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const endpoint = userId ? `/users/${userId}/dashboard` : '/users/me/dashboard';
@@ -109,7 +144,6 @@ export default function Profile() {
         } else {
           showToast('Erro ao carregar dados do perfil.', 'error');
         }
-        navigate('/library');
       })
       .finally(() => {
         setLoading(false);
@@ -154,15 +188,35 @@ export default function Profile() {
   const platGames = getFilteredPlatGames();
 
   if (loading) {
+    return <Loader message="Carregando perfil..." />;
+  }
+
+  if (!data) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loader}></div>
-        <p>Carregando perfil...</p>
+      <div className={styles.container}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '350px',
+          color: 'var(--text-secondary)',
+          textAlign: 'center',
+          gap: 'var(--gap-md)',
+          padding: 'var(--gap-xl)',
+          backgroundColor: 'var(--card-bg)',
+          borderRadius: 'var(--border-radius-lg)',
+          border: '1px solid var(--border-color)',
+          maxWidth: '500px',
+          margin: '4rem auto'
+        }}>
+          <span style={{ fontSize: '3rem' }}>🔒</span>
+          <h3 style={{ color: 'var(--text-primary)', margin: '0' }}>Perfil Privado</h3>
+          <p style={{ margin: '0', fontSize: '0.95rem', lineHeight: '1.5' }}>Este perfil é privado. Você precisa seguir este usuário para visualizar suas atividades e biblioteca.</p>
+        </div>
       </div>
     );
   }
-
-  if (!data) return null;
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Data desconhecida';
@@ -196,7 +250,28 @@ export default function Profile() {
           {data.username.charAt(0).toUpperCase()}
         </div>
         <div className={styles.profileInfo}>
-          <PageTitle level="h1" className={styles.usernameTitle}>{data.username}</PageTitle>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-md)', flexWrap: 'wrap' }}>
+            <PageTitle level="h1" className={styles.usernameTitle}>{data.username}</PageTitle>
+            {!isOwnProfile && (
+              <button
+                className={`${styles.followButton} ${data.is_following ? styles.following : ''}`}
+                onClick={handleFollowToggle}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '16px',
+                  fontSize: '0.85rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: '1px solid var(--primary)',
+                  backgroundColor: data.is_following ? 'transparent' : 'var(--primary)',
+                  color: data.is_following ? 'var(--primary)' : '#fff',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {data.is_following ? 'Seguindo' : 'Seguir'}
+              </button>
+            )}
+          </div>
           <p className={styles.emailText}>{data.email}</p>
           <p className={styles.joinedText}>
             Membro desde {formatDate(data.created_at)}
@@ -382,9 +457,9 @@ export default function Profile() {
                 <div className={styles.boardGamesGrid}>
                   {boardGames.map((game, index) => (
                     <div key={index} className={styles.boardGameMiniCard}>
-                      {game.cover_url ? (
+                      {getBestGameCover(game) ? (
                         <img
-                          src={resolveImageUrl(game.cover_url)}
+                          src={getBestGameCover(game)}
                           alt={game.title}
                           className={styles.boardGameCover}
                         />
@@ -474,9 +549,9 @@ export default function Profile() {
                 <div className={styles.boardGamesGrid}>
                   {platGames.map((game, index) => (
                     <div key={index} className={styles.boardGameMiniCard}>
-                      {game.cover_url ? (
+                      {getBestGameCover(game) ? (
                         <img
-                          src={resolveImageUrl(game.cover_url)}
+                          src={getBestGameCover(game)}
                           alt={game.title}
                           className={styles.boardGameCover}
                         />
@@ -499,6 +574,65 @@ export default function Profile() {
               ) : (
                 <p className={styles.boardEmptyText}>
                   Nenhum jogo platinado neste período.
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
+      </section>
+
+      {/* Board de Jogos Favoritos */}
+      <section className={styles.boardSection}>
+        <Card className={styles.boardCard}>
+          <div
+            className={styles.boardHeader}
+            onClick={() => setFavoritesCollapsed(!favoritesCollapsed)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className={styles.boardTitleWrapper}>
+              <span className={styles.collapseIcon}>
+                {favoritesCollapsed ? '▶' : '▼'}
+              </span>
+              <h3 className={styles.boardTitle}>Jogos Favoritos</h3>
+            </div>
+            <div className={styles.boardCounterWrapper} style={{ border: 'none', padding: '0', margin: '0' }}>
+              <span className={styles.boardCountLabel} style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>
+                {data.favorite_games ? data.favorite_games.length : 0} {data.favorite_games?.length === 1 ? 'jogo' : 'jogos'}
+              </span>
+            </div>
+          </div>
+
+          {!favoritesCollapsed && (
+            <div className={styles.boardContent}>
+              {data.favorite_games && data.favorite_games.length > 0 ? (
+                <div className={styles.boardGamesGrid}>
+                  {data.favorite_games.map((game, index) => (
+                    <div key={index} className={styles.boardGameMiniCard}>
+                      {getBestGameCover(game) ? (
+                        <img
+                          src={getBestGameCover(game)}
+                          alt={game.title}
+                          className={styles.boardGameCover}
+                        />
+                      ) : (
+                        <div className={styles.boardGameCoverPlaceholder}>
+                          <span>Sem capa</span>
+                        </div>
+                      )}
+                      <div className={styles.boardGameDetails}>
+                        <span className={styles.boardGameTitle} title={game.title}>
+                          {game.title}
+                        </span>
+                        <span className={styles.boardGameMeta}>
+                          🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.boardEmptyText}>
+                  Nenhum jogo favoritado.
                 </p>
               )}
             </div>
@@ -585,10 +719,7 @@ export default function Profile() {
                 </div>
                 
                 {loadingGames ? (
-                  <div className={styles.modalLoaderContainer}>
-                    <div className={styles.loader}></div>
-                    <p>Carregando jogos...</p>
-                  </div>
+                  <Loader message="Carregando jogos..." minHeight="200px" />
                 ) : (
                   <div className={`${styles.genreGamesList} scrollbar-visualmemory`}>
                     {userGames
@@ -597,12 +728,12 @@ export default function Profile() {
                         return ug.genres.includes(selectedGenre);
                       })
                       .map((ug) => {
-                        const cover = ug.custom_cover_url || ug.cover_url;
+                        const cover = getBestGameCover(ug);
                         return (
                           <div key={ug.id} className={styles.genreGameCard}>
                             {cover ? (
                               <img
-                                src={resolveImageUrl(cover)}
+                                src={cover}
                                 alt={ug.title}
                                 className={styles.genreGameCover}
                               />

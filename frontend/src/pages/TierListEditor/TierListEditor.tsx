@@ -3,7 +3,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent } from '@dnd-kit/core';
 
-import { Button } from '@/components/Shared';
+import { Button, Loader } from '@/components/Shared';
 
 import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
@@ -128,7 +128,7 @@ export default function TierListEditor() {
     setNewTierColor('#cccccc');
   };
 
-  if (loading) return <p className="loading-center">Carregando...</p>;
+  if (loading) return <Loader />;
 
   if (error) {
     return (

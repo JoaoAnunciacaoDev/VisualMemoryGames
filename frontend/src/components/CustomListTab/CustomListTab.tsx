@@ -10,6 +10,22 @@ import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/CustomListTab/CustomListTab.module.css';
 import { getBestGameCover } from '@/services/media';
 import { GameInList, LibraryGame } from '@/types';
+import {
+  DndContext,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  DragEndEvent,
+  closestCenter,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface CustomList {
   id: string;
@@ -154,6 +170,47 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
     }
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent, listId: string) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const currentList = lists.find((l) => l.id === listId);
+    if (!currentList) return;
+
+    const oldIndex = currentList.games.findIndex((g) => g.id === active.id);
+    const newIndex = currentList.games.findIndex((g) => g.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reorderedGames = [...currentList.games];
+    const [movedGame] = reorderedGames.splice(oldIndex, 1);
+    reorderedGames.splice(newIndex, 0, movedGame);
+
+    setLists((prev) =>
+      prev.map((l) => (l.id === listId ? { ...l, games: reorderedGames } : l))
+    );
+
+    try {
+      const gameIds = reorderedGames.map((g) => g.id);
+      await api.put(`/lists/${listId}/reorder`, { game_ids: gameIds });
+      showToast('Ordem da lista salva!', 'success');
+    } catch {
+      showToast('Erro ao salvar a ordem da lista.', 'error');
+      await loadLists();
+    }
+  };
+
   const toggleExpand = (listId: string) => {
     setExpandedList((prev) => (prev === listId ? null : listId));
   };
@@ -270,52 +327,26 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
 
               {expandedList === list.id && (
                 <div className={styles.listContent}>
-                  <div className={styles.gameGrid}>
-                    {list.games.map((game) => (
-                      <div
-                        key={game.id}
-                        className={`${styles.gameItem} ${selectedGameId === game.id ? styles.gameItemSelected : ''}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedGameId(selectedGameId === game.id ? null : game.id);
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(event) => handleGameItemKeyDown(event, game.id)}
-                        aria-pressed={selectedGameId === game.id}
-                        aria-label={`${selectedGameId === game.id ? 'Desselecionar' : 'Selecionar'} jogo ${game.title}`}
-                      >
-                        {game.cover_url ? (
-                          <img
-                            src={getBestGameCover(game)}
-                            alt={game.title}
-                            className={styles.cover}
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) => handleDragEnd(event, list.id)}
+                  >
+                    <SortableContext items={list.games.map((g) => g.id)} strategy={rectSortingStrategy}>
+                      <div className={styles.gameGrid}>
+                        {list.games.map((game) => (
+                          <SortableCustomListGame
+                            key={game.id}
+                            game={game}
+                            listId={list.id}
+                            selectedGameId={selectedGameId}
+                            setSelectedGameId={setSelectedGameId}
+                            removeGameModal={removeGameModal}
                           />
-                        ) : (
-                          <div className={styles.noCover}>
-                            {game.title.substring(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <span className={styles.gameTitle}>{game.title}</span>
-                        {selectedGameId === game.id && (
-                          <button
-                            type="button"
-                            className={styles.removeGame}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeGameModal.open({
-                                listId: list.id,
-                                gameId: game.id,
-                              });
-                            }}
-                            title="Remover da lista"
-                          >
-                            X
-                          </button>
-                        )}
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
                   {!list.is_system && (
                     <Button
                       type="button"
@@ -366,6 +397,96 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
           onConfirm={(ids) => handleAddGames(selectingForList, ids)}
           onClose={() => setSelectingForList(null)}
         />
+      )}
+    </div>
+  );
+}
+
+interface SortableCustomListGameProps {
+  game: GameInList;
+  listId: string;
+  selectedGameId: string | null;
+  setSelectedGameId: (id: string | null) => void;
+  removeGameModal: { open: (target: { listId: string; gameId: string }) => void };
+}
+
+function SortableCustomListGame({
+  game,
+  listId,
+  selectedGameId,
+  setSelectedGameId,
+  removeGameModal,
+}: SortableCustomListGameProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: game.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: 'grab',
+  };
+
+  const isSelected = selectedGameId === game.id;
+
+  const handleGameItemKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setSelectedGameId(isSelected ? null : game.id);
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${styles.gameItem} ${isSelected ? styles.gameItemSelected : ''}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedGameId(isSelected ? null : game.id);
+      }}
+      onKeyDown={handleGameItemKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
+      aria-label={`${isSelected ? 'Desselecionar' : 'Selecionar'} jogo ${game.title}`}
+    >
+      <div {...attributes} {...listeners} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {getBestGameCover(game) ? (
+          <img
+            src={getBestGameCover(game)}
+            alt={game.title}
+            className={styles.cover}
+            draggable={false}
+          />
+        ) : (
+          <div className={styles.noCover}>
+            {game.title.substring(0, 2).toUpperCase()}
+          </div>
+        )}
+        <span className={styles.gameTitle}>{game.title}</span>
+      </div>
+      {isSelected && (
+        <button
+          type="button"
+          className={styles.removeGame}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeGameModal.open({
+              listId,
+              gameId: game.id,
+            });
+          }}
+          title="Remover da lista"
+        >
+          X
+        </button>
       )}
     </div>
   );

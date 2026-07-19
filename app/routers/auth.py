@@ -37,9 +37,13 @@ def login(
 ):
     """Rota para autenticar o usuário e gerar o Token JWT."""
 
+    from sqlalchemy import func
     user = (
         db.query(User)
-        .filter((User.username == form_data.username) | (User.email == form_data.username))
+        .filter(
+            (func.lower(User.username) == func.lower(form_data.username))
+            | (func.lower(User.email) == func.lower(form_data.username))
+        )
         .first()
     )
 

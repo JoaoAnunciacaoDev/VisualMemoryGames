@@ -13,7 +13,7 @@ import {
   GameModal,
   ManualGameModal
 } from '@/components';
-import { ConfirmModal, Button } from '@/components/Shared';
+import { ConfirmModal, Button, Loader } from '@/components/Shared';
 
 import { LibraryGame, GameResult } from '@/types';
 
@@ -108,12 +108,7 @@ export default function Library() {
   };
 
   if (authLoading || (libraryLoading && games.length === 0)) {
-    return (
-      <div className={styles.loaderContainer}>
-        <div className={styles.loader}></div>
-        <p>Carregando biblioteca...</p>
-      </div>
-    );
+    return <Loader message="Carregando biblioteca..." />;
   }
 
   return (

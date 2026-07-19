@@ -7,9 +7,10 @@ from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+from sqlalchemy.ext.associationproxy import association_proxy, AssociationProxy
 
 if TYPE_CHECKING:
-    from app.models.custom_lists import CustomList
+    from app.models.custom_lists import CustomList, CustomListGame
     from app.models.tierlist import TierItem
     from app.models.user_game import UserGame
 
@@ -40,6 +41,9 @@ class Game(Base):
     tier_items: Mapped[List["TierItem"]] = relationship(
         "TierItem", back_populates="game", cascade="all, delete-orphan"
     )
-    custom_lists: Mapped[List["CustomList"]] = relationship(
-        "CustomList", secondary="custom_list_games", back_populates="games"
+    list_games: Mapped[List["CustomListGame"]] = relationship(
+        "CustomListGame", back_populates="game", cascade="all, delete-orphan"
+    )
+    custom_lists: AssociationProxy[List["CustomList"]] = association_proxy(
+        "list_games", "custom_list"
     )

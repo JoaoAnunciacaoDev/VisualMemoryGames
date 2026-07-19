@@ -70,6 +70,8 @@ def get_user_tierlists(
         .filter(TierList.user_id == user_id)
         .all()
     )
+    for tl in tierlists:
+        enrich_tierlist_with_custom_covers(tl, db)
     return tierlists
 
 

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from '@/services/api';
 import styles from "./Social.module.css";
 import { formatDate, formatDateTime } from "@/utils/date";
+import { Loader } from "@/components/Shared";
 
 interface Game {
   id: string;
@@ -152,7 +153,7 @@ const Social: React.FC = () => {
           <div className={styles.feedLayout}>
             <div className={styles.mainFeed}>
               <h2>Atividades Recentes</h2>
-              {loading && <p>Carregando feed...</p>}
+              {loading && <Loader message="Carregando feed..." />}
               {!loading && feedData?.activities.length === 0 && (
                 <p className={styles.empty}>Nenhuma atividade recente. Siga mais pessoas!</p>
               )}
@@ -161,7 +162,7 @@ const Social: React.FC = () => {
                   <div key={act.id} className={styles.activityCard}>
                     <div className={styles.actHeader}>
                       <span className={styles.username}>
-                        <Link to={`/profile/${act.user_id}`}>{act.username}</Link>
+                        <Link to={`/profile/${act.username}`}>{act.username}</Link>
                       </span>{" "}
                       <span className={styles.actionText}>{renderActionText(act)}</span>{" "}
                       <span className={styles.gameTitle}>{act.game.title}</span>
@@ -226,7 +227,7 @@ const Social: React.FC = () => {
               {searchResults.map((user) => (
                 <div key={user.id} className={styles.userCard}>
                   <div className={styles.userInfo}>
-                    <Link to={`/profile/${user.id}`} className={styles.usernameLink}>
+                    <Link to={`/profile/${user.username}`} className={styles.usernameLink}>
                       {user.username}
                     </Link>
                     <span className={styles.stats}>

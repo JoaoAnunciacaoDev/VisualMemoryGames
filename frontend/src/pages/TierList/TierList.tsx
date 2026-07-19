@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { ConfirmModal, Button } from '@/components/Shared';
+import { ConfirmModal, Button, Loader } from '@/components/Shared';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -107,7 +107,7 @@ export default function TierLists() {
           title: g.title, 
           coverUrl: getBestGameCover({
               cover_url: g.cover_url,
-              custom_cover_url: null,
+              custom_cover_url: g.custom_cover_url,
             }) ?? null,
         })) ?? [];
 
@@ -136,12 +136,7 @@ export default function TierLists() {
   };
 
   if (loading) {
-    return (
-      <div className={styles.loaderContainer}>
-        <div className={styles.loader}></div>
-        <p>Carregando tier lists...</p>
-      </div>
-    );
+    return <Loader message="Carregando tier lists..." />;
   }
 
   return (

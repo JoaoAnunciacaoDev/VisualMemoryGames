@@ -44,10 +44,13 @@ def initiate_registration(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    # Verificar se já existe usuário cadastrado
+    from sqlalchemy import func
     existing_user = (
         db.query(User)
-        .filter((User.email == user_init.email) | (User.username == user_init.username))
+        .filter(
+            (func.lower(User.email) == func.lower(user_init.email))
+            | (func.lower(User.username) == func.lower(user_init.username))
+        )
         .first()
     )
 
@@ -87,9 +90,14 @@ def initiate_registration(
 
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    # 1. Verificar se já existe usuário cadastrado
+    from sqlalchemy import func
     existing_user = (
-        db.query(User).filter((User.email == user.email) | (User.username == user.username)).first()
+        db.query(User)
+        .filter(
+            (func.lower(User.email) == func.lower(user.email))
+            | (func.lower(User.username) == func.lower(user.username))
+        )
+        .first()
     )
 
     if existing_user:
@@ -240,17 +248,23 @@ def get_dashboard(
     current_user: User = Depends(get_current_user),
 ):
     """Gera dados estatísticos e histórico de jogos do usuário atual para a página de perfil."""
-    return get_user_dashboard(str(current_user.id), db, current_user)
+    return get_user_dashboard(str(current_user.id), db, current_user, current_user)
 
 
-@router.get("/{user_id}/dashboard", response_model=DashboardResponse)
+@router.get("/{identifier}/dashboard", response_model=DashboardResponse)
 def get_public_dashboard(
-    user_id: str,
+    identifier: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Verificar se o usuário é público ou se é admin
-    target_user = db.query(User).filter(User.id == user_id).first()
+    from sqlalchemy import func
+    target_user = (
+        db.query(User)
+        .filter(
+            (User.id == identifier) | (func.lower(User.username) == func.lower(identifier))
+        )
+        .first()
+    )
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
@@ -258,7 +272,7 @@ def get_public_dashboard(
 
     is_following = (
         db.query(Follow)
-        .filter(Follow.follower_id == current_user.id, Follow.following_id == user_id)
+        .filter(Follow.follower_id == current_user.id, Follow.following_id == target_user.id)
         .first()
         is not None
     )
@@ -271,10 +285,10 @@ def get_public_dashboard(
     ):
         raise HTTPException(status_code=403, detail="Perfil privado.")
 
-    return get_user_dashboard(user_id, db, target_user)
+    return get_user_dashboard(str(target_user.id), db, target_user, current_user)
 
 
-def get_user_dashboard(user_id: str, db: Session, target_user: User):
+def get_user_dashboard(user_id: str, db: Session, target_user: User, current_user: User = None):
     user_games = (
         db.query(UserGame)
         .options(joinedload(UserGame.game))
@@ -364,10 +378,38 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User):
         )
         yearly_platinums_list.append(YearlyGames(year=year, games=sorted_platinums))
 
+    favorite_games_list = []
+    for ug in user_games:
+        if ug.favorite:
+            cover = ug.custom_cover_url or (ug.game.cover_url if ug.game else None)
+            g_data = DashboardGame(
+                title=ug.game.title if ug.game else "Jogo Desconhecido",
+                cover_url=cover,
+                hours_played=ug.hours_played or 0.0,
+                rating=ug.rating,
+                finished_at=(datetime.combine(ug.finished_at, datetime.min.time())) if ug.finished_at else None,
+            )
+            favorite_games_list.append(g_data)
+
+    favorite_games_list = sorted(
+        favorite_games_list,
+        key=lambda x: (x.rating or 0.0, x.hours_played),
+        reverse=True,
+    )
+
     from app.models.follow import Follow
 
     followers_count = db.query(Follow).filter(Follow.following_id == target_user.id).count()
     following_count = db.query(Follow).filter(Follow.follower_id == target_user.id).count()
+
+    is_following_val = False
+    if current_user and current_user.id != target_user.id:
+        is_following_val = (
+            db.query(Follow)
+            .filter(Follow.follower_id == current_user.id, Follow.following_id == target_user.id)
+            .first()
+            is not None
+        )
 
     return DashboardResponse(
         username=target_user.username,
@@ -385,4 +427,6 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User):
         following_count=following_count,
         yearly_games=yearly_games_list,
         yearly_platinums=yearly_platinums_list,
+        favorite_games=favorite_games_list,
+        is_following=is_following_val,
     )

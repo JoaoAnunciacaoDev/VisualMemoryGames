@@ -33,6 +33,22 @@ def search_users(
     return social_service.search_users(q, current_user, db)
 
 
+def resolve_user_id(identifier: str, db: Session) -> str:
+    if identifier == "me":
+        return identifier
+    from sqlalchemy import func
+    user = (
+        db.query(User)
+        .filter(
+            (User.id == identifier) | (func.lower(User.username) == func.lower(identifier))
+        )
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+    return str(user.id)
+
+
 @router.get("/users/{user_id}/profile", response_model=UserPublicProfile)
 def get_profile(
     user_id: str,
@@ -40,7 +56,8 @@ def get_profile(
     current_user: User = Depends(get_current_user),
 ):
     """Busca o perfil social de um usuário específico."""
-    profile = social_service.get_user_profile(user_id, current_user, db)
+    target_id = resolve_user_id(user_id, db)
+    profile = social_service.get_user_profile(target_id, current_user, db)
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Perfil privado ou não encontrado."
@@ -55,7 +72,8 @@ def get_followers(
     current_user: User = Depends(get_current_user),
 ):
     """Busca a lista de seguidores de um usuário."""
-    target_id = str(current_user.id) if user_id == "me" else user_id
+    resolved_id = resolve_user_id(user_id, db)
+    target_id = str(current_user.id) if resolved_id == "me" else resolved_id
     print(f"[DEBUG] get_followers user_id={user_id}, target_id={target_id}")
     followers = social_service.get_followers(target_id, current_user, db)
     print(f"[DEBUG] get_followers returning {len(followers)} followers")
@@ -69,7 +87,8 @@ def get_following(
     current_user: User = Depends(get_current_user),
 ):
     """Busca a lista de quem um usuário segue."""
-    target_id = str(current_user.id) if user_id == "me" else user_id
+    resolved_id = resolve_user_id(user_id, db)
+    target_id = str(current_user.id) if resolved_id == "me" else resolved_id
     following = social_service.get_following(target_id, current_user, db)
     return following
 
@@ -81,7 +100,8 @@ def follow_user(
     current_user: User = Depends(get_current_user),
 ):
     """Segue um usuário público."""
-    success = social_service.follow_user(user_id, current_user, db)
+    target_id = resolve_user_id(user_id, db)
+    success = social_service.follow_user(target_id, current_user, db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível seguir este usuário."
@@ -95,4 +115,5 @@ def unfollow_user(
     current_user: User = Depends(get_current_user),
 ):
     """Deixa de seguir um usuário."""
-    social_service.unfollow_user(user_id, current_user, db)
+    target_id = resolve_user_id(user_id, db)
+    social_service.unfollow_user(target_id, current_user, db)

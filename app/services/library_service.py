@@ -13,7 +13,7 @@ def remove_from_library(db_user_game: UserGame, current_user: User, db: Session)
 
     lists = (
         db.query(CustomList)
-        .options(selectinload(CustomList.games))
+        .options(selectinload(CustomList.list_games))
         .filter(CustomList.user_id == current_user.id)
         .all()
     )

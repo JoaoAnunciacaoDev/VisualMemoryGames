@@ -74,17 +74,41 @@ def get_my_library(db: Session = Depends(get_db), current_user: User = Depends(g
     return get_user_library(str(current_user.id), db, current_user)
 
 
-@router.get("/user/{user_id}", response_model=List[LibraryGameResponse])
+@router.get("/user/{identifier}", response_model=List[LibraryGameResponse])
 def get_user_library(
-    user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    identifier: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    if str(user_id) != str(current_user.id):
+    from sqlalchemy import func
+    target_user = (
+        db.query(User)
+        .filter(
+            (User.id == identifier) | (func.lower(User.username) == func.lower(identifier))
+        )
+        .first()
+    )
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+
+    from app.models.follow import Follow
+    is_following = (
+        db.query(Follow)
+        .filter(Follow.follower_id == current_user.id, Follow.following_id == target_user.id)
+        .first()
+        is not None
+    )
+
+    if (
+        not target_user.is_public
+        and not current_user.is_admin
+        and not is_following
+        and target_user.id != current_user.id
+    ):
         raise HTTPException(status_code=403, detail="Sem permissão para ver esta biblioteca.")
 
     library = (
         db.query(UserGame, Game)
         .join(Game, Game.id == UserGame.game_id)
-        .filter(UserGame.user_id == user_id)
+        .filter(UserGame.user_id == target_user.id)
         .all()
     )
 

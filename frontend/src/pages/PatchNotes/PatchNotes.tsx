@@ -1,5 +1,5 @@
 import { useState, useEffect, SyntheticEvent, useCallback } from 'react';
-import { PageTitle, Button, Input, Modal, ConfirmModal } from '@/components/Shared';
+import { PageTitle, Button, Input, Modal, ConfirmModal, Loader } from '@/components/Shared';
 import api from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -176,7 +176,7 @@ export default function PatchNotes() {
       </div>
 
       {loading ? (
-        <p className={styles.emptyText}>Carregando notas de atualização...</p>
+        <Loader message="Carregando notas de atualização..." />
       ) : patches.length === 0 ? (
         <p className={styles.emptyText}>Nenhuma nota de atualização publicada ainda.</p>
       ) : (

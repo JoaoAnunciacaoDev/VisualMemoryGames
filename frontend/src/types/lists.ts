@@ -2,6 +2,7 @@ export interface CustomListGame {
   id: string;
   title: string;
   cover_url: string | null;
+  custom_cover_url: string | null;
   external_id?: number | null;
 }
 

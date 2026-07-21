@@ -45,6 +45,7 @@ export default function LibraryGamesView({
             rating={game.rating}
             startedAt={game.started_at}
             finishedAt={game.finished_at}
+            platinumAt={game.platinum_at}
             store={game.store}
             favorite={game.favorite}
             onClick={() => onSelectGame(game)}
@@ -80,6 +81,7 @@ export default function LibraryGamesView({
                     rating={game.rating}
                     startedAt={game.started_at}
                     finishedAt={game.finished_at}
+                    platinumAt={game.platinum_at}
                     store={game.store}
                     favorite={game.favorite}
                     onClick={() => onSelectGame(game)}

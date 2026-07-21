@@ -3,6 +3,7 @@ import styles from './Recommendations.module.css';
 import RecommendationCarousel, { RecommendationGame } from '@/components/RecommendationCarousel/RecommendationCarousel';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
+import { Loader } from '@/components/Shared';
 
 interface RecommendationCategory {
   title: string;
@@ -30,14 +31,9 @@ export default function Recommendations() {
     fetchRecommendations();
   }, [showToast]);
 
-  if (loading) { 
-    return (
-      <div className={styles.loaderContainer}>
-        <div className={styles.loader}></div>
-        <p>Buscando as melhores recomendações para você...</p>
-      </div>
-    );
-  };
+  if (loading) {
+    return <Loader message="Buscando as melhores recomendações para você..." minHeight="80vh" />;
+  }
 
   return (
     <div className={styles.page}>

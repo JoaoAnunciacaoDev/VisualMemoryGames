@@ -172,19 +172,12 @@ export default function Library() {
           onAddGame={handleAddGame}
           onRemoveGame={(externalId) => removeConfirm.open(externalId)}
           onOpenGame={setSelectedSearchGame}
+          onManualAdd={() => setShowManualModal(true)}
         />
       )}
 
       {activeTab === 'lists' && (
         <CustomListsTab libraryGames={games} onLibraryChange={loadLibrary} />
-      )}
-
-      {activeTab === 'manual' && (
-        <div className={styles.manualSection}>
-          <Button variant="primary" onClick={() => setShowManualModal(true)}>
-            + Adicionar Jogo Manualmente
-          </Button>
-        </div>
       )}
 
       {selectedLibraryGame && (
@@ -200,7 +193,10 @@ export default function Library() {
               showToast('Erro ao remover jogo.', 'error');
             }
           }}
-          onClose={() => setSelectedLibraryGame(null)}
+          onClose={() => {
+            setSelectedLibraryGame(null);
+            loadLibrary();
+          }}
         />
       )}
 

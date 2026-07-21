@@ -1,4 +1,4 @@
-export type LibraryTab = 'library' | 'lists' | 'search' | 'manual';
+export type LibraryTab = 'library' | 'lists' | 'search';
 
 export type SortBy = 'rating' | 'started_at' | 'finished_at' | 'platinum_at' | null;
 

@@ -10,7 +10,6 @@ const TABS: Array<{ key: LibraryTab; label: string }> = [
   { key: 'library', label: 'Meus Jogos' },
   { key: 'search', label: 'Pesquisar / Adicionar' },
   { key: 'lists', label: 'Minhas Listas' },
-  { key: 'manual', label: 'Adicionar Manualmente' },
 ];
 
 export default function LibraryTabs({ activeTab, onChange }: Props) {

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -10,12 +11,18 @@ from app.models.activity import Activity
 from app.models.game import Game
 from app.models.user import User
 from app.models.user_game import UserGame
+from app.models.user_game_review import UserGameReview
 from app.schemas.game import (
     LibraryGameResponse,
     UserGameBase,
     UserGameCreate,
     UserGameResponse,
     UserGameUpdate,
+)
+from app.schemas.user_game_review import (
+    UserGameReviewCreate,
+    UserGameReviewUpdate,
+    UserGameReviewResponse,
 )
 from app.security import get_current_user
 from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
@@ -218,6 +225,32 @@ def update_user_game(
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
 
+    # Manter a tabela de reviews sincronizada caso rating ou notes sejam editados via PUT herdado
+    if "rating" in update_data or "notes" in update_data:
+        latest_review = (
+            db.query(UserGameReview)
+            .filter(UserGameReview.user_game_id == db_user_game.id)
+            .order_by(UserGameReview.created_at.desc())
+            .first()
+        )
+        new_rating = update_data.get("rating", db_user_game.rating)
+        new_notes = update_data.get("notes", db_user_game.notes)
+        if new_rating is not None or new_notes is not None:
+            if latest_review:
+                latest_review.rating = new_rating
+                latest_review.notes = new_notes
+                latest_review.updated_at = datetime.now()
+            else:
+                db.add(
+                    UserGameReview(
+                        user_game_id=db_user_game.id,
+                        rating=new_rating,
+                        notes=new_notes,
+                    )
+                )
+        elif latest_review:
+            db.delete(latest_review)
+
     # Verificar atividades
     if old_status != db_user_game.status:
         db.add(
@@ -306,3 +339,146 @@ def remove_game_from_library(
     db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
     remove_from_library(db_user_game, current_user, db)
     return None
+
+
+def sync_user_game_latest_review(user_game: UserGame, db: Session):
+    """Sincroniza o rating e notes do UserGame com a avaliação mais recente."""
+    latest_review = (
+        db.query(UserGameReview)
+        .filter(UserGameReview.user_game_id == user_game.id)
+        .order_by(UserGameReview.created_at.desc())
+        .first()
+    )
+    if latest_review:
+        user_game.rating = latest_review.rating
+        user_game.notes = latest_review.notes
+    else:
+        user_game.rating = None
+        user_game.notes = None
+
+
+@router.get("/{user_game_id}/reviews", response_model=List[UserGameReviewResponse])
+def get_user_game_reviews(
+    user_game_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Obtém todas as avaliações de um jogo específico da biblioteca do usuário."""
+    db_user_game = db.query(UserGame).filter(UserGame.id == user_game_id).first()
+    if not db_user_game:
+        raise HTTPException(status_code=404, detail="Jogo não encontrado na biblioteca.")
+
+    # Verificar visibilidade da biblioteca
+    target_user = db_user_game.user
+    is_following = False
+    if current_user.id != target_user.id:
+        from app.models.follow import Follow
+        is_following = db.query(Follow).filter(
+            Follow.follower_id == current_user.id, Follow.followed_id == target_user.id
+        ).first() is not None
+
+    if (
+        not target_user.is_public
+        and not current_user.is_admin
+        and not is_following
+        and target_user.id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="Sem permissão para ver estas avaliações.")
+
+    reviews = (
+        db.query(UserGameReview)
+        .filter(UserGameReview.user_game_id == user_game_id)
+        .order_by(UserGameReview.created_at.desc())
+        .all()
+    )
+    return reviews
+
+
+@router.post("/{user_game_id}/reviews", response_model=UserGameReviewResponse, status_code=status.HTTP_201_CREATED)
+def create_user_game_review(
+    user_game_id: str,
+    review: UserGameReviewCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Cria uma nova avaliação para um jogo da biblioteca."""
+    db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
+
+    if db_user_game.status == GameStatus.WANT_TO_PLAY:
+        raise HTTPException(
+            status_code=400, detail="Mude o status para avaliar o jogo."
+        )
+
+    db_review = UserGameReview(
+        user_game_id=db_user_game.id,
+        rating=review.rating,
+        notes=review.notes,
+    )
+    db.add(db_review)
+    db.flush()
+
+    sync_user_game_latest_review(db_user_game, db)
+
+    db.commit()
+    db.refresh(db_review)
+    return db_review
+
+
+@router.put("/{user_game_id}/reviews/{review_id}", response_model=UserGameReviewResponse)
+def update_user_game_review(
+    user_game_id: str,
+    review_id: str,
+    review_update: UserGameReviewUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Atualiza uma avaliação existente."""
+    db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
+
+    db_review = (
+        db.query(UserGameReview)
+        .filter(UserGameReview.id == review_id, UserGameReview.user_game_id == db_user_game.id)
+        .first()
+    )
+    if not db_review:
+        raise HTTPException(status_code=404, detail="Avaliação não encontrada.")
+
+    update_data = review_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_review, key, value)
+    
+    db_review.updated_at = datetime.now()
+    db.flush()
+
+    sync_user_game_latest_review(db_user_game, db)
+
+    db.commit()
+    db.refresh(db_review)
+    return db_review
+
+
+@router.delete("/{user_game_id}/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_game_review(
+    user_game_id: str,
+    review_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove uma avaliação."""
+    db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
+
+    db_review = (
+        db.query(UserGameReview)
+        .filter(UserGameReview.id == review_id, UserGameReview.user_game_id == db_user_game.id)
+        .first()
+    )
+    if not db_review:
+        raise HTTPException(status_code=404, detail="Avaliação não encontrada.")
+
+    db.delete(db_review)
+    db.flush()
+
+    sync_user_game_latest_review(db_user_game, db)
+
+    db.commit()
+    return status.HTTP_204_NO_CONTENT

@@ -24,6 +24,7 @@ interface GameDetails {
   genres: string[];
   trailer_url?: string;
   stores?: Store[];
+  rating?: number;
 }
 
 interface Props {

@@ -21,6 +21,47 @@ interface PatchNote {
   author?: PatchNoteAuthor;
 }
 
+function renderMarkdown(md: string): string {
+  if (!md) return '';
+  let html = md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+  html = html.replace(/__(.*?)__/gim, '<strong>$1</strong>');
+
+  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+  html = html.replace(/_(.*?)_/gim, '<em>$1</em>');
+
+  html = html.replace(/`(.*?)`/gim, '<code>$1</code>');
+
+  html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+
+  html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+  html = html.replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>');
+  html = html.replace(/^\s*\*\s+(.*$)/gim, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/gim, '<ul>$1</ul>');
+  html = html.replace(/<\/ul>\s*<ul>/gim, '');
+
+  const paragraphs = html.split(/\n\s*\n/);
+  html = paragraphs.map(p => {
+    p = p.trim();
+    if (!p) return '';
+    if (/^(<h|<ul|<ol|<li|<blockquote|<pre)/i.test(p)) {
+      return p;
+    }
+    return `<p>${p.replace(/\n/g, '<br />')}</p>`;
+  }).join('\n');
+
+  return html;
+}
+
 export default function PatchNotes() {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -215,7 +256,10 @@ export default function PatchNotes() {
                 )}
               </header>
               <div className={styles.cardBody}>
-                <p className={styles.content}>{patch.content}</p>
+                <div 
+                  className={styles.content}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(patch.content) }}
+                />
               </div>
             </article>
           ))}
@@ -246,7 +290,7 @@ export default function PatchNotes() {
           <label className={styles.label}>
             Conteúdo
             <textarea
-              className={styles.textarea}
+              className={`${styles.textarea} scrollbar-visualmemory`}
               placeholder="Descreva as alterações aplicadas..."
               value={content}
               onChange={(e) => setContent(e.target.value)}

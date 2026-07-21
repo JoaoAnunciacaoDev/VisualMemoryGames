@@ -15,6 +15,7 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  TouchSensor,
   KeyboardSensor,
   DragEndEvent,
   closestCenter,
@@ -174,6 +175,12 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 6,
       },
     }),
     useSensor(KeyboardSensor, {

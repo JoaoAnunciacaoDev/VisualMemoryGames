@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, Date, Float, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, Date, Float, ForeignKey, Index, String, Text, desc
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -12,6 +12,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.game import Game
     from app.models.user import User
+    from app.models.user_game_review import UserGameReview
 
 
 class UserGame(Base):
@@ -40,3 +41,9 @@ class UserGame(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="user_games")
     game: Mapped["Game"] = relationship("Game", back_populates="user_games")
+    reviews: Mapped[list["UserGameReview"]] = relationship(
+        "UserGameReview",
+        back_populates="user_game",
+        cascade="all, delete-orphan",
+        order_by=desc("UserGameReview.created_at")
+    )

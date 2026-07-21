@@ -69,7 +69,7 @@ describe('Social Page', () => {
       expect(screen.getByText('New Released Game')).toBeInTheDocument();
     });
 
-    expect(mockApi.get).toHaveBeenCalledWith('/social/feed');
+    expect(mockApi.get).toHaveBeenCalledWith('/social/feed', expect.any(Object));
   });
 
   it('searches for users correctly', async () => {

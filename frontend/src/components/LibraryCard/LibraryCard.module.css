@@ -119,9 +119,30 @@
 
 .meta {
   display: flex;
-  gap: var(--gap-md);
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
   font-size: var(--font-size-xs);
   color: var(--muted);
+  margin-top: 2px;
+}
+
+.metaLeft {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.metaCenter {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.metaRight {
+  flex: 1;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .libraryCard::before {

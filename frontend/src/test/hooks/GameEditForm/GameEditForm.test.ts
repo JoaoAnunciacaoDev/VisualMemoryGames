@@ -55,7 +55,7 @@ describe('useGameEditForm', () => {
     expect(result.current.form.favorite).toBe(false);
     expect(result.current.editTitle).toBe('Test Game');
     expect(result.current.editReleaseYear).toBe('2020');
-    expect(result.current.editPlatforms).toBe('PC');
+    expect(result.current.editPlatforms).toEqual(['PC']);
     expect(result.current.editGenres).toEqual(['Action']);
     expect(result.current.canReview).toBe(true);
     expect(result.current.displayCover).toBe('https://example.com/cover.jpg');

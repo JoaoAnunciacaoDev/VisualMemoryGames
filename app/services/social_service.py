@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -189,7 +189,12 @@ def unfollow_user(user_id: str, current_user: User, db: Session) -> bool:
     return True
 
 
-def get_feed(current_user: User, db: Session) -> FeedResponse:
+def get_feed(
+    current_user: User,
+    db: Session,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+) -> FeedResponse:
     """Busca as atividades dos usuários que eu sigo + lançamentos da semana."""
 
     # 1. Obter IDs que eu sigo
@@ -200,19 +205,48 @@ def get_feed(current_user: User, db: Session) -> FeedResponse:
     # 2. Buscar atividades recentes
     activities = []
     if following_ids:
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timezone
 
-        fifteen_days_ago = datetime.now(timezone.utc) - timedelta(days=15)
+        from app.models.user_game import UserGame
+
+        now = datetime.now(timezone.utc)
+        target_year = year if year is not None else now.year
+        target_month = month if month is not None else now.month
+
+        start_date = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+        if target_month == 12:
+            end_date = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
+
         raw_activities = (
             db.query(Activity)
-            .filter(Activity.user_id.in_(following_ids), Activity.created_at >= fifteen_days_ago)
+            .filter(
+                Activity.user_id.in_(following_ids),
+                Activity.created_at >= start_date,
+                Activity.created_at < end_date,
+            )
             .order_by(Activity.created_at.desc())
-            .limit(20)
             .all()
         )
 
+        game_ids = [act.game_id for act in raw_activities]
+        ugs = (
+            db.query(UserGame)
+            .filter(UserGame.user_id.in_(following_ids), UserGame.game_id.in_(game_ids))
+            .all()
+        )
+        user_games_map = {(ug.user_id, ug.game_id): ug for ug in ugs}
+
         for act in raw_activities:
             game = act.game
+            ug = user_games_map.get((act.user_id, act.game_id))
+            cover_url = (
+                ug.custom_cover_url
+                if (ug and ug.custom_cover_url)
+                else game.cover_url
+            )
+
             activities.append(
                 ActivityResponse(
                     id=act.id,
@@ -222,7 +256,7 @@ def get_feed(current_user: User, db: Session) -> FeedResponse:
                         id=game.id,
                         external_id=game.external_id,
                         title=game.title,
-                        cover_url=game.cover_url,
+                        cover_url=cover_url,
                         release_year=game.release_year,
                         platforms=safe_load_json_list(game.platforms),
                         genres=safe_load_json_list(game.genres),

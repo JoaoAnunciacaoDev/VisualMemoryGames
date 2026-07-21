@@ -72,11 +72,14 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     """Busca jogos na API externa da RAWG pelos gêneros."""
     url = f"{BASE_URL}/games"
     # Pede mais para caso tenhamos que filtrar
+    import random
+    page = random.randint(1, 3)
     params = {
         "key": RAWG_API_KEY,
         "genres": genres,
         "page_size": page_size + 10,
         "ordering": "-added",
+        "page": page,
     }
 
     try:
@@ -178,21 +181,43 @@ def get_weekly_releases_rawg() -> List[Dict]:
             response.raise_for_status()
             data = response.json()
 
-        results = []
+        raw_items = []
         for item in data.get("results", []):
             if _is_nsfw(item):
                 continue
             released = item.get("released")
+            if not released:
+                continue
+            raw_items.append(item)
+
+        # Dynamic quality filter fallback
+        filtered_items = [
+            item for item in raw_items
+            if item.get("added", 0) >= 10 or item.get("metacritic")
+        ]
+
+        if len(filtered_items) < 5:
+            filtered_items = [
+                item for item in raw_items
+                if item.get("added", 0) >= 2 or item.get("metacritic")
+            ]
+
+        if len(filtered_items) < 3:
+            filtered_items = raw_items
+
+        results = []
+        for item in filtered_items:
             results.append(
                 {
                     "title": item["name"],
                     "cover_url": item.get("background_image"),
-                    "release_date": released,
+                    "release_date": item.get("released"),
                     "genres": [g["name"] for g in (item.get("genres") or [])],
                 }
             )
-            if len(results) == 10:
-                break
-        return results
+
+        # Sort by release date ascending
+        results.sort(key=lambda x: x["release_date"])
+        return results[:10]
     except Exception:
         return []

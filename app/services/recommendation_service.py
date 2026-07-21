@@ -4,7 +4,7 @@ import random
 from typing import Dict, List, Optional, Set
 
 from sqlalchemy import String, cast, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql.expression import func
 
 from app.models.game import Game
@@ -101,8 +101,14 @@ class RecommendationService:
     def __init__(self, db: Session, user_id: str):
         self.db = db
         self.user_id = user_id
-        # Carrega os external_ids que o usuário já tem para excluir das recomendações
-        user_games = self.db.query(UserGame).filter(UserGame.user_id == self.user_id).all()
+        # Carrega os external_ids e game_ids que o usuário já tem para excluir das recomendações
+        user_games = (
+            self.db.query(UserGame)
+            .options(joinedload(UserGame.game))
+            .filter(UserGame.user_id == self.user_id)
+            .all()
+        )
+        self.owned_game_ids = {ug.game_id for ug in user_games}
         self.owned_external_ids = {ug.game.external_id for ug in user_games if ug.game.external_id}
         self.user_games = user_games
 
@@ -116,14 +122,13 @@ class RecommendationService:
         excludes = (
             exclude_external_ids if exclude_external_ids is not None else self.owned_external_ids
         )
-        owned_by_others_subq = self.db.query(UserGame.game_id).distinct()
 
         clauses = []
         for g in genres:
             clauses.append(cast(Game.genres, String).ilike(f'%"{g}"%'))
             clauses.append(cast(Game.genres, String).ilike(f'%{g}%'))
 
-        query = self.db.query(Game).filter(Game.id.in_(owned_by_others_subq))
+        query = self.db.query(Game).filter(~Game.id.in_(self.owned_game_ids))
         if excludes:
             query = query.filter(~Game.external_id.in_(excludes))
 

@@ -53,10 +53,33 @@ const Social: React.FC = () => {
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadFeed = async () => {
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+
+  const currentYear = now.getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+  const months = [
+    { value: 1, label: 'Janeiro' },
+    { value: 2, label: 'Fevereiro' },
+    { value: 3, label: 'Março' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Maio' },
+    { value: 6, label: 'Junho' },
+    { value: 7, label: 'Julho' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Setembro' },
+    { value: 10, label: 'Outubro' },
+    { value: 11, label: 'Novembro' },
+    { value: 12, label: 'Dezembro' }
+  ];
+
+  const loadFeed = async (m: number, y: number) => {
     setLoading(true);
     try {
-      const res = await api.get('/social/feed');
+      const res = await api.get('/social/feed', {
+        params: { month: m, year: y }
+      });
       setFeedData(res.data);
     } catch (err) {
       console.error(err);
@@ -68,9 +91,9 @@ const Social: React.FC = () => {
   useEffect(() => {
     if (activeTab === "feed") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadFeed();
+      loadFeed(selectedMonth, selectedYear);
     }
-  }, [activeTab]);
+  }, [activeTab, selectedMonth, selectedYear]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +175,31 @@ const Social: React.FC = () => {
         {activeTab === "feed" && (
           <div className={styles.feedLayout}>
             <div className={styles.mainFeed}>
-              <h2>Atividades Recentes</h2>
+              <div className={styles.feedHeaderRow}>
+                <h2>Atividades Recentes</h2>
+                <div className={styles.feedFilters}>
+                  <select
+                    className={styles.filterSelect}
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    disabled={loading}
+                  >
+                    {months.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    className={styles.filterSelect}
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    disabled={loading}
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               {loading && <Loader message="Carregando feed..." />}
               {!loading && feedData?.activities.length === 0 && (
                 <p className={styles.empty}>Nenhuma atividade recente. Siga mais pessoas!</p>

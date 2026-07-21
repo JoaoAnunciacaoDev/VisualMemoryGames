@@ -11,6 +11,14 @@ vi.mock('@/hooks/useConfirmAction', () => ({
 vi.mock('@/components/RatingStars/RatingStars', () => ({
   default: ({ value }: { value: number | null }) => <div data-testid="rating-stars">Rating: {value}</div>,
 }));
+vi.mock('@/services/api', () => ({
+  default: {
+    get: vi.fn().mockResolvedValue({ data: [] }),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
+    delete: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
 
 const mockGame: LibraryGame = {
   id: 'ug-1', game_id: 'game-1', external_id: 100, title: 'Zelda Breath of the Wild',
@@ -32,7 +40,7 @@ const baseForm = {
   setEditTitle: vi.fn(),
   editReleaseYear: '2017',
   setEditReleaseYear: vi.fn(),
-  editPlatforms: 'Nintendo Switch',
+  editPlatforms: ['Nintendo Switch'],
   setEditPlatforms: vi.fn(),
   editGenres: ['Action', 'Adventure'],
   setEditGenres: vi.fn(),

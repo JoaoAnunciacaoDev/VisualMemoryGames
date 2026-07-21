@@ -12,6 +12,7 @@ interface Props {
   onAddGame: (game: GameResult) => void;
   onRemoveGame: (externalId: number) => void;
   onOpenGame: (game: GameResult) => void;
+  onManualAdd: () => void;
 }
 
 export default function LibrarySearchView({
@@ -22,10 +23,11 @@ export default function LibrarySearchView({
   onAddGame,
   onRemoveGame,
   onOpenGame,
+  onManualAdd,
 }: Props) {
   return (
     <>
-      <SearchBar onSearch={searchGames} isSearching={isSearching} />
+      <SearchBar onSearch={searchGames} isSearching={isSearching} onManualAdd={onManualAdd} />
       <GameGrid>
         {searchResults.map((game) => (
           <GameCard

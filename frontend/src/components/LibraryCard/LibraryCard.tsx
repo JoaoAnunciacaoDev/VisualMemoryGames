@@ -11,6 +11,7 @@ interface Props {
   rating: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  platinumAt: string | null;
   store?: string | null;
   favorite?: boolean;
   onClick: () => void;
@@ -46,17 +47,14 @@ export default function LibraryCard({
   coverUrl,
   status,
   rating,
-  startedAt,
   finishedAt,
+  platinumAt,
   store,
   favorite,
   onClick,
 }: Props) {
-  const year = finishedAt
-    ? finishedAt.substring(0, 4)
-    : startedAt
-    ? startedAt.substring(0, 4)
-    : null;
+  const finishedYear = finishedAt ? finishedAt.substring(0, 4) : null;
+  const platinumYear = platinumAt ? platinumAt.substring(0, 4) : null;
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -97,8 +95,15 @@ export default function LibraryCard({
       <div className={styles.info}>
         <h3 className={styles.title}>{title}</h3>
         <div className={styles.meta}>
-          {rating !== null && <span>{rating}/10</span>}
-          {year && <span>{year}</span>}
+          <span className={styles.metaLeft}>
+            {rating !== null ? `📝 ${rating}/10` : ''}
+          </span>
+          <span className={styles.metaCenter}>
+            {finishedYear ? `✅ ${finishedYear}` : ''}
+          </span>
+          <span className={styles.metaRight}>
+            {platinumYear ? `🏆 ${platinumYear}` : ''}
+          </span>
         </div>
       </div>
     </Card>

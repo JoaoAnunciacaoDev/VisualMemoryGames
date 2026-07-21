@@ -6,9 +6,10 @@ import styles from '@/components/SearchBar/SearchBar.module.css';
 interface Props {
   onSearch: (query: string) => void;
   isSearching: boolean;
+  onManualAdd?: () => void;
 }
 
-export default function SearchBar({ onSearch, isSearching }: Props) {
+export default function SearchBar({ onSearch, isSearching, onManualAdd }: Props) {
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: SyntheticEvent) => {
@@ -27,6 +28,11 @@ export default function SearchBar({ onSearch, isSearching }: Props) {
       <Button type="submit" disabled={isSearching}>
         {isSearching ? 'Buscando...' : 'Pesquisar'}
       </Button>
+      {onManualAdd && (
+        <Button type="button" variant="primary" onClick={onManualAdd} style={{ whiteSpace: 'nowrap' }}>
+          + Adicionar Manualmente
+        </Button>
+      )}
     </form>
   );
 }

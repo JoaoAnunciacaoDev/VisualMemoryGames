@@ -90,3 +90,85 @@ def test_invalid_date_relationships(client, auth_headers, setup_game):
     assert (
         "A data de início não pode ser posterior à data de conclusão" in response.json()["detail"]
     )
+
+
+def test_user_game_reviews_flow(client, auth_headers, setup_game):
+    """Testa o fluxo completo de CRUD de múltiplas avaliações e sincronização."""
+    # 1. Adicionar o jogo à biblioteca
+    ug_response = client.post("/user-games/", json={"game_id": setup_game}, headers=auth_headers)
+    ug_id = ug_response.json()["id"]
+
+    # Iniciar e mudar status para permitir reviews
+    client.put(f"/user-games/{ug_id}", json={"status": "Jogando"}, headers=auth_headers)
+
+    def get_ug():
+        lib = client.get("/user-games/me", headers=auth_headers).json()
+        return [ug for ug in lib if ug["id"] == ug_id][0]
+
+    # 2. Criar a primeira avaliação (Review 1)
+    rev1_response = client.post(
+        f"/user-games/{ug_id}/reviews",
+        json={"rating": 8.5, "notes": "Review 1 text"},
+        headers=auth_headers
+    )
+    assert rev1_response.status_code == 201
+    rev1 = rev1_response.json()
+    assert rev1["rating"] == 8.5
+    assert rev1["notes"] == "Review 1 text"
+
+    # Verificar que o UserGame foi sincronizado com Review 1
+    ug = get_ug()
+    assert ug["rating"] == 8.5
+    assert ug["notes"] == "Review 1 text"
+
+    # 3. Criar a segunda avaliação (Review 2 - mais recente)
+    rev2_response = client.post(
+        f"/user-games/{ug_id}/reviews",
+        json={"rating": 9.0, "notes": "Review 2 text"},
+        headers=auth_headers
+    )
+    assert rev2_response.status_code == 201
+    rev2 = rev2_response.json()
+
+    # Verificar sincronização com o mais recente (Review 2)
+    ug = get_ug()
+    assert ug["rating"] == 9.0
+    assert ug["notes"] == "Review 2 text"
+
+    # 4. Listar avaliações
+    get_revs = client.get(f"/user-games/{ug_id}/reviews", headers=auth_headers)
+    assert len(get_revs.json()) == 2
+    # Devem vir ordenados por data decrescente (Review 2 primeiro)
+    assert get_revs.json()[0]["id"] == rev2["id"]
+
+    # 5. Atualizar Review 2
+    update_response = client.put(
+        f"/user-games/{ug_id}/reviews/{rev2['id']}",
+        json={"rating": 9.5, "notes": "Review 2 updated"},
+        headers=auth_headers
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["rating"] == 9.5
+
+    # Verificar sincronização pós-update
+    ug = get_ug()
+    assert ug["rating"] == 9.5
+    assert ug["notes"] == "Review 2 updated"
+
+    # 6. Deletar Review 2
+    del_response = client.delete(f"/user-games/{ug_id}/reviews/{rev2['id']}", headers=auth_headers)
+    assert del_response.status_code == 204
+
+    # Verificar que o UserGame sincronizou de volta para Review 1
+    ug = get_ug()
+    assert ug["rating"] == 8.5
+    assert ug["notes"] == "Review 1 text"
+
+    # 7. Deletar Review 1
+    del_response2 = client.delete(f"/user-games/{ug_id}/reviews/{rev1['id']}", headers=auth_headers)
+    assert del_response2.status_code == 204
+
+    # Verificar que o UserGame voltou a ficar sem nota/review
+    ug = get_ug()
+    assert ug["rating"] is None
+    assert ug["notes"] is None

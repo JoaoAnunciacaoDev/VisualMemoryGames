@@ -99,3 +99,12 @@ export interface User {
   last_active_at?: string;
   games_count?: number;
 }
+
+export interface UserGameReview {
+  id: string;
+  user_game_id: string;
+  rating: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}

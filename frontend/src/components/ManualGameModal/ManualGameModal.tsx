@@ -5,6 +5,7 @@ import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
 import { isValidUrl } from '@/utils/validation';
 import { STANDARD_GENRES } from '@/utils/genres';
+import { STANDARD_PLATFORMS } from '@/utils/platforms';
 import styles from '@/components/ManualGameModal/ManualGameModal.module.css';
 
 interface Props {
@@ -15,7 +16,7 @@ interface Props {
 export default function ManualGameModal({ onSuccess, onClose }: Props) {
   const [title, setTitle] = useState('');
   const [releaseYear, setReleaseYear] = useState('');
-  const [platforms, setPlatforms] = useState('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -75,9 +76,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
       const formData = new FormData();
       formData.append('title', title.trim());
       if (releaseYear) formData.append('release_year', releaseYear);
-      formData.append('platforms', JSON.stringify(
-        platforms.split(',').map((p) => p.trim()).filter(Boolean)
-      ));
+      formData.append('platforms', JSON.stringify(selectedPlatforms));
       formData.append('genres', JSON.stringify(selectedGenres));
       if (coverFile) {
         formData.append('cover_file', coverFile);
@@ -117,13 +116,28 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
     !selectedGenres.some(g => g.toLowerCase() === genreSearch.trim().toLowerCase()) &&
     !STANDARD_GENRES.some(g => g.label.toLowerCase() === genreSearch.trim().toLowerCase() || g.id.toLowerCase() === genreSearch.trim().toLowerCase());
 
+  const [platformSearch, setPlatformSearch] = useState('');
+  const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
+
+  const filteredPlatforms = STANDARD_PLATFORMS.filter((platform) => {
+    const matchesSearch = platform.label.toLowerCase().includes(platformSearch.toLowerCase()) || 
+                          platform.id.toLowerCase().includes(platformSearch.toLowerCase());
+    const notSelected = !selectedPlatforms.includes(platform.id);
+    return matchesSearch && notSelected;
+  });
+
+  const showCustomPlatformOption = 
+    platformSearch.trim() !== '' &&
+    !selectedPlatforms.some(p => p.toLowerCase() === platformSearch.trim().toLowerCase()) &&
+    !STANDARD_PLATFORMS.some(p => p.label.toLowerCase() === platformSearch.trim().toLowerCase() || p.id.toLowerCase() === platformSearch.trim().toLowerCase());
+
   return (
     <Modal open onClose={() => !isSaving && onClose()} maxWidth="560px" showCloseButton={!isSaving}>
       <div className={styles.header}>
         <h3>Adicionar Jogo Manualmente</h3>
       </div>
 
-      <div className={styles.body}>
+      <div className={`${styles.body} scrollbar-visualmemory`}>
         <div className={styles.coverSection}>
           <div className={styles.coverPreview}>
             {coverPreview ? (
@@ -195,16 +209,91 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
           />
         </label>
 
-        <label className={styles.label}>
-          Plataformas
-          <Input
-            type="text"
-            placeholder="Ex: PC, PlayStation 5, Xbox (separados por vírgula)"
-            value={platforms}
-            onChange={(e) => setPlatforms(e.target.value)}
-            disabled={isSaving}
-          />
-        </label>
+        <div className={styles.genresSection}>
+          <span className={styles.genresLabel}>Plataformas</span>
+          
+          {selectedPlatforms.length > 0 && (
+            <div className={styles.genreTagsContainer}>
+              {selectedPlatforms.map((platformId) => {
+                const platformLabel = STANDARD_PLATFORMS.find((p) => p.id === platformId)?.label ?? platformId;
+                return (
+                  <span key={platformId} className={styles.selectedGenreTag}>
+                    {platformLabel}
+                    <button
+                      type="button"
+                      className={styles.removeTagBtn}
+                      onClick={() => setSelectedPlatforms(selectedPlatforms.filter((id) => id !== platformId))}
+                      disabled={isSaving}
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          <div className={styles.searchWrapper}>
+            <input
+              type="text"
+              placeholder="Pesquisar ou adicionar plataforma..."
+              className={styles.genreSearchInput}
+              value={platformSearch}
+              onChange={(e) => setPlatformSearch(e.target.value)}
+              onFocus={() => setIsPlatformDropdownOpen(true)}
+              onBlur={() => {
+                setTimeout(() => setIsPlatformDropdownOpen(false), 200);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const trimmed = platformSearch.trim();
+                  if (trimmed) {
+                    const matchedStandard = STANDARD_PLATFORMS.find(
+                      (p) => p.label.toLowerCase() === trimmed.toLowerCase() || p.id.toLowerCase() === trimmed.toLowerCase()
+                    );
+                    const platformToAdd = matchedStandard ? matchedStandard.id : trimmed;
+                    if (!selectedPlatforms.includes(platformToAdd)) {
+                      setSelectedPlatforms([...selectedPlatforms, platformToAdd]);
+                    }
+                    setPlatformSearch('');
+                  }
+                }
+              }}
+              disabled={isSaving}
+            />
+
+            {isPlatformDropdownOpen && (filteredPlatforms.length > 0 || showCustomPlatformOption) && (
+              <div className={`${styles.dropdownList} scrollbar-visualmemory`}>
+                {filteredPlatforms.map((platform) => (
+                  <button
+                    key={platform.id}
+                    type="button"
+                    className={styles.dropdownItem}
+                    onMouseDown={() => {
+                      setSelectedPlatforms([...selectedPlatforms, platform.id]);
+                      setPlatformSearch('');
+                    }}
+                  >
+                    {platform.label}
+                  </button>
+                ))}
+                {showCustomPlatformOption && (
+                  <button
+                    type="button"
+                    className={`${styles.dropdownItem} ${styles.customItem}`}
+                    onMouseDown={() => {
+                      setSelectedPlatforms([...selectedPlatforms, platformSearch.trim()]);
+                      setPlatformSearch('');
+                    }}
+                  >
+                    + Adicionar "{platformSearch.trim()}" como plataforma personalizada
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className={styles.genresSection}>
           <span className={styles.genresLabel}>Gêneros</span>
@@ -261,7 +350,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
             />
 
             {isDropdownOpen && (filteredGenres.length > 0 || showCustomOption) && (
-              <div className={styles.dropdownList}>
+              <div className={`${styles.dropdownList} scrollbar-visualmemory`}>
                 {filteredGenres.map((genre) => (
                   <button
                     key={genre.id}

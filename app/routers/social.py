@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -14,11 +14,13 @@ router = APIRouter(prefix="/social", tags=["Social"])
 
 @router.get("/feed", response_model=FeedResponse)
 def get_my_feed(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Retorna as atividades dos usuários seguidos e lançamentos da semana."""
-    return social_service.get_feed(current_user, db)
+    return social_service.get_feed(current_user, db, year=year, month=month)
 
 
 @router.get("/users/search", response_model=List[UserPublicProfile])

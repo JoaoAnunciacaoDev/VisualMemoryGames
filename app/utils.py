@@ -16,5 +16,4 @@ def safe_load_json_list(value: str | None) -> list[str]:
             return [str(x) for x in parsed]
         return [str(parsed)]
     except (json.JSONDecodeError, TypeError):
-        # Fallback para string simples (ex: "PC, PS5" ou apenas "PC")
         return [x.strip() for x in value.split(",") if x.strip()]

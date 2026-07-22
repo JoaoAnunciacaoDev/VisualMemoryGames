@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from 'react';
+import { ChangeEvent, useState, useCallback } from 'react';
 import api from '@/services/api';
 import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
@@ -35,12 +35,12 @@ export function useGameEditForm(game: LibraryGame) {
 
   const canReview = form.status !== 'Quero Jogar';
 
-  const updateField = <K extends keyof UpdateLibraryGame>(
-    field: K,
-    value: UpdateLibraryGame[K]
-  ) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  const updateField = useCallback(
+    <K extends keyof UpdateLibraryGame>(field: K, value: UpdateLibraryGame[K]) => {
+      setForm((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
 
   const handleStatusChange = (newStatus: string) => {
     setForm((prev) => {

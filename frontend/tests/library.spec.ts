@@ -36,16 +36,18 @@ test.describe('Library Management', () => {
   });
 
   test('should allow adding a game manually, changing status, and removing it', async ({ page }) => {
-    // Navigate to "Adicionar Manualmente" tab
-    await page.click('role=tab[name="Adicionar Manualmente"]');
+    // Navigate to "Pesquisar / Adicionar" tab
+    await page.click('role=tab[name="Pesquisar / Adicionar"]');
 
     // Click the Add manual game button
-    await page.click('button:has-text("+ Adicionar Jogo Manualmente")');
+    await page.click('button:has-text("+ Adicionar Manualmente")');
 
     // Fill the manual game form
     await page.fill('input[placeholder="Nome do jogo"]', gameTitle);
     await page.fill('input[placeholder="Ex: 2024"]', '2025');
-    await page.fill('input[placeholder="Ex: PC, PlayStation 5, Xbox (separados por vírgula)"]', 'PC');
+    // Select platform using autocomplete
+    await page.fill('input[placeholder="Pesquisar ou adicionar plataforma..."]', 'PC');
+    await page.click('button:has-text("PC")');
     
     // Select standard genre using autocomplete
     await page.fill('input[placeholder="Pesquisar ou adicionar gênero..."]', 'Ação');
@@ -68,7 +70,7 @@ test.describe('Library Management', () => {
     await page.click(`h3:has-text("${gameTitle}")`);
 
     // Change status from Quero Jogar (or whatever default) to Zerado
-    await page.locator('label:has-text("Status") select').selectOption({ label: 'Zerado' });
+    await page.click('button:has-text("Zerado")');
     
     // Save
     await page.click('button:has-text("Salvar")');

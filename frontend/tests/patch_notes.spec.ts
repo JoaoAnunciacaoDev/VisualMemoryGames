@@ -41,7 +41,7 @@ test.describe('Patch Notes Flow', () => {
 
     // 3. Promover o usuário a Admin diretamente via script no banco de testes
     execSync(
-      `poetry run python -c "import app.models.user; import app.models.tierlist; import app.models.custom_lists; import app.models.user_game; import app.models.game; import app.models.steam_account; import app.models.itch_account; from app.database import SessionLocal; from app.models.user import User; session = SessionLocal(); user = session.query(User).filter(User.username == '${adminUsername}').first(); user.is_admin = True; session.commit(); session.close()"`,
+      `poetry run python -c "import app.models.user; import app.models.tierlist; import app.models.custom_lists; import app.models.user_game; import app.models.user_game_review; import app.models.game; import app.models.steam_account; import app.models.itch_account; from app.database import SessionLocal; from app.models.user import User; session = SessionLocal(); user = session.query(User).filter(User.username == '${adminUsername}').first(); user.is_admin = True; session.commit(); session.close()"`,
       { cwd: '..' }
     );
 

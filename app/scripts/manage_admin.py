@@ -12,6 +12,7 @@ from app.models import (
     tierlist,
     user,
     user_game,
+    user_game_review,
 )
 from app.models.user import User
 

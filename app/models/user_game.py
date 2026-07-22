@@ -45,5 +45,9 @@ class UserGame(Base):
         "UserGameReview",
         back_populates="user_game",
         cascade="all, delete-orphan",
-        order_by=desc("UserGameReview.created_at"),
+        order_by=lambda: desc(UserGameReview.created_at),
     )
+
+
+# Import relationship target model to register with SQLAlchemy mapper registry
+from app.models.user_game_review import UserGameReview  # noqa: E402, F401

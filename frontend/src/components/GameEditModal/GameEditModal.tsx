@@ -107,12 +107,11 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
       if (latest) {
         updateField('rating', latest.rating);
         updateField('notes', latest.notes);
-      } else {
-        updateField('rating', null);
-        updateField('notes', null);
       }
+      return reviewsList;
     } catch (err) {
       console.error('Erro ao carregar avaliações:', err);
+      return [];
     } finally {
       setReviewsLoading(false);
     }
@@ -178,7 +177,11 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
         setEditingReviewId(null);
         setReviewNotes('');
       }
-      await fetchReviews();
+      const updated = await fetchReviews();
+      if (!updated || updated.length === 0) {
+        updateField('rating', null);
+        updateField('notes', null);
+      }
     } catch {
       showToast('Erro ao excluir avaliação.', 'error');
     } finally {

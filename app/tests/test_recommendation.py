@@ -66,6 +66,7 @@ def test_get_recommendations(client, db_session, auth_headers):
 
     # 2. Mockar o retorno da API RAWG para testar o fallback paralelo
     call_count = 0
+
     def mock_get_games_side_effect(genres, page_size=20):
         nonlocal call_count
         call_count += 1
@@ -115,8 +116,6 @@ def test_get_recommendations(client, db_session, auth_headers):
         assert mock_get_games.called
 
         # Verificar se os jogos do RAWG foram persistidos localmente
-        persisted_game = (
-            db_session.query(Game).filter(Game.external_id == 210).first()
-        )
+        persisted_game = db_session.query(Game).filter(Game.external_id == 210).first()
         assert persisted_game is not None
         assert persisted_game.title == "Mock Game 1_0"

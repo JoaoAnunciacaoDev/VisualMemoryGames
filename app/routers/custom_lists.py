@@ -29,14 +29,16 @@ def serialize_custom_list(lst: CustomList) -> dict:
     games_data = []
     for lg in sorted_list_games:
         game = lg.game
-        games_data.append({
-            "id": game.id,
-            "title": game.title,
-            "cover_url": game.cover_url,
-            "custom_cover_url": getattr(game, "custom_cover_url", None),
-            "external_id": game.external_id,
-            "order_index": lg.order_index,
-        })
+        games_data.append(
+            {
+                "id": game.id,
+                "title": game.title,
+                "cover_url": game.cover_url,
+                "custom_cover_url": getattr(game, "custom_cover_url", None),
+                "external_id": game.external_id,
+                "order_index": lg.order_index,
+            }
+        )
     return {
         "id": lst.id,
         "user_id": lst.user_id,
@@ -148,11 +150,7 @@ def add_game_to_list(
         max_order = max(lg.order_index for lg in lst.list_games)
     next_order = max_order + 1
 
-    new_list_game = CustomListGame(
-        custom_list_id=lst.id,
-        game_id=game.id,
-        order_index=next_order
-    )
+    new_list_game = CustomListGame(custom_list_id=lst.id, game_id=game.id, order_index=next_order)
     db.add(new_list_game)
 
     if lst.is_system is True:

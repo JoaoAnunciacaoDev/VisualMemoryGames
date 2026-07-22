@@ -45,5 +45,5 @@ class UserGame(Base):
         "UserGameReview",
         back_populates="user_game",
         cascade="all, delete-orphan",
-        order_by=desc("UserGameReview.created_at")
+        order_by=desc("UserGameReview.created_at"),
     )

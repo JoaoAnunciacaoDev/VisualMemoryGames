@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
@@ -95,7 +95,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
   const [reviewNotes, setReviewNotes] = useState('');
   const [isReviewSaving, setIsReviewSaving] = useState(false);
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setReviewsLoading(true);
       const res = await api.get(`/user-games/${game.id}/reviews`);
@@ -116,15 +116,17 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
     } finally {
       setReviewsLoading(false);
     }
-  };
+  }, [game.id, updateField]);
 
   useEffect(() => {
     if (game.id) {
-      fetchReviews();
-      setEditingReviewId(null);
-      setReviewNotes('');
+      Promise.resolve().then(() => {
+        fetchReviews();
+        setEditingReviewId(null);
+        setReviewNotes('');
+      });
     }
-  }, [game.id]);
+  }, [game.id, fetchReviews]);
 
   const handleSaveReview = async () => {
     if (form.rating === null && !reviewNotes.trim()) {
@@ -150,7 +152,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
       setReviewNotes('');
       setEditingReviewId(null);
       await fetchReviews();
-    } catch (err) {
+    } catch {
       showToast('Erro ao salvar avaliação.', 'error');
     } finally {
       setIsReviewSaving(false);
@@ -177,7 +179,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
         setReviewNotes('');
       }
       await fetchReviews();
-    } catch (err) {
+    } catch {
       showToast('Erro ao excluir avaliação.', 'error');
     } finally {
       setIsReviewSaving(false);

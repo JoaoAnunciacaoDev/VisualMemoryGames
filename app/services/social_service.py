@@ -241,11 +241,7 @@ def get_feed(
         for act in raw_activities:
             game = act.game
             ug = user_games_map.get((act.user_id, act.game_id))
-            cover_url = (
-                ug.custom_cover_url
-                if (ug and ug.custom_cover_url)
-                else game.cover_url
-            )
+            cover_url = ug.custom_cover_url if (ug and ug.custom_cover_url) else game.cover_url
 
             activities.append(
                 ActivityResponse(

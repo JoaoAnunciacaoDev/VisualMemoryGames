@@ -73,6 +73,7 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     url = f"{BASE_URL}/games"
     # Pede mais para caso tenhamos que filtrar
     import random
+
     page = random.randint(1, 3)
     params = {
         "key": RAWG_API_KEY,
@@ -192,14 +193,12 @@ def get_weekly_releases_rawg() -> List[Dict]:
 
         # Dynamic quality filter fallback
         filtered_items = [
-            item for item in raw_items
-            if item.get("added", 0) >= 10 or item.get("metacritic")
+            item for item in raw_items if item.get("added", 0) >= 10 or item.get("metacritic")
         ]
 
         if len(filtered_items) < 5:
             filtered_items = [
-                item for item in raw_items
-                if item.get("added", 0) >= 2 or item.get("metacritic")
+                item for item in raw_items if item.get("added", 0) >= 2 or item.get("metacritic")
             ]
 
         if len(filtered_items) < 3:

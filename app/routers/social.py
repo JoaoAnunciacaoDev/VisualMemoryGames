@@ -39,11 +39,10 @@ def resolve_user_id(identifier: str, db: Session) -> str:
     if identifier == "me":
         return identifier
     from sqlalchemy import func
+
     user = (
         db.query(User)
-        .filter(
-            (User.id == identifier) | (func.lower(User.username) == func.lower(identifier))
-        )
+        .filter((User.id == identifier) | (func.lower(User.username) == func.lower(identifier)))
         .first()
     )
     if not user:

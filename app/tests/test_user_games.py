@@ -109,7 +109,7 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     rev1_response = client.post(
         f"/user-games/{ug_id}/reviews",
         json={"rating": 8.5, "notes": "Review 1 text"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert rev1_response.status_code == 201
     rev1 = rev1_response.json()
@@ -125,7 +125,7 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     rev2_response = client.post(
         f"/user-games/{ug_id}/reviews",
         json={"rating": 9.0, "notes": "Review 2 text"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert rev2_response.status_code == 201
     rev2 = rev2_response.json()
@@ -145,7 +145,7 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     update_response = client.put(
         f"/user-games/{ug_id}/reviews/{rev2['id']}",
         json={"rating": 9.5, "notes": "Review 2 updated"},
-        headers=auth_headers
+        headers=auth_headers,
     )
     assert update_response.status_code == 200
     assert update_response.json()["rating"] == 9.5

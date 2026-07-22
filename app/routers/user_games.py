@@ -21,8 +21,8 @@ from app.schemas.game import (
 )
 from app.schemas.user_game_review import (
     UserGameReviewCreate,
-    UserGameReviewUpdate,
     UserGameReviewResponse,
+    UserGameReviewUpdate,
 )
 from app.security import get_current_user
 from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
@@ -86,17 +86,17 @@ def get_user_library(
     identifier: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     from sqlalchemy import func
+
     target_user = (
         db.query(User)
-        .filter(
-            (User.id == identifier) | (func.lower(User.username) == func.lower(identifier))
-        )
+        .filter((User.id == identifier) | (func.lower(User.username) == func.lower(identifier)))
         .first()
     )
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado.")
 
     from app.models.follow import Follow
+
     is_following = (
         db.query(Follow)
         .filter(Follow.follower_id == current_user.id, Follow.following_id == target_user.id)
@@ -373,9 +373,13 @@ def get_user_game_reviews(
     is_following = False
     if current_user.id != target_user.id:
         from app.models.follow import Follow
-        is_following = db.query(Follow).filter(
-            Follow.follower_id == current_user.id, Follow.followed_id == target_user.id
-        ).first() is not None
+
+        is_following = (
+            db.query(Follow)
+            .filter(Follow.follower_id == current_user.id, Follow.followed_id == target_user.id)
+            .first()
+            is not None
+        )
 
     if (
         not target_user.is_public
@@ -394,7 +398,11 @@ def get_user_game_reviews(
     return reviews
 
 
-@router.post("/{user_game_id}/reviews", response_model=UserGameReviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{user_game_id}/reviews",
+    response_model=UserGameReviewResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def create_user_game_review(
     user_game_id: str,
     review: UserGameReviewCreate,
@@ -405,9 +413,7 @@ def create_user_game_review(
     db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
 
     if db_user_game.status == GameStatus.WANT_TO_PLAY:
-        raise HTTPException(
-            status_code=400, detail="Mude o status para avaliar o jogo."
-        )
+        raise HTTPException(status_code=400, detail="Mude o status para avaliar o jogo.")
 
     db_review = UserGameReview(
         user_game_id=db_user_game.id,
@@ -446,7 +452,7 @@ def update_user_game_review(
     update_data = review_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_review, key, value)
-    
+
     db_review.updated_at = datetime.now()
     db.flush()
 

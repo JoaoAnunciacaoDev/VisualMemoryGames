@@ -45,6 +45,7 @@ def initiate_registration(
     db: Session = Depends(get_db),
 ):
     from sqlalchemy import func
+
     existing_user = (
         db.query(User)
         .filter(
@@ -91,6 +92,7 @@ def initiate_registration(
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     from sqlalchemy import func
+
     existing_user = (
         db.query(User)
         .filter(
@@ -258,11 +260,10 @@ def get_public_dashboard(
     current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import func
+
     target_user = (
         db.query(User)
-        .filter(
-            (User.id == identifier) | (func.lower(User.username) == func.lower(identifier))
-        )
+        .filter((User.id == identifier) | (func.lower(User.username) == func.lower(identifier)))
         .first()
     )
     if not target_user:

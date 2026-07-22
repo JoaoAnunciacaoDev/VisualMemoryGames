@@ -46,10 +46,19 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
 - 🎨 **Visual Moderno de Capas:**
   - Badge dinâmico com o ícone e nome da loja (ex: `🎮 Steam`, `PlayStation Store`, `Xbox Store`) sobreposto nos cards da biblioteca.
   - Indicador de estrela dourada (`⭐`) no topo direito para os jogos favoritados.
+  - Emojis descritivos integrados nos GameCards da biblioteca (📝 Nota, ✅ Ano de Conclusão, 🏆 Ano de Platina) para maior legibilidade visual.
 - 🔍 **Pesquisa e Cadastro Inteligente:**
   - Pesquisa integrada com a API oficial da RAWG.
-  - Seletor de gêneros inteligente com busca textual, autocomplete de gêneros sugeridos e tags com remoção rápida.
-  - Criação de gêneros personalizados dinamicamente sob demanda.
+- 📝 **Múltiplas Avaliações (Histórico/Timeline):**
+  - Registro de múltiplos comentários textuais e notas por jogo para acompanhar a mudança de opinião em novas jogatinas.
+  - Exibição em linha do tempo conectada (Timeline Feed) com renderização de Markdown.
+- 🚀 **Motor de Recomendações Otimizado:**
+  - Carregamento instantâneo via cache local no banco de dados.
+  - Exclusão robusta de jogos já contidos na biblioteca (comparando IDs internos e externos).
+  - Variedade aprimorada com paginação aleatória nas consultas RAWG.
+- 📊 **Social, Feed & Lançamentos:**
+  - Filtro dropdown por mês e ano para consultar o Feed de Atividades de forma segmentada dos usuários que você segue.
+  - Painel lateral de Lançamentos da Semana integrado ao RAWG com filtro inteligente dinâmico contra escassez de lançamentos populares.
 - 📊 **Painel de Perfil Avançado (Dashboard):**
   - Board estatístico interativo para ver jogos concluídos no ano filtrados por mês, contendo contador de jogos zerados e grade de capas correspondentes.
   - Histórico de conclusões anual colapsável em acordeões (`▶` / `▼`) para otimização de espaço.
@@ -169,7 +178,7 @@ mise run front.lint      # Analisa erros do React/TypeScript
 
 ## Executar Testes Unitários
 ```bash
-# Backend (Pytest - 63 testes completos)
+# Backend (Pytest)
 mise run back.test
 
 # Frontend (Vitest)

@@ -126,7 +126,7 @@ class RecommendationService:
         clauses = []
         for g in genres:
             clauses.append(cast(Game.genres, String).ilike(f'%"{g}"%'))
-            clauses.append(cast(Game.genres, String).ilike(f'%{g}%'))
+            clauses.append(cast(Game.genres, String).ilike(f"%{g}%"))
 
         query = self.db.query(Game).filter(~Game.id.in_(self.owned_game_ids))
         if excludes:
@@ -314,9 +314,11 @@ class RecommendationService:
                             break
 
             if games_list:
-                final_carousels.append({
-                    "title": cat["title"],
-                    "games": _format_games(games_list),
-                })
+                final_carousels.append(
+                    {
+                        "title": cat["title"],
+                        "games": _format_games(games_list),
+                    }
+                )
 
         return final_carousels

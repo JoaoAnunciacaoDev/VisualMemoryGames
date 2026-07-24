@@ -29,9 +29,18 @@ def _send_email(
     if (
         os.getenv("ENVIRONMENT", "development") == "development"
         and not os.getenv("RENDER")
-        and debug_code
     ):
-        print(f"\n[DEBUG EMAIL] Código de {email_type} para {to_email}: {debug_code}\n")
+        logger.info(f"[MOCK EMAIL] Simulação de Envio de E-mail ({email_type})")
+        print("\n==================================================")
+        print(f"[MOCK EMAIL] Simulação de Envio de E-mail ({email_type})")
+        print(f"Para: {to_email}")
+        print(f"Assunto: {subject}")
+        if debug_code:
+            print(f"Código: {debug_code}")
+        else:
+            print(f"Conteúdo:\n{text_content}")
+        print("==================================================\n")
+        return
 
     # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
     if brevo_api_key:

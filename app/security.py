@@ -44,6 +44,7 @@ def get_current_user(
         detail="Credenciais inválidas ou token expirado.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    print(f"DEBUG ENVIRONMENT: {os.getenv('ENVIRONMENT')}")
     print(f"DEBUG COOKIES: {request.cookies}")
     print(f"DEBUG HEADER: {header_token}")
 

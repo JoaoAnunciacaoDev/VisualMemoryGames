@@ -82,14 +82,15 @@ def login(
 
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=expires_delta)
 
+    is_prod = os.getenv("ENVIRONMENT") == "production"
     response.set_cookie(
         key="token",
         value=access_token,
         httponly=True,
         max_age=max_age,
         expires=max_age,
-        samesite="lax",
-        secure=os.getenv("ENVIRONMENT") == "production",
+        samesite="none" if is_prod else "lax",
+        secure=is_prod,
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -183,10 +184,11 @@ def confirm_password_reset(
 @router.post("/logout")
 def logout(response: Response):
     """Exclui o cookie de autenticação do usuário."""
+    is_prod = os.getenv("ENVIRONMENT") == "production"
     response.delete_cookie(
         key="token",
         httponly=True,
-        samesite="lax",
-        secure=os.getenv("ENVIRONMENT") == "production",
+        samesite="none" if is_prod else "lax",
+        secure=is_prod,
     )
     return {"message": "Desconectado com sucesso"}

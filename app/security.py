@@ -44,23 +44,16 @@ def get_current_user(
         detail="Credenciais inválidas ou token expirado.",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    print(f"DEBUG ENVIRONMENT: {os.getenv('ENVIRONMENT')}")
-    print(f"DEBUG COOKIES: {request.cookies}")
-    print(f"DEBUG HEADER: {header_token}")
-
     token = header_token or request.cookies.get("token")
     if not token:
-        print("DEBUG: Nenhum token encontrado!")
         raise credentials_exception
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
-            print("DEBUG: Sub nulo no payload!")
             raise credentials_exception
-    except jwt.PyJWTError as e:
-        print(f"DEBUG: Falha na decodificação do JWT: {e}")
+    except jwt.PyJWTError:
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id).first()

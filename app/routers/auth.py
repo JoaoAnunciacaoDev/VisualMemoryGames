@@ -2,7 +2,16 @@ import os
 import random
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    status,
+)
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -11,7 +20,7 @@ from app.limiter import limiter
 from app.models.password_reset import PasswordReset
 from app.models.user import User
 from app.schemas.password_reset import PasswordResetConfirm, PasswordResetInitiate
-from app.security import create_access_token
+from app.security import ACCESS_TOKEN_EXPIRE_DAYS, create_access_token
 from app.services.auth_service import get_password_hash, verify_password
 from app.services.email_service import send_password_reset_email
 
@@ -32,7 +41,9 @@ def cleanup_deleted_users(db: Session):
 @limiter.limit("5/minute")
 def login(
     request: Request,
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
+    remember_me: bool = Form(default=False),
     db: Session = Depends(get_db),
 ):
     """Rota para autenticar o usuário e gerar o Token JWT."""
@@ -62,7 +73,24 @@ def login(
         db.commit()
         db.refresh(user)
 
-    access_token = create_access_token(data={"sub": str(user.id)})
+    if remember_me:
+        expires_delta = timedelta(days=30)
+        max_age = 30 * 24 * 60 * 60
+    else:
+        expires_delta = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+        max_age = None
+
+    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=expires_delta)
+
+    response.set_cookie(
+        key="token",
+        value=access_token,
+        httponly=True,
+        max_age=max_age,
+        expires=max_age,
+        samesite="lax",
+        secure=os.getenv("ENVIRONMENT") == "production",
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -150,3 +178,15 @@ def confirm_password_reset(
     db.commit()
 
     return {"message": "Senha redefinida com sucesso."}
+
+
+@router.post("/logout")
+def logout(response: Response):
+    """Exclui o cookie de autenticação do usuário."""
+    response.delete_cookie(
+        key="token",
+        httponly=True,
+        samesite="lax",
+        secure=os.getenv("ENVIRONMENT") == "production",
+    )
+    return {"message": "Desconectado com sucesso"}

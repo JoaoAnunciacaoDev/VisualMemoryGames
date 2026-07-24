@@ -136,3 +136,8 @@ class DashboardResponse(BaseModel):
     yearly_platinums: List[YearlyGames] = Field(default_factory=list)
     favorite_games: List[DashboardGame] = Field(default_factory=list)
     is_following: bool = False
+
+
+class FeedbackCreate(BaseModel):
+    title: str = Field(..., min_length=3, max_length=100)
+    description: str = Field(..., min_length=10, max_length=2000)

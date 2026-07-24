@@ -14,3 +14,4 @@ export { default as RatingStars } from './RatingStars/RatingStars';
 export { default as SearchBar } from './SearchBar/SearchBar';
 export { default as SelectGamesModal } from './SelectGamesModal/SelectGamesModal';
 export { default as Toast } from './Toast/Toast';
+export { default as FeedbackModal } from './FeedbackModal/FeedbackModal';

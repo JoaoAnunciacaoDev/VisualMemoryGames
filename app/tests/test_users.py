@@ -167,3 +167,27 @@ def test_create_user_expired_code(client, db_session):
     )
     assert response.status_code == 400
     assert "Código de verificação expirou" in response.json()["detail"]
+
+
+def test_send_feedback_success(client, auth_headers):
+    response = client.post(
+        "/users/feedback",
+        json={
+            "title": "Feedback muito bom",
+            "description": "Estou gostando muito da plataforma, continuem com o bom trabalho!",
+        },
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Feedback enviado com sucesso"
+
+
+def test_send_feedback_unauthorized(client):
+    response = client.post(
+        "/users/feedback",
+        json={
+            "title": "Feedback não autorizado",
+            "description": "Não deveria funcionar sem token",
+        },
+    )
+    assert response.status_code == 401

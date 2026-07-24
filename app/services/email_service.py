@@ -180,3 +180,35 @@ def send_password_reset_email(email: str, code: str):
     _send_email(
         email, "Recuperação de Senha - VisualMemory", text, html, code, "redefinição de senha"
     )
+
+
+def send_feedback_email(sender_email: str, sender_username: str, title: str, description: str):
+    """Envia um e-mail contendo o feedback do usuário para o e-mail configurado."""
+    receiver = (
+        os.getenv("SMTP_USER")
+    )
+    subject = f"[VisualMemory Feedback] {title}"
+    text = (
+        f"Feedback enviado por {sender_username} ({sender_email}):\n\n"
+        f"Título: {title}\n\n"
+        f"Descrição:\n{description}"
+    )
+    div_style = (
+        "background-color: #f9fafb; padding: 15px; border-radius: 8px; "
+        "border: 1px solid #e5e7eb; white-space: pre-wrap;"
+    )
+    html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+        <h2 style="color: #4f46e5;">Novo Feedback Recebido</h2>
+        <p><strong>Usuário:</strong> {sender_username} ({sender_email})</p>
+        <p><strong>Título:</strong> {title}</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p><strong>Descrição:</strong></p>
+        <div style="{div_style}">
+          {description}
+        </div>
+      </body>
+    </html>
+    """
+    _send_email(receiver, subject, text, html, None, "feedback")

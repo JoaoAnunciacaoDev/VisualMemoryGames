@@ -3,13 +3,28 @@ import sys
 from logging.config import fileConfig
 
 from sqlalchemy import create_engine
+
 from alembic import context
 
 # Adiciona o diretório raiz ao path para conseguir importar os modelos
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import Base
-from app.models import user, game, user_game, user_game_review, tierlist, custom_lists, email_verification, password_reset, steam_account, itch_account, follow, activity, patch_note  # noqa
+from app.models import (  # noqa
+    activity,
+    custom_lists,
+    email_verification,
+    follow,
+    game,
+    itch_account,
+    password_reset,
+    patch_note,
+    steam_account,
+    tierlist,
+    user,
+    user_game,
+    user_game_review,
+)
 
 target_metadata = Base.metadata
 

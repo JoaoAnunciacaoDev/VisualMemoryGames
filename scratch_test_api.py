@@ -1,5 +1,5 @@
+
 import requests
-import json
 
 base_url = "http://localhost:8000"
 # Register a test user

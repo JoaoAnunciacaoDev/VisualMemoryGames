@@ -20,6 +20,7 @@ from app.routers.steam import ACTIVE_SYNC_USERS
 from app.schemas.user import (
     DashboardGame,
     DashboardResponse,
+    FeedbackCreate,
     UserCreate,
     UserDeleteRequest,
     UserPasswordChange,
@@ -31,7 +32,7 @@ from app.schemas.user import (
 )
 from app.security import get_current_user
 from app.services.auth_service import get_password_hash, verify_password
-from app.services.email_service import send_verification_email
+from app.services.email_service import send_feedback_email, send_verification_email
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -434,4 +435,21 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
         yearly_platinums=yearly_platinums_list,
         favorite_games=favorite_games_list,
         is_following=is_following_val,
+     )
+
+
+@router.post("/feedback", status_code=status.HTTP_200_OK)
+def send_feedback(
+    feedback: FeedbackCreate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+):
+    """Envia um e-mail de feedback usando tarefas em segundo plano."""
+    background_tasks.add_task(
+        send_feedback_email,
+        current_user.email,
+        current_user.username,
+        feedback.title,
+        feedback.description,
     )
+    return {"message": "Feedback enviado com sucesso"}

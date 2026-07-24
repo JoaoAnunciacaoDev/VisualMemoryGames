@@ -20,10 +20,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 import json
 
+
 def upgrade() -> None:
     """Upgrade schema."""
     conn = op.get_bind()
-    
+
     # Tabela temporária para ler/escrever os dados
     games_table = sa.Table(
         'games',
@@ -32,30 +33,30 @@ def upgrade() -> None:
         sa.Column('platforms', sa.String()),
         sa.Column('genres', sa.String())
     )
-    
+
     # Busca e limpa os dados antes de fazer o ALTER
     results = conn.execute(sa.select(games_table.c.id, games_table.c.platforms, games_table.c.genres)).fetchall()
     for row in results:
         game_id, platforms, genres = row
-        
+
         new_platforms = platforms
         new_genres = genres
         changed = False
-        
+
         if platforms and isinstance(platforms, str):
             if platforms.startswith("["):
                 new_platforms = platforms.replace("'", '"')
             else:
                 new_platforms = json.dumps([platforms])
             changed = True
-            
+
         if genres and isinstance(genres, str):
             if genres.startswith("["):
                 new_genres = genres.replace("'", '"')
             else:
                 new_genres = json.dumps([genres])
             changed = True
-            
+
         if changed:
             conn.execute(
                 games_table.update().where(games_table.c.id == game_id).values(

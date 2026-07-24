@@ -1,6 +1,8 @@
 import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from app.models.follow import Follow
 from app.models.user import User
 
@@ -14,7 +16,7 @@ follows = db.query(Follow).all()
 print("All follows:")
 for f in follows:
     print(f"Follower: {f.follower_id}, Following: {f.following_id}")
-    
+
 users = db.query(User).all()
 print("All users:")
 for u in users:

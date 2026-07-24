@@ -87,14 +87,15 @@ export default function Login() {
     return 'Ocorreu um erro no servidor.';
   };
 
-  const handleLogin = async (username: string, password: string) => {
+  const handleLogin = async (username: string, password: string, rememberMe: boolean) => {
     setError('');
     try {
       const params = new URLSearchParams();
       params.append('username', username);
       params.append('password', password);
+      params.append('remember_me', rememberMe.toString());
       const response = await api.post('/login', params);
-      setToken(response.data.access_token);
+      setToken(response.data.access_token, rememberMe);
       navigate('/library');
     } catch (err) {
       setError(parseError(err));

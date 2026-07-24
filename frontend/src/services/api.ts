@@ -3,11 +3,12 @@ import { getToken, clearToken } from './auth';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken();
-  if (token) {
+  if (token && token !== 'session') {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

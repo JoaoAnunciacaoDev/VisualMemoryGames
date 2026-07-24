@@ -69,10 +69,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [token]);
 
-  const logout = useCallback(() => {
-    clearToken();
-    setUserState(null);
-    navigate('/login');
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/logout');
+    } catch (err) {
+      console.error('Erro ao fazer logout no servidor:', err);
+    } finally {
+      clearToken();
+      setUserState(null);
+      navigate('/login');
+    }
   }, [navigate]);
 
   return (

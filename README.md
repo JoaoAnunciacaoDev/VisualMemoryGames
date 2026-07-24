@@ -66,6 +66,11 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
 - ⚙️ **Configurações Flexíveis:**
   - Controle de preferências gerais, incluindo opção para habilitar ou desabilitar o fechamento de modais ao clicar do lado de fora (overlay).
 - 🏆 **Tier Lists:** Criação de Tier Lists com sistema intuitivo de Drag & Drop.
+- 💬 **Modal de Feedback:**
+  - Botão de feedback integrado de forma reativa no rodapé (Footer).
+  - Modal dinâmico com título e descrição para envio de feedback.
+  - Confirmação de segurança via `ConfirmModal` antes do envio.
+  - Envio de e-mail assíncrono em segundo plano (Background Tasks) para o endereço administrativo configurado.
 
 ---
 

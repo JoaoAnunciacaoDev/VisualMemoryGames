@@ -39,11 +39,8 @@
   color: var(--primary);
   font-size: var(--font-size-sm);
   text-align: right;
-  align-self: flex-end;
   cursor: pointer;
   padding: 0;
-  margin-top: -5px;
-  margin-bottom: var(--gap-sm);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
@@ -51,6 +48,32 @@
 .forgotPasswordButton:hover {
   color: var(--primary-hover);
   text-decoration: underline;
+}
+
+.loginOptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -5px;
+  margin-bottom: var(--gap-sm);
+  width: 100%;
+}
+
+.rememberMeLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs, 6px);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.rememberMeCheckbox {
+  cursor: pointer;
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
 }
 
 .resendButton {

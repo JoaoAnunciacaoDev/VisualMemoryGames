@@ -7,7 +7,7 @@ import PageTitle from '@/components/Shared/PageTitle/PageTitle';
 import styles from './AuthForm.module.css';
 
 interface Props {
-  onLogin: (username: string, password: string) => Promise<void>;
+  onLogin: (username: string, password: string, rememberMe: boolean) => Promise<void>;
   onRegisterInitiate: (username: string, email: string, password: string) => Promise<void>;
   onRegisterConfirm: (username: string, email: string, password: string, code: string) => Promise<void>;
   onPasswordResetInitiate: (email: string) => Promise<void>;
@@ -32,6 +32,7 @@ export default function AuthForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
@@ -67,7 +68,7 @@ export default function AuthForm({
 
     try {
       if (step === 'login') {
-        await onLogin(username, password);
+        await onLogin(username, password, rememberMe);
       } else if (step === 'register') {
         await onRegisterInitiate(username, email, password);
         setStep('verify');
@@ -161,17 +162,29 @@ export default function AuthForm({
               disabled={isSubmitting}
             />
             {step === 'login' && (
-              <button
-                type="button"
-                className={styles.forgotPasswordButton}
-                onClick={() => {
-                  clearError();
-                  setStep('reset_password_initiate');
-                }}
-                disabled={isSubmitting}
-              >
-                Esqueci minha senha
-              </button>
+              <div className={styles.loginOptions}>
+                <label className={styles.rememberMeLabel}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    disabled={isSubmitting}
+                    className={styles.rememberMeCheckbox}
+                  />
+                  Mantenha-me conectado
+                </label>
+                <button
+                  type="button"
+                  className={styles.forgotPasswordButton}
+                  onClick={() => {
+                    clearError();
+                    setStep('reset_password_initiate');
+                  }}
+                  disabled={isSubmitting}
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
             )}
           </>
         )}

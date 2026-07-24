@@ -80,3 +80,41 @@ def test_create_duplicate_user(client):
     )
     assert response.status_code == 400
     assert "já cadastrado" in response.json()["detail"]
+
+
+def test_login_remember_me(client):
+    client.post(
+        "/users/register/initiate",
+        json={
+            "username": "remember",
+            "email": "remember@visualmemory.com",
+            "password": "SenhaSegura_123!",
+        },
+    )
+    client.post(
+        "/users/",
+        json={
+            "username": "remember",
+            "email": "remember@visualmemory.com",
+            "password": "SenhaSegura_123!",
+            "code": "123456",
+        },
+    )
+
+    # 1. Test remember_me = True (should set Max-Age to 30 days)
+    response_true = client.post(
+        "/login",
+        data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "true"}
+    )
+    assert response_true.status_code == 200
+    set_cookie_true = response_true.headers.get("set-cookie", "")
+    assert "Max-Age=2592000" in set_cookie_true or "max-age=2592000" in set_cookie_true
+
+    # 2. Test remember_me = False (should set transient session cookie, no Max-Age)
+    response_false = client.post(
+        "/login",
+        data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "false"}
+    )
+    assert response_false.status_code == 200
+    set_cookie_false = response_false.headers.get("set-cookie", "")
+    assert "Max-Age" not in set_cookie_false and "max-age" not in set_cookie_false

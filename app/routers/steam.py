@@ -497,7 +497,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                             context=user_game.status,
                         )
                     )
-                if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
+                if old_status != "Platinado" and user_game.status == "Platinado":
                     db.add(
                         Activity(
                             user_id=str(account.user_id),
@@ -505,6 +505,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                             action_type="PLATINUM",
                         )
                     )
+                if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
                     from app.services.custom_list_service import sync_auto_list
                     sync_auto_list(
                         user_id=str(account.user_id),

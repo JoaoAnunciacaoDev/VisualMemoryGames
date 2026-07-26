@@ -220,7 +220,6 @@ def update_user_game(
 
     old_status = db_user_game.status
     old_rating = db_user_game.rating
-    old_platinum = db_user_game.platinum_at
 
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
@@ -275,7 +274,7 @@ def update_user_game(
                 context=rating_context,
             )
         )
-    if old_platinum != db_user_game.platinum_at and db_user_game.platinum_at is not None:
+    if old_status != "Platinado" and db_user_game.status == "Platinado":
         db.add(
             Activity(
                 user_id=str(current_user.id), game_id=db_user_game.game_id, action_type="PLATINUM"

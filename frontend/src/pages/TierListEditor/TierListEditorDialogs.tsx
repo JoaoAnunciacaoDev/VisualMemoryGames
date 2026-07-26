@@ -6,10 +6,12 @@ interface Props {
   existingGameIds: Set<string>;
   removeGameConfirm: { isOpen: boolean; target: string | null; close: () => void };
   removeTierConfirm: { isOpen: boolean; target: string | null; close: () => void };
+  privacyConfirm: { isOpen: boolean; target: boolean | null; close: () => void };
   onAddGame: (game: { id: string; title: string; coverUrl: string | null }) => void;
   onCloseSearchModal: () => void;
   onRemoveGame: (gameId: string) => void;
   onRemoveTier: (tierId: string) => void;
+  onTogglePrivacy: (newIsPublic: boolean) => void;
 }
 
 export default function TierListEditorDialogs({
@@ -17,10 +19,12 @@ export default function TierListEditorDialogs({
   existingGameIds,
   removeGameConfirm,
   removeTierConfirm,
+  privacyConfirm,
   onAddGame,
   onCloseSearchModal,
   onRemoveGame,
   onRemoveTier,
+  onTogglePrivacy,
 }: Props) {
   return (
     <>
@@ -58,6 +62,23 @@ export default function TierListEditorDialogs({
           removeTierConfirm.close();
         }}
         onCancel={removeTierConfirm.close}
+      />
+
+      <ConfirmModal
+        isOpen={privacyConfirm.isOpen}
+        title="Alterar Privacidade"
+        message={
+          privacyConfirm.target
+            ? "Tem certeza que deseja tornar esta Tier List pública? Ela ficará visível para outros usuários."
+            : "Tem certeza que deseja tornar esta Tier List privada? Apenas você poderá visualizá-la."
+        }
+        confirmText="Sim, alterar"
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (privacyConfirm.target !== null) onTogglePrivacy(privacyConfirm.target);
+          privacyConfirm.close();
+        }}
+        onCancel={privacyConfirm.close}
       />
     </>
   );

@@ -37,12 +37,28 @@ def create_tierlist(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    new_tierlist = TierList(user_id=current_user.id, title=tierlist.title)
+    new_tierlist = TierList(
+        user_id=current_user.id,
+        title=tierlist.title,
+        is_public=tierlist.is_public,
+    )
     db.add(new_tierlist)
     db.commit()
     db.refresh(new_tierlist)
 
     create_default_categories(str(new_tierlist.id), db)
+
+    # Registo de atividade para criação de Tier List (apenas se for pública)
+    if new_tierlist.is_public:
+        from app.models.activity import Activity
+        activity = Activity(
+            user_id=str(current_user.id),
+            game_id=None,
+            action_type="CREATED_TIERLIST",
+            tierlist_id=str(new_tierlist.id)
+        )
+        db.add(activity)
+        db.commit()
 
     db.refresh(new_tierlist)
     return new_tierlist
@@ -58,18 +74,19 @@ def get_my_tierlists(db: Session = Depends(get_db), current_user: User = Depends
 def get_user_tierlists(
     user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    """Busca todas as Tier Lists de um usuário. Apenas o próprio dono pode ver."""
-    if str(user_id) != str(current_user.id):
-        raise HTTPException(status_code=403, detail="Sem permissão para ver estas tier lists.")
+    """Busca as Tier Lists de um usuário.
 
-    tierlists = (
-        db.query(TierList)
-        .options(
-            joinedload(TierList.categories).joinedload(TierCategory.items).joinedload(TierItem.game)
-        )
-        .filter(TierList.user_id == user_id)
-        .all()
+    O próprio dono vê todas; outros usuários vêem apenas as públicas.
+    """
+    query = db.query(TierList).options(
+        joinedload(TierList.categories).joinedload(TierCategory.items).joinedload(TierItem.game)
     )
+    if str(user_id) != str(current_user.id):
+        query = query.filter(TierList.user_id == user_id, TierList.is_public)
+    else:
+        query = query.filter(TierList.user_id == user_id)
+
+    tierlists = query.all()
     for tl in tierlists:
         enrich_tierlist_with_custom_covers(tl, db)
     return tierlists
@@ -91,7 +108,7 @@ def get_tierlist(
     if not tierlist:
         raise HTTPException(status_code=404, detail="Tier List não encontrada.")
 
-    if str(tierlist.user_id) != str(current_user.id):
+    if not tierlist.is_public and str(tierlist.user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão para ver esta tier list.")
 
     enrich_tierlist_with_custom_covers(tierlist, db)
@@ -107,10 +124,38 @@ def update_tierlist(
     current_user: User = Depends(get_current_user),
 ):
     tierlist: TierList = get_owned_or_raise(TierList, tierlist_id, str(current_user.id), db)
+    old_title = tierlist.title
+    old_is_public = getattr(tierlist, "is_public", True)
+
     if data.title is not None:
         tierlist.title = data.title
+    if data.is_public is not None:
+        tierlist.is_public = data.is_public
+
     db.commit()
     db.refresh(tierlist)
+
+    from app.models.activity import Activity
+    if not tierlist.is_public:
+        # Se a tier list passou a ser privada, deleta todas as atividades relacionadas a ela
+        db.query(Activity).filter(
+            Activity.tierlist_id == tierlist.id
+        ).delete(synchronize_session=False)
+        db.commit()
+    else:
+        # Se a tier list é/continua pública e foi atualizada relevante (título ou se tornou pública)
+        has_new_title = data.title is not None and old_title != data.title
+        has_visibility_changed = data.is_public is not None and not old_is_public
+        if has_new_title or has_visibility_changed:
+            activity = Activity(
+                user_id=str(current_user.id),
+                game_id=None,
+                action_type="UPDATED_TIERLIST",
+                tierlist_id=str(tierlist.id),
+            )
+            db.add(activity)
+            db.commit()
+
     return tierlist
 
 

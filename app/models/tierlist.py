@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Boolean, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -21,6 +21,7 @@ class TierList(Base):
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="tier_lists")
     categories: Mapped[List["TierCategory"]] = relationship(

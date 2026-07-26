@@ -13,6 +13,7 @@ import {
   updateTierListCategory,
   updateTierListTitle,
 } from '@/services/tierlistEditor';
+import api from '@/services/api';
 
 import { useToast } from '@/hooks/useToast';
 
@@ -34,6 +35,7 @@ export function useTierListEditor(
   const onReload = options?.onReload;
 
   const [title, setTitle] = useState(initialData?.title ?? '');
+  const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? true);
   const [tiers, setTiers] = useState<Tier[]>(initialData?.tiers ?? []);
   const [games, setGames] = useState<Record<string, GameItem[]>>(initialData?.games ?? {});
   const [poolCategoryId, setPoolCategoryId] = useState<string | null>(initialData?.poolCategoryId ?? null);
@@ -43,6 +45,7 @@ export function useTierListEditor(
   if (initialData !== prevInitialData) {
     setPrevInitialData(initialData);
     setTitle(initialData?.title ?? '');
+    setIsPublic(initialData?.isPublic ?? true);
     setTiers(initialData?.tiers ?? []);
     setGames(initialData?.games ?? {});
     setPoolCategoryId(initialData?.poolCategoryId ?? null);
@@ -60,6 +63,18 @@ export function useTierListEditor(
       setTitle(newTitle);
     } catch {
       showToast('Erro ao salvar título.', 'error');
+    }
+  }, [showToast, tierListId]);
+
+  const saveIsPublic = useCallback(async (newIsPublic: boolean) => {
+    if (!tierListId) return;
+
+    try {
+      await api.put(`/tierlists/${tierListId}`, { is_public: newIsPublic });
+      setIsPublic(newIsPublic);
+      showToast(newIsPublic ? 'Tier list agora é pública!' : 'Tier list agora é privada!', 'success');
+    } catch {
+      showToast('Erro ao salvar privacidade.', 'error');
     }
   }, [showToast, tierListId]);
 
@@ -233,6 +248,9 @@ export function useTierListEditor(
   return {
     title,
     setTitle,
+    isPublic,
+    setIsPublic,
+    saveIsPublic,
     tiers,
     setTiers,
     games,

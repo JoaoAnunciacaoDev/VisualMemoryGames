@@ -121,11 +121,12 @@ class TierListBase(BaseModel):
 
 
 class TierListCreate(TierListBase):
-    pass
+    is_public: bool = True
 
 
 class TierListUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    is_public: Optional[bool] = None
 
     @field_validator("title")
     @classmethod
@@ -136,6 +137,7 @@ class TierListUpdate(BaseModel):
 class TierListResponse(TierListBase):
     id: str
     user_id: str
+    is_public: bool
 
     categories: List[TierCategoryResponse] = []
     model_config = ConfigDict(from_attributes=True)

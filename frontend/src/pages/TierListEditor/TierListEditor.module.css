@@ -211,3 +211,29 @@
 .tierLabelWrapper {
   touch-action: none;
 }
+
+/* ===== Ações do cabeçalho ===== */
+.headerActions {
+  display: flex;
+  gap: var(--gap-sm);
+  align-items: center;
+}
+
+.privacyButton {
+  padding: 10px 18px;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .headerActions {
+    width: 100%;
+    flex-direction: column;
+    gap: var(--gap-xs);
+  }
+  
+  .privacyButton {
+    width: 100%;
+    justify-content: center;
+  }
+}

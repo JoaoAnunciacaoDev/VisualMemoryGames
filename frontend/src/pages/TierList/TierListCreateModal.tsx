@@ -10,6 +10,7 @@ export interface TierListCreateValues {
   gameSource: GameSource;
   selectedStatus: string;
   selectedListId: string;
+  isPublic: boolean;
 }
 
 interface Props {
@@ -33,6 +34,7 @@ export default function TierListCreateModal({
   const [gameSource, setGameSource] = useState<GameSource>('empty');
   const [selectedStatus, setSelectedStatus] = useState('Zerado');
   const [selectedListId, setSelectedListId] = useState('');
+  const [isPublic, setIsPublic] = useState(true);
 
   const handleClose = () => {
     onClose();
@@ -40,6 +42,7 @@ export default function TierListCreateModal({
     setGameSource('empty');
     setSelectedStatus('Zerado');
     setSelectedListId('');
+    setIsPublic(true);
   };
 
   const handleCreate = () => {
@@ -50,6 +53,7 @@ export default function TierListCreateModal({
       gameSource,
       selectedStatus,
       selectedListId,
+      isPublic,
     });
 
     handleClose();
@@ -121,6 +125,16 @@ export default function TierListCreateModal({
             </select>
           </label>
         )}
+
+        <label className={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className={styles.checkbox}
+          />
+          <span>Tornar esta Tier List pública</span>
+        </label>
 
         <div className={styles.modalActions}>
           <Button type="button" variant="ghost" onClick={handleClose}>

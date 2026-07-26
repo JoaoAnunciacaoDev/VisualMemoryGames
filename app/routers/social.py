@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.social import FeedResponse, UserPublicProfile
+from app.schemas.social import ActivityResponse, FeedResponse, UserPublicProfile
 from app.security import get_current_user
 from app.services import social_service
 
@@ -21,6 +21,15 @@ def get_my_feed(
 ):
     """Retorna as atividades dos usuários seguidos e lançamentos da semana."""
     return social_service.get_feed(current_user, db, year=year, month=month)
+
+
+@router.get("/activities/me", response_model=List[ActivityResponse])
+def get_my_activities(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retorna a lista de atividades do próprio usuário logado."""
+    return social_service.get_my_activities(current_user, db)
 
 
 @router.get("/users/search", response_model=List[UserPublicProfile])

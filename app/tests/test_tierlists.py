@@ -31,14 +31,37 @@ def test_get_my_tierlists(auth_headers, client):
 
 
 def test_cannot_see_other_user_tierlists(auth_headers, second_user_headers, client):
-    """Um utilizador não pode ver as tierlists de outro."""
-    client.post("/tierlists/", json={"title": "Minha TierList"}, headers=auth_headers)
+    """Um utilizador não pode ver as tierlists privadas de outro."""
+    # Criar uma tierlist privada
+    client.post(
+        "/tierlists/", json={"title": "TierList Privada", "is_public": False}, headers=auth_headers
+    )
+
+    # Criar uma tierlist pública
+    client.post(
+        "/tierlists/", json={"title": "TierList Publica", "is_public": True}, headers=auth_headers
+    )
 
     me = client.get("/users/me", headers=auth_headers)
     tester_id = me.json()["id"]
 
+    # Outro usuário busca as tierlists deste usuário
     response = client.get(f"/tierlists/user/{tester_id}", headers=second_user_headers)
-    assert response.status_code == 403
+    assert response.status_code == 200
+
+    # Ele deve ver apenas a pública, não a privada
+    titles = [tl["title"] for tl in response.json()]
+    assert "TierList Publica" in titles
+    assert "TierList Privada" not in titles
+
+    # Tenta acessar diretamente a tierlist privada de outro
+    priv_resp = client.post(
+        "/tierlists/", json={"title": "Privada Direta", "is_public": False}, headers=auth_headers
+    )
+    priv_id = priv_resp.json()["id"]
+
+    response_priv = client.get(f"/tierlists/{priv_id}", headers=second_user_headers)
+    assert response_priv.status_code == 403
 
 
 def test_update_tierlist(auth_headers, client):

@@ -71,6 +71,7 @@ export interface TierCategory {
 export interface TierListSummary {
   id: string;
   title: string;
+  is_public: boolean;
   categories: TierCategory[];
 }
 

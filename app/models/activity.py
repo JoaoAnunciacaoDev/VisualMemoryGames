@@ -14,10 +14,17 @@ class Activity(Base):
         String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     game_id: Mapped[str] = mapped_column(
-        String, ForeignKey("games.id", ondelete="CASCADE"), nullable=False
+        String, ForeignKey("games.id", ondelete="CASCADE"), nullable=True
+    )
+    target_user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    tierlist_id: Mapped[str] = mapped_column(
+        String, ForeignKey("tierlists.id", ondelete="CASCADE"), nullable=True, index=True
     )
 
-    # action_type could be 'ADDED', 'UPDATED_STATUS', 'RATED', 'PLATINUM'
+    # action_type could be 'ADDED', 'UPDATED_STATUS', 'RATED', 'PLATINUM', 'FOLLOW',
+    # 'CREATED_TIERLIST', 'UPDATED_TIERLIST'
     action_type: Mapped[str] = mapped_column(String, nullable=False)
 
     # Optional context (e.g., 'Jogando', 'Finalizado' if action_type is 'UPDATED_STATUS')
@@ -27,5 +34,15 @@ class Activity(Base):
         DateTime, default=lambda: datetime.now(timezone.utc), index=True
     )
 
-    user = relationship("User", backref=backref("activities", cascade="all, delete-orphan"))
+    user = relationship(
+        "User",
+        foreign_keys=[user_id],
+        backref=backref("activities", cascade="all, delete-orphan"),
+    )
+    target_user = relationship(
+        "User", foreign_keys=[target_user_id], backref=backref("targeted_activities")
+    )
     game = relationship("Game", backref=backref("activities", cascade="all, delete-orphan"))
+    tierlist = relationship(
+        "TierList", foreign_keys=[tierlist_id], backref=backref("tierlist_activities")
+    )

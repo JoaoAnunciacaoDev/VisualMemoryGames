@@ -57,7 +57,10 @@ export default function FeedbackModal({ onClose }: Props) {
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <label className={styles.label}>
-              Título
+              <div className={styles.labelHeader}>
+                <span>Título</span>
+                <span className={styles.charCount}>{title.length}/100</span>
+              </div>
               <Input
                 type="text"
                 placeholder="Ex: Sugestão para novas listas, Erro de login"
@@ -65,12 +68,16 @@ export default function FeedbackModal({ onClose }: Props) {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 disabled={isSubmitting}
+                maxLength={100}
                 autoFocus
               />
             </label>
 
             <label className={styles.label}>
-              Descrição
+              <div className={styles.labelHeader}>
+                <span>Descrição</span>
+                <span className={styles.charCount}>{description.length}/2000</span>
+              </div>
               <textarea
                 className={styles.textarea}
                 placeholder="Descreva seu feedback em detalhes..."
@@ -79,6 +86,7 @@ export default function FeedbackModal({ onClose }: Props) {
                 required
                 disabled={isSubmitting}
                 rows={6}
+                maxLength={2000}
               />
             </label>
 

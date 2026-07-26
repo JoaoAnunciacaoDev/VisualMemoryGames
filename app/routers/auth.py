@@ -88,7 +88,7 @@ def login(
         value=access_token,
         httponly=True,
         max_age=max_age,
-        expires=max_age,
+        expires=datetime.now(timezone.utc) + expires_delta if remember_me else None,
         samesite="none" if is_prod else "lax",
         secure=is_prod,
     )

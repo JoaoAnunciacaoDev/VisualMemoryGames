@@ -171,6 +171,15 @@ def follow_user(user_id: str, current_user: User, db: Session) -> bool:
     if not existing:
         follow = Follow(follower_id=current_user.id, following_id=user_id)
         db.add(follow)
+
+        # Gerar atividade de seguimento
+        activity = Activity(
+            user_id=str(current_user.id),
+            game_id=None,
+            action_type="FOLLOW",
+            target_user_id=str(user_id)
+        )
+        db.add(activity)
         db.commit()
     return True
 
@@ -185,8 +194,100 @@ def unfollow_user(user_id: str, current_user: User, db: Session) -> bool:
 
     if existing:
         db.delete(existing)
+        # Deleta atividades de seguimento correspondentes
+        db.query(Activity).filter(
+            Activity.user_id == current_user.id,
+            Activity.target_user_id == user_id,
+            Activity.action_type == "FOLLOW"
+        ).delete(synchronize_session=False)
         db.commit()
     return True
+
+
+def format_activities(
+    raw_activities: List[Activity], db: Session, current_user: User
+) -> List[ActivityResponse]:
+    import json
+
+    from app.models.user_game import UserGame
+
+    # Pre-fetch user games for games mentioned in activities
+    user_game_keys = {(act.user_id, act.game_id) for act in raw_activities if act.game_id}
+
+    user_games_map = {}
+    if user_game_keys:
+        user_ids = {u_id for u_id, g_id in user_game_keys}
+        game_ids = {g_id for u_id, g_id in user_game_keys}
+        ugs = (
+            db.query(UserGame)
+            .filter(UserGame.user_id.in_(user_ids), UserGame.game_id.in_(game_ids))
+            .all()
+        )
+        user_games_map = {(ug.user_id, ug.game_id): ug for ug in ugs}
+
+    activities_res = []
+    for act in raw_activities:
+        game_res = None
+        if act.game_id and act.game:
+            ug = user_games_map.get((act.user_id, act.game_id))
+            cover_url = ug.custom_cover_url if (ug and ug.custom_cover_url) else act.game.cover_url
+            game_res = GameResponse(
+                id=act.game.id,
+                external_id=act.game.external_id,
+                title=act.game.title,
+                cover_url=cover_url,
+                release_year=act.game.release_year,
+                platforms=safe_load_json_list(act.game.platforms),
+                genres=safe_load_json_list(act.game.genres),
+            )
+
+        target_user_res = None
+        if act.target_user_id and act.target_user:
+            target_user_res = get_user_profile(str(act.target_user_id), current_user, db)
+
+        tierlist_id = str(act.tierlist_id) if act.tierlist_id else None
+        tierlist_title = act.tierlist.title if (act.tierlist_id and act.tierlist) else None
+
+        commentary = None
+        context_val = act.context
+        if act.action_type == "RATED" and context_val:
+            if "{" in context_val:
+                try:
+                    parsed = json.loads(context_val)
+                    if isinstance(parsed, dict):
+                        context_val = str(parsed.get("rating"))
+                        commentary = parsed.get("notes")
+                except Exception:
+                    pass
+
+        activities_res.append(
+            ActivityResponse(
+                id=act.id,
+                user_id=act.user.id,
+                username=act.user.username,
+                game=game_res,
+                action_type=act.action_type,
+                context=context_val,
+                created_at=act.created_at,
+                target_user=target_user_res,
+                tierlist_id=tierlist_id,
+                tierlist_title=tierlist_title,
+                commentary=commentary,
+            )
+        )
+    return activities_res
+
+
+def get_my_activities(current_user: User, db: Session) -> List[ActivityResponse]:
+    """Busca as atividades do próprio usuário logado."""
+    raw_activities = (
+        db.query(Activity)
+        .filter(Activity.user_id == current_user.id)
+        .order_by(Activity.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return format_activities(raw_activities, db, current_user)
 
 
 def get_feed(
@@ -206,8 +307,6 @@ def get_feed(
     activities = []
     if following_ids:
         from datetime import datetime, timezone
-
-        from app.models.user_game import UserGame
 
         now = datetime.now(timezone.utc)
         target_year = year if year is not None else now.year
@@ -230,38 +329,7 @@ def get_feed(
             .all()
         )
 
-        game_ids = [act.game_id for act in raw_activities]
-        ugs = (
-            db.query(UserGame)
-            .filter(UserGame.user_id.in_(following_ids), UserGame.game_id.in_(game_ids))
-            .all()
-        )
-        user_games_map = {(ug.user_id, ug.game_id): ug for ug in ugs}
-
-        for act in raw_activities:
-            game = act.game
-            ug = user_games_map.get((act.user_id, act.game_id))
-            cover_url = ug.custom_cover_url if (ug and ug.custom_cover_url) else game.cover_url
-
-            activities.append(
-                ActivityResponse(
-                    id=act.id,
-                    user_id=act.user.id,
-                    username=act.user.username,
-                    game=GameResponse(
-                        id=game.id,
-                        external_id=game.external_id,
-                        title=game.title,
-                        cover_url=cover_url,
-                        release_year=game.release_year,
-                        platforms=safe_load_json_list(game.platforms),
-                        genres=safe_load_json_list(game.genres),
-                    ),
-                    action_type=act.action_type,
-                    context=act.context,
-                    created_at=act.created_at,
-                )
-            )
+        activities = format_activities(raw_activities, db, current_user)
 
     # 3. Buscar lançamentos do RAWG
     rawg_games = get_weekly_releases_rawg()

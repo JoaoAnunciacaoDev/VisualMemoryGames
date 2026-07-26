@@ -61,7 +61,7 @@ export default function TierListEditor() {
   }, [loadEditor]);
 
   const {
-    title, setTitle, tiers, setTiers, games, setGames,
+    title, setTitle, isPublic, saveIsPublic, tiers, setTiers, games, setGames,
     existingGameIds, saveTitle, addTier, removeTier,
     updateTierLabel, updateTierColor, addGameToPool,
     removeGame, moveGame, reorderTier,
@@ -79,6 +79,7 @@ export default function TierListEditor() {
 
   const removeGameConfirm = useConfirmAction<string>();
   const removeTierConfirm = useConfirmAction<string>();
+  const privacyConfirm = useConfirmAction<boolean>();
 
   // --- Handlers de arrasto de tiers ---
   const handleTierDragStart = useCallback(() => {
@@ -152,6 +153,8 @@ export default function TierListEditor() {
         onTitleChange={setTitle}
         onTitleSave={handleTitleSave}
         onAddGame={() => setShowSearchModal(true)}
+        isPublic={isPublic}
+        onTogglePrivacy={() => privacyConfirm.open(!isPublic)}
       />
 
       <TierListEditorBoard
@@ -183,6 +186,7 @@ export default function TierListEditor() {
         existingGameIds={existingGameIds}
         removeGameConfirm={removeGameConfirm}
         removeTierConfirm={removeTierConfirm}
+        privacyConfirm={privacyConfirm}
         onAddGame={async (game) => {
           await addGameToPool(game);
           setShowSearchModal(false);
@@ -194,6 +198,7 @@ export default function TierListEditor() {
         onRemoveTier={async (tierId) => {
           await removeTier(tierId);
         }}
+        onTogglePrivacy={saveIsPublic}
       />
     </div>
   );

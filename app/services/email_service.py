@@ -27,7 +27,7 @@ def _send_email(
     email_type: str = "verificação",
 ):
     if (
-        os.getenv("ENVIRONMENT", "development") == "development"
+        os.getenv("ENVIRONMENT", "development") in ("development", "testing")
         and not os.getenv("RENDER")
     ):
         logger.info(f"[MOCK EMAIL] Simulação de Envio de E-mail ({email_type})")

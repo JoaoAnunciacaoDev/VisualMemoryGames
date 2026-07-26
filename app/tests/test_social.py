@@ -175,3 +175,97 @@ def test_get_followers_and_following(client: TestClient, db_session, auth_header
     res_followers_user2 = client.get(f"/social/users/{user2.id}/followers", headers=auth_headers)
     assert res_followers_user2.status_code == 200
     assert res_followers_user2.json()[0]["username"] == "tester"
+
+
+def test_new_activities_and_my_activities_endpoint(client: TestClient, db_session, auth_headers):
+    # 1. Test Follow activity
+    user2 = User(
+        username="targetuser", email="target@example.com", password_hash="123", is_public=True
+    )
+    db_session.add(user2)
+    db_session.commit()
+    db_session.refresh(user2)
+
+    # Follow
+    client.post(f"/social/users/{user2.id}/follow", headers=auth_headers)
+
+    # Check activities/me endpoint
+    resp = client.get("/social/activities/me", headers=auth_headers)
+    assert resp.status_code == 200
+    activities = resp.json()
+    follow_act = next((a for a in activities if a["action_type"] == "FOLLOW"), None)
+    assert follow_act is not None
+    assert follow_act["target_user"]["username"] == "targetuser"
+
+    # Unfollow
+    client.delete(f"/social/users/{user2.id}/follow", headers=auth_headers)
+    resp = client.get("/social/activities/me", headers=auth_headers)
+    activities = resp.json()
+    follow_act = next((a for a in activities if a["action_type"] == "FOLLOW"), None)
+    assert follow_act is None
+
+    # 2. Test TierList activities
+    # Create public tier list
+    tl_resp = client.post(
+        "/tierlists/", json={"title": "Public TL", "is_public": True}, headers=auth_headers
+    )
+    assert tl_resp.status_code == 201
+    tl_id = tl_resp.json()["id"]
+
+    resp = client.get("/social/activities/me", headers=auth_headers)
+    activities = resp.json()
+    create_act = next((a for a in activities if a["action_type"] == "CREATED_TIERLIST"), None)
+    assert create_act is not None
+    assert create_act["tierlist_title"] == "Public TL"
+
+    # Update public tier list
+    client.put(f"/tierlists/{tl_id}", json={"title": "Updated TL"}, headers=auth_headers)
+    resp = client.get("/social/activities/me", headers=auth_headers)
+    activities = resp.json()
+    update_act = next((a for a in activities if a["action_type"] == "UPDATED_TIERLIST"), None)
+    assert update_act is not None
+
+    # Turn private
+    client.put(f"/tierlists/{tl_id}", json={"is_public": False}, headers=auth_headers)
+    resp = client.get("/social/activities/me", headers=auth_headers)
+    activities = resp.json()
+    # Should delete all activities for this tierlist
+    tl_acts = [a for a in activities if a["tierlist_id"] == tl_id]
+    assert len(tl_acts) == 0
+
+    # 3. Test RATED activity with notes (commentary)
+    # Create game
+    game = Game(external_id=9999, title="Rated Game")
+    db_session.add(game)
+    db_session.commit()
+    db_session.refresh(game)
+
+    # Post add game first (no rating initially)
+    add_resp = client.post(
+        "/user-games/",
+        json={
+            "game_id": game.id,
+            "status": "Quero Jogar"
+        },
+        headers=auth_headers
+    )
+    assert add_resp.status_code == 201
+    ug_id = add_resp.json()["id"]
+
+    # Rate and add review notes via PUT
+    client.put(
+        f"/user-games/{ug_id}",
+        json={
+            "status": "Zerado",
+            "rating": 5,
+            "notes": "Jogo maravilhoso!"
+        },
+        headers=auth_headers
+    )
+
+    resp = client.get("/social/activities/me", headers=auth_headers)
+    activities = resp.json()
+    rated_act = next((a for a in activities if a["action_type"] == "RATED"), None)
+    assert rated_act is not None
+    assert rated_act["context"] == "5.0"
+    assert rated_act["commentary"] == "Jogo maravilhoso!"

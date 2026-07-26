@@ -15,14 +15,27 @@ interface Game {
   genres: string[];
 }
 
+interface UserProfile {
+  id: string;
+  username: string;
+  is_public: boolean;
+  followers_count: number;
+  following_count: number;
+  is_following: boolean | null;
+}
+
 interface Activity {
   id: number;
   user_id: string;
   username: string;
-  game: Game;
+  game: Game | null;
   action_type: string;
   context: string | null;
   created_at: string;
+  target_user?: UserProfile | null;
+  tierlist_id?: string | null;
+  tierlist_title?: string | null;
+  commentary?: string | null;
 }
 
 interface RawgRelease {
@@ -37,18 +50,10 @@ interface FeedData {
   rawg_releases: RawgRelease[];
 }
 
-interface UserProfile {
-  id: string;
-  username: string;
-  is_public: boolean;
-  followers_count: number;
-  following_count: number;
-  is_following: boolean | null;
-}
-
 const Social: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"feed" | "search">("feed");
+  const [activeTab, setActiveTab] = useState<"feed" | "my-activities" | "search">("feed");
   const [feedData, setFeedData] = useState<FeedData | null>(null);
+  const [myActivities, setMyActivities] = useState<Activity[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -88,10 +93,24 @@ const Social: React.FC = () => {
     }
   };
 
+  const loadMyActivities = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/social/activities/me');
+      setMyActivities(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "feed") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadFeed(selectedMonth, selectedYear);
+    } else if (activeTab === "my-activities") {
+      loadMyActivities();
     }
   }, [activeTab, selectedMonth, selectedYear]);
 
@@ -152,6 +171,88 @@ const Social: React.FC = () => {
     }
   };
 
+  const renderActivityHeader = (act: Activity) => {
+    const userLink = (
+      <span className={styles.username}>
+        <Link to={`/profile/${act.username}`}>{act.username}</Link>
+      </span>
+    );
+
+    if (act.action_type === "FOLLOW" && act.target_user) {
+      return (
+        <>
+          {userLink} começou a seguir{" "}
+          <span className={styles.targetUsername}>
+            <Link to={`/profile/${act.target_user.username}`}>{act.target_user.username}</Link>
+          </span>
+        </>
+      );
+    }
+
+    if (act.action_type === "CREATED_TIERLIST") {
+      return (
+        <>
+          {userLink} criou a Tier List{" "}
+          <span className={styles.tierlistLink}>
+            <Link to={`/tierlists/${act.tierlist_id}`}>{act.tierlist_title}</Link>
+          </span>
+        </>
+      );
+    }
+
+    if (act.action_type === "UPDATED_TIERLIST") {
+      return (
+        <>
+          {userLink} atualizou a Tier List{" "}
+          <span className={styles.tierlistLink}>
+            <Link to={`/tierlists/${act.tierlist_id}`}>{act.tierlist_title}</Link>
+          </span>
+        </>
+      );
+    }
+
+    return (
+      <>
+        {userLink} <span className={styles.actionText}>{renderActionText(act)}</span>{" "}
+        <span className={styles.gameTitle}>{act.game?.title}</span>
+      </>
+    );
+  };
+
+  const renderActivityList = (activities: Activity[], emptyMessage: string) => {
+    if (activities.length === 0) {
+      return <p className={styles.empty}>{emptyMessage}</p>;
+    }
+
+    return (
+      <div className={styles.activityList}>
+        {activities.map((act) => (
+          <div key={act.id} className={styles.activityCard}>
+            <div className={styles.actHeader}>
+              {renderActivityHeader(act)}
+            </div>
+            {act.game && act.game.cover_url && (
+              <img
+                src={act.game.cover_url}
+                alt={act.game.title}
+                className={styles.actCover}
+              />
+            )}
+            {act.action_type === "RATED" && act.commentary && (
+              <div className={styles.commentaryBox}>
+                <span className={styles.commentaryQuote}>“</span>
+                <p className={styles.commentaryText}>{act.commentary}</p>
+              </div>
+            )}
+            <div className={styles.actDate}>
+              {formatDateTime(act.created_at)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className={styles.socialContainer}>
       <h1 className={styles.pageTitle}>Social</h1>
@@ -162,6 +263,12 @@ const Social: React.FC = () => {
           onClick={() => setActiveTab("feed")}
         >
           Feed de Notícias
+        </button>
+        <button
+          className={`${styles.tabBtn} ${activeTab === "my-activities" ? styles.active : ""}`}
+          onClick={() => setActiveTab("my-activities")}
+        >
+          Minhas Atividades
         </button>
         <button
           className={`${styles.tabBtn} ${activeTab === "search" ? styles.active : ""}`}
@@ -201,32 +308,7 @@ const Social: React.FC = () => {
                 </div>
               </div>
               {loading && <Loader message="Carregando feed..." />}
-              {!loading && feedData?.activities.length === 0 && (
-                <p className={styles.empty}>Nenhuma atividade recente. Siga mais pessoas!</p>
-              )}
-              <div className={styles.activityList}>
-                {feedData?.activities.map((act) => (
-                  <div key={act.id} className={styles.activityCard}>
-                    <div className={styles.actHeader}>
-                      <span className={styles.username}>
-                        <Link to={`/profile/${act.username}`}>{act.username}</Link>
-                      </span>{" "}
-                      <span className={styles.actionText}>{renderActionText(act)}</span>{" "}
-                      <span className={styles.gameTitle}>{act.game.title}</span>
-                    </div>
-                    {act.game.cover_url && (
-                      <img
-                        src={act.game.cover_url}
-                        alt={act.game.title}
-                        className={styles.actCover}
-                      />
-                    )}
-                    <div className={styles.actDate}>
-                      {formatDateTime(act.created_at)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {!loading && renderActivityList(feedData?.activities || [], "Nenhuma atividade recente. Siga mais pessoas!")}
             </div>
 
             <div className={styles.sidebarFeed}>
@@ -247,6 +329,16 @@ const Social: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "my-activities" && (
+          <div className={styles.myActivitiesLayout}>
+            <div className={styles.mainFeed}>
+              <h2>Minhas Atividades</h2>
+              {loading && <Loader message="Carregando minhas atividades..." />}
+              {!loading && renderActivityList(myActivities, "Você ainda não tem nenhuma atividade registrada.")}
             </div>
           </div>
         )}

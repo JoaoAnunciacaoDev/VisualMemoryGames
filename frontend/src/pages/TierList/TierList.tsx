@@ -70,10 +70,11 @@ export default function TierLists() {
     gameSource,
     selectedStatus,
     selectedListId,
+    isPublic,
   }: TierListCreateValues) => {
     setIsCreating(true);
     try {
-      const response = await api.post('/tierlists/', { title });
+      const response = await api.post('/tierlists/', { title, is_public: isPublic });
       const tierlistId = response.data.id;
 
       let gamesToAdd: { id: string; title: string; coverUrl: string | null }[] = [];

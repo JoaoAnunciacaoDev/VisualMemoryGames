@@ -19,10 +19,14 @@ class ActivityResponse(BaseModel):
     id: int
     user_id: str
     username: str
-    game: GameResponse
+    game: Optional[GameResponse] = None
     action_type: str
     context: Optional[str] = None
     created_at: datetime
+    target_user: Optional[UserPublicProfile] = None
+    tierlist_id: Optional[str] = None
+    tierlist_title: Optional[str] = None
+    commentary: Optional[str] = None
 
 
 class RawgRelease(BaseModel):

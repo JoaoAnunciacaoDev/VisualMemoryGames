@@ -262,12 +262,17 @@ def update_user_game(
             )
         )
     if old_rating != db_user_game.rating and db_user_game.rating is not None:
+        import json
+        rating_context = json.dumps({
+            "rating": db_user_game.rating,
+            "notes": db_user_game.notes or ""
+        })
         db.add(
             Activity(
                 user_id=str(current_user.id),
                 game_id=db_user_game.game_id,
                 action_type="RATED",
-                context=str(db_user_game.rating),
+                context=rating_context,
             )
         )
     if old_platinum != db_user_game.platinum_at and db_user_game.platinum_at is not None:

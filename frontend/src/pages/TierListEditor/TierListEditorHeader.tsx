@@ -8,6 +8,8 @@ interface Props {
   onTitleChange: (value: string) => void;
   onTitleSave: () => void;
   onAddGame: () => void;
+  isPublic: boolean;
+  onTogglePrivacy: () => void;
 }
 
 export default function TierListEditorHeader({
@@ -17,6 +19,8 @@ export default function TierListEditorHeader({
   onTitleChange,
   onTitleSave,
   onAddGame,
+  isPublic,
+  onTogglePrivacy,
 }: Props) {
   return (
     <div className={styles.header}>
@@ -34,13 +38,22 @@ export default function TierListEditorHeader({
           {title}
         </h2>
       )}
-      <Button
-        variant="primary"
-        className={styles.addGameButton}
-        onClick={onAddGame}
-      >
-        + Adicionar Jogo
-      </Button>
+      <div className={styles.headerActions}>
+        <Button
+          variant={isPublic ? 'secondary' : 'primary'}
+          className={styles.privacyButton}
+          onClick={onTogglePrivacy}
+        >
+          {isPublic ? '🔓 Público' : '🔒 Privado'}
+        </Button>
+        <Button
+          variant="primary"
+          className={styles.addGameButton}
+          onClick={onAddGame}
+        >
+          + Adicionar Jogo
+        </Button>
+      </div>
     </div>
   );
 }

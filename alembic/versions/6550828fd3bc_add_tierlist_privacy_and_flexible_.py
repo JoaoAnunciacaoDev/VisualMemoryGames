@@ -33,7 +33,7 @@ def upgrade() -> None:
         batch_op.create_foreign_key(batch_op.f('fk_activities_tierlist_id_tierlists'), 'tierlists', ['tierlist_id'], ['id'], ondelete='CASCADE')
 
     with op.batch_alter_table('tierlists', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('is_public', sa.Boolean(), nullable=False))
+        batch_op.add_column(sa.Column('is_public', sa.Boolean(), nullable=False, server_default=sa.text('true')))
 
     # ### end Alembic commands ###
 

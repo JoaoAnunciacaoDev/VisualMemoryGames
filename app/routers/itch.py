@@ -186,11 +186,21 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
             user_game = UserGame(
                 user_id=account.user_id,
                 game_id=game_db.id,
+                game=game_db,
                 status="Quero Jogar",  # Valor padrão
                 store="ITCH",
             )
             db.add(user_game)
             new_games_count += 1
+
+            from app.models.activity import Activity
+            db.add(
+                Activity(
+                    user_id=str(account.user_id),
+                    game_id=str(game_db.id),
+                    action_type="ADDED",
+                )
+            )
         else:
             updated_games_count += 1
 

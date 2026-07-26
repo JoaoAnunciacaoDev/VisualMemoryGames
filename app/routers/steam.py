@@ -410,6 +410,8 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
         is_platinized = appid in platinized_game_dates
         is_recent = appid in recent_appids
 
+        from app.models.activity import Activity
+
         if not user_game:
             # Classifica o status inicial:
             # - Se platinou: "Platinado"
@@ -426,6 +428,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             user_game = UserGame(
                 user_id=account.user_id,
                 game_id=game.id,
+                game=game,
                 rating=None,
                 status=status_init,
                 hours_played=hours,
@@ -436,7 +439,36 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             )
             db.add(user_game)
             new_games_count += 1
+
+            # Log ADED activity
+            db.add(
+                Activity(
+                    user_id=str(account.user_id),
+                    game_id=str(game.id),
+                    action_type="ADDED",
+                )
+            )
+            # If platinized at creation, also log PLATINUM and sync to auto-list
+            if status_init == "Platinado":
+                db.add(
+                    Activity(
+                        user_id=str(account.user_id),
+                        game_id=str(game.id),
+                        action_type="PLATINUM",
+                    )
+                )
+                from app.services.custom_list_service import sync_auto_list
+                sync_auto_list(
+                    user_id=str(account.user_id),
+                    user_game=user_game,
+                    field_name="platinum_at",
+                    list_type="platinized_year",
+                    db=db,
+                )
         else:
+            old_status = user_game.status
+            old_platinum = user_game.platinum_at
+
             has_changes = False
             # Se platinou na Steam e o status local não reflete isso ou a data está em branco
             if is_platinized:
@@ -456,6 +488,31 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
 
             if has_changes:
                 updated_games_count += 1
+                if old_status != user_game.status:
+                    db.add(
+                        Activity(
+                            user_id=str(account.user_id),
+                            game_id=str(game.id),
+                            action_type="UPDATED_STATUS",
+                            context=user_game.status,
+                        )
+                    )
+                if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
+                    db.add(
+                        Activity(
+                            user_id=str(account.user_id),
+                            game_id=str(game.id),
+                            action_type="PLATINUM",
+                        )
+                    )
+                    from app.services.custom_list_service import sync_auto_list
+                    sync_auto_list(
+                        user_id=str(account.user_id),
+                        user_game=user_game,
+                        field_name="platinum_at",
+                        list_type="platinized_year",
+                        db=db,
+                    )
 
     account.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()

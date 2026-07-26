@@ -238,6 +238,127 @@ def test_sync_steam_games_success(
     assert hl2_ug.status == "Quero Jogar"
     assert hl2_ug.acquired_at is None
 
+    # Verifica as atividades registradas
+    from app.models.activity import Activity
+    activities = db_session.query(Activity).all()
+    # 3 ADDED activities + 1 PLATINUM activity
+    assert len(activities) == 4
+
+    added_acts = [a for a in activities if a.action_type == "ADDED"]
+    assert len(added_acts) == 3
+
+    plat_acts = [a for a in activities if a.action_type == "PLATINUM"]
+    assert len(plat_acts) == 1
+    assert str(plat_acts[0].game_id) == str(l4d_ug.game_id)
+
+    # Verifica se a lista automática "Platinados 2026" foi criada e o jogo associado
+    from app.models.custom_lists import CustomList
+    plat_list = (
+        db_session.query(CustomList)
+        .filter(CustomList.list_type == "platinized_year", CustomList.name == "Platinados 2026")
+        .first()
+    )
+    assert plat_list is not None
+    assert len(plat_list.games) == 1
+    assert plat_list.games[0].title == "Left 4 Dead"
+
+
+@patch("app.routers.steam.steam_service.is_game_platinized")
+@patch("app.routers.steam.steam_service.get_recently_played_games")
+@patch("app.routers.steam.steam_service.get_owned_games")
+@patch("app.routers.steam.steam_service.get_player_summary")
+def test_sync_steam_games_update_activity(
+    mock_summary, mock_games, mock_recent, mock_plat, client, auth_headers, db_session
+):
+    mock_summary.return_value = {
+        "steam_id": "765611980843858",
+        "persona_name": "Gamer123",
+        "avatar_url": "http://avatar.url",
+    }
+    mock_recent.return_value = []
+
+    from datetime import date
+    async def side_effect_plat(steam_id, appid, *args, **kwargs):
+        return date(2026, 7, 2) if appid == 500 else None
+    mock_plat.side_effect = side_effect_plat
+
+    # Mock de jogos da Steam
+    mock_games.return_value = [
+        {
+            "appid": 500,
+            "name": "Left 4 Dead",
+            "playtime_forever": 1200,
+        }
+    ]
+
+    # Pre-add Left 4 Dead as "Jogando"
+    me = client.get("/users/me", headers=auth_headers)
+    user_id = me.json()["id"]
+
+    game = Game(
+        title="Left 4 Dead",
+        steam_appid=500,
+        cover_url="http://cover.url",
+        platforms=["PC"],
+        genres=[],
+    )
+    db_session.add(game)
+    db_session.flush()
+
+    user_game = UserGame(
+        user_id=user_id,
+        game_id=game.id,
+        status="Jogando",
+        hours_played=10.0,
+        store="STEAM",
+    )
+    db_session.add(user_game)
+    db_session.commit()
+
+    # Clear previous mock activities
+    from app.models.activity import Activity
+    db_session.query(Activity).delete()
+    db_session.commit()
+
+    # Inicia com mock de sync zerado durante o connect
+    with patch("app.routers.steam.sync_single_account", return_value=(0, 0)):
+        client.post(
+            "/users/me/steam/accounts",
+            json={"profile_url": "765611980843858"},
+            headers=auth_headers,
+        )
+
+    # Executa a rota de sincronização
+    sync_resp = client.post("/users/me/steam/sync", headers=auth_headers)
+    assert sync_resp.status_code == 200
+
+    # Verifica se os status mudaram para Platinado
+    db_session.refresh(user_game)
+    assert user_game.status == "Platinado"
+
+    # Verifica as atividades registradas
+    activities = db_session.query(Activity).all()
+    # 1 UPDATED_STATUS + 1 PLATINUM
+    assert len(activities) == 2
+
+    status_act = next((a for a in activities if a.action_type == "UPDATED_STATUS"), None)
+    assert status_act is not None
+    assert status_act.context == "Platinado"
+
+    plat_act = next((a for a in activities if a.action_type == "PLATINUM"), None)
+    assert plat_act is not None
+
+    # Verifica se a lista automática "Platinados 2026" foi criada e o jogo associado
+    from app.models.custom_lists import CustomList
+    plat_list = (
+        db_session.query(CustomList)
+        .filter(CustomList.list_type == "platinized_year", CustomList.name == "Platinados 2026")
+        .first()
+    )
+    assert plat_list is not None
+    assert len(plat_list.games) == 1
+    assert plat_list.games[0].title == "Left 4 Dead"
+
 
 def test_safe_load_json_list():
     from app.utils import safe_load_json_list

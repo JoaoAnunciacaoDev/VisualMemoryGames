@@ -77,7 +77,7 @@ def auth_headers(client):
         },
     )
 
-    login = client.post("/login", data={"username": "tester", "password": "SenhaSegura_123!"})
+    login = client.post("/token", data={"username": "tester", "password": "SenhaSegura_123!"})
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
@@ -103,7 +103,7 @@ def second_user_headers(client):
         },
     )
 
-    login = client.post("/login", data={"username": "invasor", "password": "SenhaSegura_123!"})
+    login = client.post("/token", data={"username": "invasor", "password": "SenhaSegura_123!"})
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 

@@ -37,6 +37,43 @@ def cleanup_deleted_users(db: Session):
         db.commit()
 
 
+@router.post("/token")
+@limiter.limit("5/minute")
+def token_login(
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    """Rota padrão OAuth2 para gerar o Token JWT em Swagger UI / clientes API."""
+    from sqlalchemy import func
+
+    user = (
+        db.query(User)
+        .filter(
+            (func.lower(User.username) == func.lower(form_data.username))
+            | (func.lower(User.email) == func.lower(form_data.username))
+        )
+        .first()
+    )
+
+    if not user or not verify_password(form_data.password, str(user.password_hash)):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário ou senha incorretos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if user.is_deleted:
+        user.is_deleted = False
+        user.deleted_at = None
+        db.commit()
+        db.refresh(user)
+
+    expires_delta = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=expires_delta)
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(
@@ -46,7 +83,7 @@ def login(
     remember_me: bool = Form(default=False),
     db: Session = Depends(get_db),
 ):
-    """Rota para autenticar o usuário e gerar o Token JWT."""
+    """Rota para autenticar o usuário da aplicação Web via Cookie HttpOnly."""
 
     from sqlalchemy import func
 
@@ -91,8 +128,9 @@ def login(
         expires=datetime.now(timezone.utc) + expires_delta if remember_me else None,
         samesite="none" if is_prod else "lax",
         secure=is_prod,
+        path="/",
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"success": True, "message": "Login realizado com sucesso"}
 
 
 @router.post("/password-reset/initiate", status_code=status.HTTP_200_OK)
@@ -190,5 +228,6 @@ def logout(response: Response):
         httponly=True,
         samesite="none" if is_prod else "lax",
         secure=is_prod,
+        path="/",
     )
     return {"message": "Desconectado com sucesso"}

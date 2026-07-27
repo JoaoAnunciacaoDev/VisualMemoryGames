@@ -6,19 +6,19 @@ import AuthForm from '@/components/AuthForm/AuthForm';
 import { useToast } from '@/hooks/useToast';
 
 import api from '@/services/api';
-import { getToken, setToken } from '@/services/auth';
-
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user, reloadUser } = useAuth();
 
   useEffect(() => {
-    if (getToken()) {
+    if (user) {
       navigate('/library', { replace: true });
     }
-  }, [navigate]);
+  }, [user, navigate]);
 
   interface BackendError {
     response?: {
@@ -94,8 +94,8 @@ export default function Login() {
       params.append('username', username);
       params.append('password', password);
       params.append('remember_me', rememberMe.toString());
-      const response = await api.post('/login', params);
-      setToken(response.data.access_token, rememberMe);
+      await api.post('/login', params);
+      await reloadUser();
       navigate('/library');
     } catch (err) {
       setError(parseError(err));

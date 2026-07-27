@@ -48,7 +48,7 @@ def test_deactivate_and_reactivate_account(client, auth_headers, db_session):
         "/login", data={"username": user.username, "password": "SenhaSegura_123!"}
     )
     assert response.status_code == status.HTTP_200_OK
-    assert "access_token" in response.json()
+    assert response.json()["success"] is True
 
     # Verificar que a conta foi reativada no banco
     db_session.refresh(user)

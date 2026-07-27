@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageTitle, Button, Input, Loader } from '@/components/Shared';
 import api from '@/services/api';
-import { isAuthenticated } from '@/services/auth';
 import { useToast } from '@/hooks/useToast';
 import { User } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,7 +17,6 @@ interface SystemStats {
 
 export default function Admin() {
   const navigate = useNavigate();
-  const token = isAuthenticated();
   const { showToast } = useToast();
   const { user, loading: authLoading } = useAuth();
 
@@ -43,11 +41,6 @@ export default function Admin() {
 
   // 1. Validar se o usuário está logado, é admin e carregar dados
   useEffect(() => {
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
     if (authLoading) return;
 
     if (!user) {

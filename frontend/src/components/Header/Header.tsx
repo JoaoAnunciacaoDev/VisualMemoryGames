@@ -2,7 +2,6 @@ import { useState, useEffect, MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Shared/Button/Button';
 import SettingsModal from '@/components/SettingsModal/SettingsModal';
-import { isAuthenticated } from '@/services/auth';
 import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
 import api from '@/services/api';
@@ -11,15 +10,15 @@ import logoIcon from '@/assets/VisualMemoryIcon.png';
 
 export default function Header() {
   const navigate = useNavigate();
-  const token = isAuthenticated();
   const { user, loading, logout } = useAuth();
+  const isLoggedIn = !!user;
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!isLoggedIn) return;
 
     const checkUnread = async () => {
       try {

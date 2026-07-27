@@ -56,7 +56,7 @@ def test_password_reset_success(client):
         data={"username": "resetuser", "password": "NewPassword123!"},
     )
     assert login_new.status_code == 200
-    assert "access_token" in login_new.json()
+    assert login_new.json()["success"] is True
 
 
 def test_password_reset_inexistent_email(client):

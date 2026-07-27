@@ -1,26 +1,17 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
-import { getToken, clearToken } from './auth';
+import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
   withCredentials: true,
 });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = getToken();
-  if (token && token !== 'session') {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      const isLoginRequest = error.config && error.config.url && error.config.url.includes('/login');
-      if (!isLoginRequest) {
-        clearToken();
+      const url = error.config && error.config.url ? error.config.url : '';
+      const isAuthRequest = url.includes('/login') || url.includes('/users/me');
+      if (!isAuthRequest) {
         window.location.href = '/login';
       }
     }

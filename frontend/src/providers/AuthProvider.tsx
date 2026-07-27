@@ -1,7 +1,6 @@
 import { useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/services/api';
-import { clearToken, getToken } from '@/services/auth';
 import { User } from '@/types';
 import { AuthContext } from '@/hooks/useAuthContext';
 
@@ -9,9 +8,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   const [user, setUserState] = useState<User | null>(null);
-  const [loading, setLoading] = useState(() => !!getToken());
-
-  const token = getToken();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     navigateRef.current = navigate;
@@ -22,31 +19,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reloadUser = useCallback(async () => {
-    if (!getToken()) {
-      setUserState(null);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
       const res = await api.get('/users/me');
       setUserState(res.data);
-    } catch (err: unknown) {
+      return res.data;
+    } catch {
       setUserState(null);
-      const errorObj = err as { response?: { status?: number }; message?: string };
-      if (errorObj.response?.status === 401 || errorObj.message === 'Unauthorized') {
-        clearToken();
-        navigateRef.current('/login');
-      }
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!token) {
-      return;
-    }
     let active = true;
     api.get('/users/me')
       .then((res) => {
@@ -54,14 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserState(res.data);
         }
       })
-      .catch((err: unknown) => {
+      .catch(() => {
         if (active) {
           setUserState(null);
-          const errorObj = err as { response?: { status?: number }; message?: string };
-          if (errorObj.response?.status === 401 || errorObj.message === 'Unauthorized') {
-            clearToken();
-            navigateRef.current('/login');
-          }
         }
       })
       .finally(() => {
@@ -73,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [token]);
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -81,7 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Erro ao fazer logout no servidor:', err);
     } finally {
-      clearToken();
       setUserState(null);
       navigate('/login');
     }

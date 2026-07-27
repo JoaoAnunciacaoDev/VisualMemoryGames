@@ -31,7 +31,7 @@ def admin_headers(client, db_session):
     db_session.commit()
 
     # Login
-    login = client.post("/login", data={"username": "adminuser", "password": "SenhaSegura_123!"})
+    login = client.post("/token", data={"username": "adminuser", "password": "SenhaSegura_123!"})
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 

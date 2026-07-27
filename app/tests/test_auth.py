@@ -20,8 +20,14 @@ def test_login_user(client):
     response = client.post("/login", data={"username": "joaogamer", "password": "SenhaSegura_123!"})
 
     assert response.status_code == 200
-    assert "access_token" in response.json()
-    assert response.json()["token_type"] == "bearer"
+    assert response.json()["success"] is True
+    assert "token" in response.cookies
+
+    # Testar também a rota /token (OAuth2)
+    response_token = client.post("/token", data={"username": "joaogamer", "password": "SenhaSegura_123!"})
+    assert response_token.status_code == 200
+    assert "access_token" in response_token.json()
+    assert response_token.json()["token_type"] == "bearer"
 
 
 def test_login_wrong_password(client):

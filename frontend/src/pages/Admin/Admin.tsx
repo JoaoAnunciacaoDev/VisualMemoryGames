@@ -80,7 +80,7 @@ export default function Admin() {
     return () => {
       active = false;
     };
-  }, [token, user, authLoading, search, reloadTrigger, navigate, showToast]);
+  }, [user, authLoading, search, reloadTrigger, navigate, showToast]);
 
   // 3. Ações rápidas
   const handleToggleActive = (user: User) => {

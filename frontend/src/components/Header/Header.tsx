@@ -34,7 +34,7 @@ export default function Header() {
     const handleRead = () => setHasUnread(false);
     window.addEventListener('patches-read', handleRead);
     return () => window.removeEventListener('patches-read', handleRead);
-  }, [token]);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -67,7 +67,7 @@ export default function Header() {
           VisualMemory
         </button>
         <nav className={styles.nav}>
-          {token && (
+          {isLoggedIn && (
             <div className={styles.navLinks}>
               <Button variant="ghost" onClick={() => navigate('/library')}>
                 Biblioteca
@@ -89,7 +89,7 @@ export default function Header() {
             </div>
           )}
 
-          {token ? (
+          {isLoggedIn ? (
             <div className={styles.navActions}>
               <button
                 type="button"

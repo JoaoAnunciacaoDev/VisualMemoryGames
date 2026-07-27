@@ -247,7 +247,8 @@ const Social: React.FC = () => {
             {act.action_type === "RATED" && act.commentary && (
               <div className={styles.commentaryBox}>
                 <span className={styles.commentaryQuote}>“</span>
-                <p className={styles.commentaryText}>{act.commentary}”</p>
+                <p className={styles.commentaryText}>{act.commentary}</p>
+                <span className={styles.commentaryQuote}>”</span>
               </div>
             )}
             <div className={styles.actDate}>

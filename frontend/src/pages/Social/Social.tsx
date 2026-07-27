@@ -62,6 +62,10 @@ const Social: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
 
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeTab]);
+
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
   const months = [
@@ -243,7 +247,7 @@ const Social: React.FC = () => {
             {act.action_type === "RATED" && act.commentary && (
               <div className={styles.commentaryBox}>
                 <span className={styles.commentaryQuote}>“</span>
-                <p className={styles.commentaryText}>{act.commentary}</p>
+                <p className={styles.commentaryText}>{act.commentary}”</p>
               </div>
             )}
             <div className={styles.actDate}>

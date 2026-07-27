@@ -269,3 +269,27 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     assert rated_act is not None
     assert rated_act["context"] == "5.0"
     assert rated_act["commentary"] == "Jogo maravilhoso!"
+
+    # 4. Test year/month query filters on /social/activities/me
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    current_month = now.month
+    current_year = now.year
+
+    # Request current month/year -> should return the activities
+    resp_filtered = client.get(
+        f"/social/activities/me?month={current_month}&year={current_year}",
+        headers=auth_headers
+    )
+    assert resp_filtered.status_code == 200
+    assert len(resp_filtered.json()) > 0
+
+    # Request a different month/year -> should return 0 activities
+    diff_month = 1 if current_month == 12 else current_month + 1
+    diff_year = current_year - 1
+    resp_empty = client.get(
+        f"/social/activities/me?month={diff_month}&year={diff_year}",
+        headers=auth_headers
+    )
+    assert resp_empty.status_code == 200
+    assert len(resp_empty.json()) == 0

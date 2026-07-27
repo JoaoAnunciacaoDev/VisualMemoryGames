@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
@@ -220,6 +220,7 @@ def update_user_game(
 
     old_status = db_user_game.status
     old_rating = db_user_game.rating
+    old_notes = db_user_game.notes
 
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
@@ -260,20 +261,8 @@ def update_user_game(
                 context=db_user_game.status,
             )
         )
-    if old_rating != db_user_game.rating and db_user_game.rating is not None:
-        import json
-        rating_context = json.dumps({
-            "rating": db_user_game.rating,
-            "notes": db_user_game.notes or ""
-        })
-        db.add(
-            Activity(
-                user_id=str(current_user.id),
-                game_id=db_user_game.game_id,
-                action_type="RATED",
-                context=rating_context,
-            )
-        )
+    if (old_rating != db_user_game.rating or old_notes != db_user_game.notes):
+        log_rated_activity(db, str(current_user.id), db_user_game)
     if old_status != "Platinado" and db_user_game.status == "Platinado":
         db.add(
             Activity(
@@ -361,6 +350,97 @@ def sync_user_game_latest_review(user_game: UserGame, db: Session):
         user_game.notes = None
 
 
+def log_rated_activity(
+    db: Session,
+    user_id: str,
+    user_game: UserGame,
+    deleted_rating: Optional[float] = None,
+):
+    """Loga ou atualiza a atividade RATED de um jogo com base no rating e notes atuais.
+    Se já houver uma atividade com a mesma nota para esse jogo, atualiza-a.
+    Se a nota for diferente, cria uma nova e preserva as anteriores.
+    Se deleted_rating for fornecido, remove a atividade associada a essa nota específica.
+    """
+    import json
+    from datetime import timezone
+
+    if deleted_rating is not None:
+        existing_activities = (
+            db.query(Activity)
+            .filter(
+                Activity.user_id == user_id,
+                Activity.game_id == user_game.game_id,
+                Activity.action_type == "RATED"
+            )
+            .all()
+        )
+        for act in existing_activities:
+            if act.context:
+                try:
+                    parsed = json.loads(act.context)
+                    if isinstance(parsed, dict) and parsed.get("rating") == deleted_rating:
+                        db.delete(act)
+                except Exception:
+                    try:
+                        if float(act.context) == float(deleted_rating):
+                            db.delete(act)
+                    except Exception:
+                        pass
+        db.flush()
+
+    if user_game.rating is None:
+        db.query(Activity).filter(
+            Activity.user_id == user_id,
+            Activity.game_id == user_game.game_id,
+            Activity.action_type == "RATED"
+        ).delete()
+        return
+
+    existing_activities = (
+        db.query(Activity)
+        .filter(
+            Activity.user_id == user_id,
+            Activity.game_id == user_game.game_id,
+            Activity.action_type == "RATED"
+        )
+        .all()
+    )
+
+    matching_activity = None
+    for act in existing_activities:
+        if act.context:
+            try:
+                parsed = json.loads(act.context)
+                if isinstance(parsed, dict) and parsed.get("rating") == user_game.rating:
+                    matching_activity = act
+                    break
+            except Exception:
+                try:
+                    if float(act.context) == float(user_game.rating):
+                        matching_activity = act
+                        break
+                except Exception:
+                    pass
+
+    rating_context = json.dumps({
+        "rating": user_game.rating,
+        "notes": user_game.notes or ""
+    })
+
+    if matching_activity:
+        matching_activity.context = rating_context
+        matching_activity.created_at = datetime.now(timezone.utc)
+    else:
+        db.add(
+            Activity(
+                user_id=user_id,
+                game_id=user_game.game_id,
+                action_type="RATED",
+                context=rating_context,
+            )
+        )
+
+
 @router.get("/{user_game_id}/reviews", response_model=List[UserGameReviewResponse])
 def get_user_game_reviews(
     user_game_id: str,
@@ -428,6 +508,7 @@ def create_user_game_review(
     db.flush()
 
     sync_user_game_latest_review(db_user_game, db)
+    log_rated_activity(db, str(current_user.id), db_user_game)
 
     db.commit()
     db.refresh(db_review)
@@ -461,6 +542,7 @@ def update_user_game_review(
     db.flush()
 
     sync_user_game_latest_review(db_user_game, db)
+    log_rated_activity(db, str(current_user.id), db_user_game)
 
     db.commit()
     db.refresh(db_review)
@@ -485,10 +567,13 @@ def delete_user_game_review(
     if not db_review:
         raise HTTPException(status_code=404, detail="Avaliação não encontrada.")
 
+    deleted_rating = db_review.rating
+
     db.delete(db_review)
     db.flush()
 
     sync_user_game_latest_review(db_user_game, db)
+    log_rated_activity(db, str(current_user.id), db_user_game, deleted_rating=deleted_rating)
 
     db.commit()
     return status.HTTP_204_NO_CONTENT

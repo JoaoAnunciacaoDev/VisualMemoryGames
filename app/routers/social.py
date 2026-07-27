@@ -25,11 +25,13 @@ def get_my_feed(
 
 @router.get("/activities/me", response_model=List[ActivityResponse])
 def get_my_activities(
+    year: Optional[int] = None,
+    month: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Retorna a lista de atividades do próprio usuário logado."""
-    return social_service.get_my_activities(current_user, db)
+    return social_service.get_my_activities(current_user, db, year=year, month=month)
 
 
 @router.get("/users/search", response_model=List[UserPublicProfile])

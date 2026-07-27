@@ -278,13 +278,33 @@ def format_activities(
     return activities_res
 
 
-def get_my_activities(current_user: User, db: Session) -> List[ActivityResponse]:
-    """Busca as atividades do próprio usuário logado."""
+def get_my_activities(
+    current_user: User,
+    db: Session,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+) -> List[ActivityResponse]:
+    """Busca as atividades do próprio usuário logado com filtro opcional de ano e mês."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    target_year = year if year is not None else now.year
+    target_month = month if month is not None else now.month
+
+    start_date = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+    if target_month == 12:
+        end_date = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
+
     raw_activities = (
         db.query(Activity)
-        .filter(Activity.user_id == current_user.id)
+        .filter(
+            Activity.user_id == current_user.id,
+            Activity.created_at >= start_date,
+            Activity.created_at < end_date,
+        )
         .order_by(Activity.created_at.desc())
-        .limit(50)
         .all()
     )
     return format_activities(raw_activities, db, current_user)

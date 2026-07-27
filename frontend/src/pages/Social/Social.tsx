@@ -93,10 +93,12 @@ const Social: React.FC = () => {
     }
   };
 
-  const loadMyActivities = async () => {
+  const loadMyActivities = async (m: number, y: number) => {
     setLoading(true);
     try {
-      const res = await api.get('/social/activities/me');
+      const res = await api.get('/social/activities/me', {
+        params: { month: m, year: y }
+      });
       setMyActivities(res.data);
     } catch (err) {
       console.error(err);
@@ -110,7 +112,7 @@ const Social: React.FC = () => {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadFeed(selectedMonth, selectedYear);
     } else if (activeTab === "my-activities") {
-      loadMyActivities();
+      loadMyActivities(selectedMonth, selectedYear);
     }
   }, [activeTab, selectedMonth, selectedYear]);
 
@@ -336,9 +338,33 @@ const Social: React.FC = () => {
         {activeTab === "my-activities" && (
           <div className={styles.myActivitiesLayout}>
             <div className={styles.mainFeed}>
-              <h2>Minhas Atividades</h2>
+              <div className={styles.feedHeaderRow}>
+                <h2>Minhas Atividades</h2>
+                <div className={styles.feedFilters}>
+                  <select
+                    className={styles.filterSelect}
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    disabled={loading}
+                  >
+                    {months.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                  <select
+                    className={styles.filterSelect}
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    disabled={loading}
+                  >
+                    {years.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               {loading && <Loader message="Carregando minhas atividades..." />}
-              {!loading && renderActivityList(myActivities, "Você ainda não tem nenhuma atividade registrada.")}
+              {!loading && renderActivityList(myActivities, "Você ainda não tem nenhuma atividade registrada no período selecionado.")}
             </div>
           </div>
         )}

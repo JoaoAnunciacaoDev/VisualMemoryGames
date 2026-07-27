@@ -31,10 +31,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.get('/users/me');
       setUserState(res.data);
-    } catch {
+    } catch (err: unknown) {
       setUserState(null);
-      clearToken();
-      navigateRef.current('/login');
+      const errorObj = err as { response?: { status?: number }; message?: string };
+      if (errorObj.response?.status === 401 || errorObj.message === 'Unauthorized') {
+        clearToken();
+        navigateRef.current('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,11 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserState(res.data);
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (active) {
           setUserState(null);
-          clearToken();
-          navigateRef.current('/login');
+          const errorObj = err as { response?: { status?: number }; message?: string };
+          if (errorObj.response?.status === 401 || errorObj.message === 'Unauthorized') {
+            clearToken();
+            navigateRef.current('/login');
+          }
         }
       })
       .finally(() => {

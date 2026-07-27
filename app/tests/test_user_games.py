@@ -121,6 +121,14 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     assert ug["rating"] == 8.5
     assert ug["notes"] == "Review 1 text"
 
+    # Verificar que gerou atividade RATED
+    act_resp = client.get("/social/activities/me", headers=auth_headers)
+    activities = act_resp.json()
+    rated_act = next((a for a in activities if a["action_type"] == "RATED"), None)
+    assert rated_act is not None
+    assert rated_act["context"] == "8.5"
+    assert rated_act["commentary"] == "Review 1 text"
+
     # 3. Criar a segunda avaliação (Review 2 - mais recente)
     rev2_response = client.post(
         f"/user-games/{ug_id}/reviews",
@@ -134,6 +142,14 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     ug = get_ug()
     assert ug["rating"] == 9.0
     assert ug["notes"] == "Review 2 text"
+
+    # Verificar que gerou uma nova atividade RATED para 9.0 e manteve a de 8.5
+    act_resp_rev2 = client.get("/social/activities/me", headers=auth_headers)
+    rated_acts = [a for a in act_resp_rev2.json() if a["action_type"] == "RATED"]
+    assert len(rated_acts) == 2
+    assert rated_acts[0]["context"] == "9.0"
+    assert rated_acts[0]["commentary"] == "Review 2 text"
+    assert rated_acts[1]["context"] == "8.5"
 
     # 4. Listar avaliações
     get_revs = client.get(f"/user-games/{ug_id}/reviews", headers=auth_headers)
@@ -155,6 +171,15 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     assert ug["rating"] == 9.5
     assert ug["notes"] == "Review 2 updated"
 
+    # Verificar que gerou uma atividade RATED para 9.5, mantendo as de 9.0 e 8.5
+    act_resp_update = client.get("/social/activities/me", headers=auth_headers)
+    rated_acts = [a for a in act_resp_update.json() if a["action_type"] == "RATED"]
+    assert len(rated_acts) == 3
+    assert rated_acts[0]["context"] == "9.5"
+    assert rated_acts[0]["commentary"] == "Review 2 updated"
+    assert rated_acts[1]["context"] == "9.0"
+    assert rated_acts[2]["context"] == "8.5"
+
     # 6. Deletar Review 2
     del_response = client.delete(f"/user-games/{ug_id}/reviews/{rev2['id']}", headers=auth_headers)
     assert del_response.status_code == 204
@@ -164,6 +189,14 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     assert ug["rating"] == 8.5
     assert ug["notes"] == "Review 1 text"
 
+    # A atividade RATED de 9.5 deve ter sido deletada, mantendo 9.0 e atualizando 8.5 para o topo
+    act_resp_del1 = client.get("/social/activities/me", headers=auth_headers)
+    rated_acts = [a for a in act_resp_del1.json() if a["action_type"] == "RATED"]
+    assert len(rated_acts) == 2
+    assert rated_acts[0]["context"] == "8.5"
+    assert rated_acts[0]["commentary"] == "Review 1 text"
+    assert rated_acts[1]["context"] == "9.0"
+
     # 7. Deletar Review 1
     del_response2 = client.delete(f"/user-games/{ug_id}/reviews/{rev1['id']}", headers=auth_headers)
     assert del_response2.status_code == 204
@@ -172,3 +205,8 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     ug = get_ug()
     assert ug["rating"] is None
     assert ug["notes"] is None
+
+    # Como o jogo não tem mais nenhuma nota, todas as atividades RATED dele devem ser deletadas
+    act_resp_del2 = client.get("/social/activities/me", headers=auth_headers)
+    rated_acts = [a for a in act_resp_del2.json() if a["action_type"] == "RATED"]
+    assert len(rated_acts) == 0

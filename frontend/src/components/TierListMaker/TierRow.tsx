@@ -19,11 +19,12 @@ interface Props {
   selectedGameId?: string | null;
   onSelectGame?: (gameId: string | null) => void;
   isTierDraggable?: boolean;
+  readOnly?: boolean;
 }
 
 export default function TierRow({
   id, label, games, color, onLabelChange, onColorChange, onDelete,
-  onRemoveGame, selectedGameId, onSelectGame, isTierDraggable = false,
+  onRemoveGame, selectedGameId, onSelectGame, isTierDraggable = false, readOnly = false,
 }: Props) {
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({ id });
   const [editingLabel, setEditingLabel] = useState(false);
@@ -38,7 +39,7 @@ export default function TierRow({
   } = useSortable({
     id,
     data: { type: 'tier' },
-    disabled: !isTierDraggable,
+    disabled: !isTierDraggable || readOnly,
   });
 
   const setRefs = (node: HTMLDivElement | null) => {
@@ -142,10 +143,13 @@ export default function TierRow({
               isSelected={selectedGameId === game.id}
               onSelect={() => onSelectGame?.(selectedGameId === game.id ? null : game.id)}
               onRemove={onRemoveGame ? () => onRemoveGame(game.id) : undefined}
+              readOnly={readOnly}
             />
           ))}
           {games.length === 0 && (
-            <div className={styles.emptyTier}>Arraste jogos aqui</div>
+            <div className={styles.emptyTier}>
+              {readOnly ? 'Sem jogos neste tier' : 'Arraste jogos aqui'}
+            </div>
           )}
         </SortableContext>
       </div>

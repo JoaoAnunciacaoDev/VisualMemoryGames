@@ -23,6 +23,8 @@ export interface TierListEditorInitialGame {
 export interface TierListEditorData {
   title: string;
   isPublic: boolean;
+  ownerId: string;
+  ownerUsername?: string;
   tiers: TierListEditorTier[];
   games: Record<string, TierListEditorGameItem[]>;
   poolCategoryId: string | null;
@@ -49,6 +51,8 @@ interface TierListCategoryApi {
 interface TierListApiResponse {
   title: string;
   is_public: boolean;
+  user_id: string;
+  username?: string;
   categories: TierListCategoryApi[];
 }
 
@@ -94,6 +98,8 @@ function mapTierListData(data: TierListApiResponse): TierListEditorData {
   return {
     title: data.title,
     isPublic: data.is_public,
+    ownerId: data.user_id,
+    ownerUsername: data.username,
     tiers: regularCategories.map((category) => ({
       id: category.id,
       label: category.name,

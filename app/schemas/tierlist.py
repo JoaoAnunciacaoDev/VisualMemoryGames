@@ -138,6 +138,7 @@ class TierListResponse(TierListBase):
     id: str
     user_id: str
     is_public: bool
+    username: Optional[str] = None
 
     categories: List[TierCategoryResponse] = []
     model_config = ConfigDict(from_attributes=True)

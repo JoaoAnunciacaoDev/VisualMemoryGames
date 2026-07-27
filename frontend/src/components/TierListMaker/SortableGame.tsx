@@ -9,9 +9,10 @@ interface Props {
   onRemove?: () => void;
   isSelected?: boolean;
   onSelect?: () => void;
+  readOnly?: boolean;
 }
 
-export default function SortableGame({ id, title, coverUrl, onRemove, isSelected, onSelect }: Props) {
+export default function SortableGame({ id, title, coverUrl, onRemove, isSelected, onSelect, readOnly = false }: Props) {
   const {
     attributes,
     listeners,
@@ -19,7 +20,7 @@ export default function SortableGame({ id, title, coverUrl, onRemove, isSelected
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled: readOnly });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,7 +50,7 @@ export default function SortableGame({ id, title, coverUrl, onRemove, isSelected
         )}
       </div>
 
-      {isSelected && onRemove && (
+      {isSelected && onRemove && !readOnly && (
         <button
           className={styles.removeGameButton}
           onClick={(e) => {

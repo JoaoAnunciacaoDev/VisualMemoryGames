@@ -89,6 +89,7 @@ def get_user_tierlists(
     tierlists = query.all()
     for tl in tierlists:
         enrich_tierlist_with_custom_covers(tl, db)
+        tl.username = tl.user.username
     return tierlists
 
 
@@ -112,6 +113,7 @@ def get_tierlist(
         raise HTTPException(status_code=403, detail="Sem permissão para ver esta tier list.")
 
     enrich_tierlist_with_custom_covers(tierlist, db)
+    tierlist.username = tierlist.user.username
 
     return tierlist
 

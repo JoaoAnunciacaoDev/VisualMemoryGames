@@ -35,6 +35,7 @@ interface Props {
   onTierDragStart: (event: DragStartEvent) => void;
   onTierDragOver: (event: DragOverEvent) => void;
   onTierDragEnd: (event: DragEndEvent) => void;
+  readOnly?: boolean;
 }
 
 export default function TierListEditorBoard({
@@ -59,6 +60,7 @@ export default function TierListEditorBoard({
   onTierDragStart,
   onTierDragOver,
   onTierDragEnd,
+  readOnly = false,
 }: Props) {
     const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -111,49 +113,53 @@ export default function TierListEditorBoard({
               label={tier.label}
               color={tier.color}
               games={games[tier.id] ?? []}
-              onLabelChange={(label) => onUpdateTierLabel(tier.id, label)}
-              onColorChange={(color) => onUpdateTierColor(tier.id, color)}
-              onDelete={() => onRemoveTier(tier.id)}
-              onRemoveGame={onRemoveGame}
+              onLabelChange={readOnly ? undefined : (label) => onUpdateTierLabel(tier.id, label)}
+              onColorChange={readOnly ? undefined : (color) => onUpdateTierColor(tier.id, color)}
+              onDelete={readOnly ? undefined : () => onRemoveTier(tier.id)}
+              onRemoveGame={readOnly ? undefined : onRemoveGame}
               selectedGameId={selectedGameId}
               onSelectGame={onSelectedGameChange}
-              isTierDraggable={true}
+              isTierDraggable={!readOnly}
+              readOnly={readOnly}
             />
           ))}
         </div>
       </SortableContext>
 
-      {/* O resto do código permanece igual */}
-      <div className={styles.addTierRow}>
-        <Input
-          type="text"
-          placeholder="Nome do novo tier..."
-          value={newTierLabel}
-          onChange={(e) => onNewTierLabelChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onAddTier()}
-          className={styles.addTierInput}
-        />
-        <input
-          type="color"
-          value={newTierColor}
-          onChange={(e) => onNewTierColorChange(e.target.value)}
-          className={styles.colorPicker}
-        />
-        <Button variant="primary" className={styles.addTierButton} onClick={onAddTier}>
-          + Adicionar Tier
-        </Button>
-      </div>
+      {!readOnly && (
+        <div className={styles.addTierRow}>
+          <Input
+            type="text"
+            placeholder="Nome do novo tier..."
+            value={newTierLabel}
+            onChange={(e) => onNewTierLabelChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onAddTier()}
+            className={styles.addTierInput}
+          />
+          <input
+            type="color"
+            value={newTierColor}
+            onChange={(e) => onNewTierColorChange(e.target.value)}
+            className={styles.colorPicker}
+          />
+          <Button variant="primary" className={styles.addTierButton} onClick={onAddTier}>
+            + Adicionar Tier
+          </Button>
+        </div>
+      )}
 
-      <div className={styles.poolArea}>
-        <h3>Jogos não classificados</h3>
-        <TierRow
-          id="unassigned"
-          games={poolGames}
-          onRemoveGame={onRemoveGame}
-          selectedGameId={selectedGameId}
-          onSelectGame={onSelectedGameChange}
-        />
-      </div>
+      {!readOnly && (
+        <div className={styles.poolArea}>
+          <h3>Jogos não classificados</h3>
+          <TierRow
+            id="unassigned"
+            games={poolGames}
+            onRemoveGame={onRemoveGame}
+            selectedGameId={selectedGameId}
+            onSelectGame={onSelectedGameChange}
+          />
+        </div>
+      )}
 
       <DragOverlay>
         {activeGame && (

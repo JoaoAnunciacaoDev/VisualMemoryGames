@@ -251,6 +251,8 @@ export function useTierListEditor(
     isPublic,
     setIsPublic,
     saveIsPublic,
+    ownerId: initialData?.ownerId ?? '',
+    ownerUsername: initialData?.ownerUsername ?? '',
     tiers,
     setTiers,
     games,

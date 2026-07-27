@@ -237,3 +237,24 @@
     justify-content: center;
   }
 }
+
+.titleArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+}
+
+.ownerText {
+  font-size: var(--font-size-sm);
+  color: var(--muted);
+}
+
+.ownerText a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.ownerText a:hover {
+  text-decoration: underline;
+}

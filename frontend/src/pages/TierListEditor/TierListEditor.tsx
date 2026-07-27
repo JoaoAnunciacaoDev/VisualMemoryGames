@@ -6,6 +6,7 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import { Button, Loader } from '@/components/Shared';
 
 import { useConfirmAction } from '@/hooks/useConfirmAction';
+import { useAuth } from '@/hooks/useAuth';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
 import { useDragHandlers } from '@/hooks/useDragHandlers';
 import {
@@ -60,12 +61,16 @@ export default function TierListEditor() {
     return () => window.clearTimeout(timeout);
   }, [loadEditor]);
 
+  const { userId } = useAuth();
+
   const {
-    title, setTitle, isPublic, saveIsPublic, tiers, setTiers, games, setGames,
+    title, setTitle, isPublic, saveIsPublic, ownerId, ownerUsername, tiers, setTiers, games, setGames,
     existingGameIds, saveTitle, addTier, removeTier,
     updateTierLabel, updateTierColor, addGameToPool,
     removeGame, moveGame, reorderTier,
   } = useTierListEditor(id, editorData, { onReload: loadEditor });
+
+  const isOwner = editorData ? userId === ownerId : false;
 
   const { activeGame, handleDragStart, handleDragOver, handleDragEnd } = useDragHandlers({
     games, setGames, moveGame, reorderTier,
@@ -155,6 +160,8 @@ export default function TierListEditor() {
         onAddGame={() => setShowSearchModal(true)}
         isPublic={isPublic}
         onTogglePrivacy={() => privacyConfirm.open(!isPublic)}
+        isOwner={isOwner}
+        ownerUsername={ownerUsername}
       />
 
       <TierListEditorBoard
@@ -179,6 +186,7 @@ export default function TierListEditor() {
         onTierDragStart={handleTierDragStart}
         onTierDragOver={handleTierDragOver}
         onTierDragEnd={handleTierDragEnd}
+        readOnly={!isOwner}
       />
 
       <TierListEditorDialogs

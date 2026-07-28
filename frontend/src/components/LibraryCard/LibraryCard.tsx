@@ -2,7 +2,7 @@ import type { KeyboardEvent } from 'react';
 import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/LibraryCard/LibraryCard.module.css';
 
-import { STORE_OPTIONS } from '@/types/enums';
+import { getStoreLabel } from '@/types/enums';
 
 interface Props {
   title: string;
@@ -35,11 +35,6 @@ const getStoreEmoji = (storeKey: string): string => {
   if (lower.includes('xbox')) return '💚';
   if (lower.includes('nintendo') || lower.includes('switch')) return '❤️';
   return '🛒';
-};
-
-const getStoreLabel = (storeKey: string): string => {
-  const option = STORE_OPTIONS.find((opt) => opt.value.toUpperCase() === storeKey.toUpperCase());
-  return option ? option.label : storeKey;
 };
 
 export default function LibraryCard({

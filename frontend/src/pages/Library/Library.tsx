@@ -21,9 +21,11 @@ import LibraryTabs from '@/pages/Library/LibraryTabs';
 import LibraryFilters from '@/pages/Library/LibraryFilters';
 import LibraryGamesView from '@/pages/Library/LibraryGamesView';
 import LibrarySearchView from '@/pages/Library/LibrarySearchView';
-import type { LibraryTab } from '@/pages/Library/Library.types';
+import type { LibraryTab, GroupMode } from '@/pages/Library/Library.types';
 
 import styles from '@/pages/Library/Library.module.css';
+
+import { STORE_OPTIONS, getStoreLabel } from '@/types/enums';
 
 const STATUS_OPTIONS = [
   'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
@@ -35,9 +37,12 @@ export default function Library() {
   const {
     filtered, search, setSearch,
     statusFilter, setStatusFilter,
+    storeFilter, setStoreFilter,
+    originFilter, setOriginFilter,
     sortBy, setSortBy, sortOrder, setSortOrder,
     yearField, setYearField, yearValue, setYearValue,
-    hoursOperator, setHoursOperator, hoursValue, setHoursValue,
+    hoursOperator, setHoursOperator, hoursValue, setHoursValue, hoursValueMax, setHoursValueMax,
+    clearAllFilters,
   } = useLibraryFilters(games);
   const { searchResults, isSearching, searchGames, addGameToLibrary } = useGameSearch();
   const { showToast } = useToast();
@@ -50,19 +55,32 @@ export default function Library() {
   const removeConfirm = useConfirmAction<number>();
 
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
-  const [groupByStatus, setGroupByStatus] = useState(true);
+  const [groupMode, setGroupMode] = useState<GroupMode>('status');
 
-  const toggleStatusCollapse = (status: string) => {
+  const toggleStatusCollapse = (groupName: string) => {
     setCollapsedStatuses((prev) => {
       const next = new Set(prev);
-      if (next.has(status)) {
-        next.delete(status);
+      if (next.has(groupName)) {
+        next.delete(groupName);
       } else {
-        next.add(status);
+        next.add(groupName);
       }
       return next;
     });
   };
+
+  const storeOptions = useMemo(() => {
+    const list = ['Todas', ...STORE_OPTIONS.map((o) => o.label)];
+    games.forEach((g) => {
+      if (g.store) {
+        const label = getStoreLabel(g.store);
+        if (!list.includes(label)) {
+          list.push(label);
+        }
+      }
+    });
+    return list;
+  }, [games]);
 
   const addedGames = useMemo(() => {
     return new Map<number, string>(
@@ -107,6 +125,11 @@ export default function Library() {
     }
   };
 
+  const handleClearAll = () => {
+    clearAllFilters();
+    setGroupMode('none');
+  };
+
   if (authLoading || (libraryLoading && games.length === 0)) {
     return <Loader message="Carregando biblioteca..." />;
   }
@@ -135,6 +158,10 @@ export default function Library() {
             onSearchChange={setSearch}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
+            storeFilter={storeFilter}
+            onStoreFilterChange={setStoreFilter}
+            originFilter={originFilter}
+            onOriginFilterChange={setOriginFilter}
             sortBy={sortBy}
             onSortByChange={setSortBy}
             sortOrder={sortOrder}
@@ -147,15 +174,19 @@ export default function Library() {
             onHoursOperatorChange={setHoursOperator}
             hoursValue={hoursValue}
             onHoursValueChange={setHoursValue}
-            groupByStatus={groupByStatus}
-            onToggleGroupByStatus={() => setGroupByStatus((prev) => !prev)}
+            hoursValueMax={hoursValueMax}
+            onHoursValueMaxChange={setHoursValueMax}
+            groupMode={groupMode}
+            onGroupModeChange={setGroupMode}
             statusOptions={STATUS_OPTIONS}
+            storeOptions={storeOptions}
+            onClearAllFilters={handleClearAll}
           />
 
           <LibraryGamesView
             games={games}
             filteredGames={filtered}
-            groupByStatus={groupByStatus}
+            groupMode={groupMode}
             collapsedStatuses={collapsedStatuses}
             onToggleStatusCollapse={toggleStatusCollapse}
             onSelectGame={setSelectedLibraryGame}

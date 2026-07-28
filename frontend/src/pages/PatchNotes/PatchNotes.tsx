@@ -69,6 +69,28 @@ export default function PatchNotes() {
   const [patches, setPatches] = useState<PatchNote[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filtros de Mês e Ano (Abre por padrão no Mês e Ano Atual, igual à aba Social)
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+
+  const currentYear = now.getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
+  const months = [
+    { value: 1, label: 'Janeiro' },
+    { value: 2, label: 'Fevereiro' },
+    { value: 3, label: 'Março' },
+    { value: 4, label: 'Abril' },
+    { value: 5, label: 'Maio' },
+    { value: 6, label: 'Junho' },
+    { value: 7, label: 'Julho' },
+    { value: 8, label: 'Agosto' },
+    { value: 9, label: 'Setembro' },
+    { value: 10, label: 'Outubro' },
+    { value: 11, label: 'Novembro' },
+    { value: 12, label: 'Dezembro' },
+  ];
+
   // Estados do Modal de Criação/Edição
   const [formOpen, setFormOpen] = useState(false);
   const [editingPatch, setEditingPatch] = useState<PatchNote | null>(null);
@@ -81,13 +103,15 @@ export default function PatchNotes() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteTitle, setDeleteTitle] = useState('');
 
-  // 1. Carregar notas de atualização
-  const fetchPatches = useCallback(async (showLoading = true) => {
+  // 1. Carregar notas de atualização com filtro de mês e ano
+  const fetchPatches = useCallback(async (m: number, y: number, showLoading = true) => {
     if (showLoading) {
       setLoading(true);
     }
     try {
-      const res = await api.get('/patch-notes');
+      const res = await api.get('/patch-notes', {
+        params: { month: m, year: y }
+      });
       setPatches(res.data);
     } catch (err) {
       console.error(err);
@@ -102,7 +126,7 @@ export default function PatchNotes() {
 
     Promise.resolve().then(() => {
       if (active) {
-        fetchPatches();
+        fetchPatches(selectedMonth, selectedYear);
       }
     });
 
@@ -122,7 +146,7 @@ export default function PatchNotes() {
     return () => {
       active = false;
     };
-  }, [fetchPatches]);
+  }, [fetchPatches, selectedMonth, selectedYear]);
 
   // 2. Abrir formulário para criação
   const handleCreateClick = () => {
@@ -170,7 +194,7 @@ export default function PatchNotes() {
         showToast('Nota de atualização publicada com sucesso!', 'success');
       }
       setFormOpen(false);
-      fetchPatches();
+      fetchPatches(selectedMonth, selectedYear);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Erro ao salvar nota de atualização.';
       setError(msg);
@@ -192,7 +216,7 @@ export default function PatchNotes() {
       await api.delete(`/patch-notes/${deleteId}`);
       showToast('Nota de atualização excluída com sucesso.', 'success');
       setDeleteId(null);
-      fetchPatches();
+      fetchPatches(selectedMonth, selectedYear);
     } catch {
       showToast('Erro ao excluir nota de atualização.', 'error');
     }
@@ -209,11 +233,39 @@ export default function PatchNotes() {
     <div className={styles.container}>
       <div className={styles.pageHeader}>
         <PageTitle level="h1">Notas de Atualização</PageTitle>
-        {user?.is_admin && (
-          <Button onClick={handleCreateClick}>
-            Publicar Novo Patch
-          </Button>
-        )}
+
+        <div className={styles.headerActions}>
+          <div className={styles.feedFilters}>
+            <select
+              className={styles.filterSelect}
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              disabled={loading}
+              aria-label="Filtrar por mês"
+            >
+              {months.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <select
+              className={styles.filterSelect}
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              disabled={loading}
+              aria-label="Filtrar por ano"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          {user?.is_admin && (
+            <Button onClick={handleCreateClick}>
+              Publicar Novo Patch
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (

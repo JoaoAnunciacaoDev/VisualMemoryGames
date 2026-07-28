@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -14,14 +14,37 @@ router = APIRouter(prefix="/patch-notes", tags=["Patch Notes"])
 
 
 @router.get("", response_model=List[PatchNoteResponse])
-def list_patch_notes(db: Session = Depends(get_db)):
-    """Retorna todas as notas de atualização ordenadas decrescentemente por data de criação."""
-    return (
-        db.query(PatchNote)
-        .options(joinedload(PatchNote.author))
-        .order_by(PatchNote.created_at.desc())
-        .all()
-    )
+def list_patch_notes(
+    month: Optional[int] = Query(None),
+    year: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Retorna as notas de atualização ordenadas decrescentemente
+    por data de criação com filtro opcional de mês e ano."""
+    query = db.query(PatchNote).options(joinedload(PatchNote.author))
+
+    if year is not None and year > 0 and month is not None and month > 0:
+        start_date = datetime(year, month, 1)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1)
+        else:
+            end_date = datetime(year, month + 1, 1)
+        query = query.filter(
+            PatchNote.created_at >= start_date,
+            PatchNote.created_at < end_date,
+        )
+    elif year is not None and year > 0:
+        start_date = datetime(year, 1, 1)
+        end_date = datetime(year + 1, 1, 1)
+        query = query.filter(
+            PatchNote.created_at >= start_date,
+            PatchNote.created_at < end_date,
+        )
+    elif month is not None and month > 0:
+        from sqlalchemy import extract
+        query = query.filter(extract("month", PatchNote.created_at) == month)
+
+    return query.order_by(PatchNote.created_at.desc()).all()
 
 
 @router.get("/unread")

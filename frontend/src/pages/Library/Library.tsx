@@ -44,7 +44,7 @@ export default function Library() {
     hoursOperator, setHoursOperator, hoursValue, setHoursValue, hoursValueMax, setHoursValueMax,
     clearAllFilters,
   } = useLibraryFilters(games);
-  const { searchResults, isSearching, searchGames, addGameToLibrary } = useGameSearch();
+  const { searchResults, isSearching, error: searchError, searchGames, addGameToLibrary } = useGameSearch();
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<LibraryTab>('library');
@@ -200,6 +200,7 @@ export default function Library() {
           isSearching={isSearching}
           searchResults={searchResults}
           addedGames={addedGames}
+          error={searchError}
           onAddGame={handleAddGame}
           onRemoveGame={(externalId) => removeConfirm.open(externalId)}
           onOpenGame={setSelectedSearchGame}

@@ -26,9 +26,8 @@ def _send_email(
     debug_code: str = None,
     email_type: str = "verificação",
 ):
-    if (
-        os.getenv("ENVIRONMENT", "development") in ("development", "testing")
-        and not os.getenv("RENDER")
+    if os.getenv("ENVIRONMENT", "development") in ("development", "testing") and not os.getenv(
+        "RENDER"
     ):
         logger.info(f"[MOCK EMAIL] Simulação de Envio de E-mail ({email_type})")
         print("\n==================================================")
@@ -193,9 +192,7 @@ def send_password_reset_email(email: str, code: str):
 
 def send_feedback_email(sender_email: str, sender_username: str, title: str, description: str):
     """Envia um e-mail contendo o feedback do usuário para o e-mail configurado."""
-    receiver = (
-        os.getenv("SMTP_USER")
-    )
+    receiver = os.getenv("SMTP_USER")
     subject = f"[VisualMemory Feedback] {title}"
     text = (
         f"Feedback enviado por {sender_username} ({sender_email}):\n\n"

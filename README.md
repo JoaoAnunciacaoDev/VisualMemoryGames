@@ -47,18 +47,19 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
   - Badge dinâmico com o ícone e nome da loja (ex: `🎮 Steam`, `PlayStation Store`, `Xbox Store`) sobreposto nos cards da biblioteca.
   - Indicador de estrela dourada (`⭐`) no topo direito para os jogos favoritados.
   - Emojis descritivos integrados nos GameCards da biblioteca (📝 Nota, ✅ Ano de Conclusão, 🏆 Ano de Platina) para maior legibilidade visual.
-- 🔍 **Pesquisa e Cadastro Inteligente:**
-  - Pesquisa integrada com a API oficial da RAWG.
+- 🔍 **Pesquisa e Cadastro Inteligente (Cache-First + IGDB / RAWG):**
+  - Arquitetura **Cache-First**: Consultas por jogos pesquisam primeiramente no banco local para retornos instantâneos em milissegundos sem dependência de outras apis.
+  - Integração com a **API do IGDB (Twitch API)** para busca de metadados completos de jogos (capas em HD, gêneros, ano de lançamento, plataformas, sinopses e trailers).
+  - Suporte de fallback legado à API oficial da RAWG com timeout resiliente.
 - 📝 **Múltiplas Avaliações (Histórico/Timeline):**
   - Registro de múltiplos comentários textuais e notas por jogo para acompanhar a mudança de opinião em novas jogatinas.
   - Exibição em linha do tempo conectada (Timeline Feed) com renderização de Markdown.
 - 🚀 **Motor de Recomendações Otimizado:**
-  - Carregamento instantâneo via cache local no banco de dados.
+  - Carregamento instantâneo via cache local no banco de dados com fallback para IGDB/RAWG.
   - Exclusão robusta de jogos já contidos na biblioteca (comparando IDs internos e externos).
-  - Variedade aprimorada com paginação aleatória nas consultas RAWG.
 - 📊 **Social, Feed & Lançamentos:**
   - Filtro dropdown por mês e ano para consultar o Feed de Atividades de forma segmentada dos usuários que você segue.
-  - Painel lateral de Lançamentos da Semana integrado ao RAWG com filtro inteligente dinâmico contra escassez de lançamentos populares.
+  - Painel lateral de Lançamentos da Semana integrado ao IGDB/RAWG com filtro inteligente dinâmico e fallback no banco local.
 - 📊 **Painel de Perfil Avançado (Dashboard):**
   - Board estatístico interativo para ver jogos concluídos no ano filtrados por mês, contendo contador de jogos zerados e grade de capas correspondentes.
   - Histórico de conclusões anual colapsável em acordeões (`▶` / `▼`) para otimização de espaço.
@@ -98,7 +99,7 @@ O projeto utiliza:
    ```bash
    cp .env.example .env
    ```
-   *Nota: Configure a variável `STEAM_API_KEY` para ativar a sincronização com a Steam.*
+   *Nota: Configure `TWITCH_CLIENT_ID` e `TWITCH_CLIENT_SECRET` para a API do IGDB e `STEAM_API_KEY` para a sincronização com a Steam.*
 
 3. Instale as ferramentas requeridas via Mise:
    ```bash

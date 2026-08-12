@@ -42,6 +42,7 @@ def list_patch_notes(
         )
     elif month is not None and month > 0:
         from sqlalchemy import extract
+
         query = query.filter(extract("month", PatchNote.created_at) == month)
 
     return query.order_by(PatchNote.created_at.desc()).all()

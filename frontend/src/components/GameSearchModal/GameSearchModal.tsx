@@ -19,16 +19,23 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<GameResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { showToast } = useToast();
 
   const handleSearch = async () => {
     if (query.trim().length < 3) return;
     setIsSearching(true);
+    setError(null);
     try {
       const response = await api.get('/games/search', { params: { q: query } });
       setResults(response.data);
-    } catch {
-      showToast('Erro ao buscar jogos.', 'error');
+    } catch (err: unknown) {
+      setResults([]);
+      const backendErr = err as { response?: { data?: { detail?: string } } };
+      const detail = backendErr.response?.data?.detail;
+      const errorMsg = typeof detail === 'string' ? detail : 'Erro ao buscar jogos no servidor.';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsSearching(false);
     }
@@ -71,6 +78,12 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
           {isSearching ? '...' : 'Buscar'}
         </Button>
       </div>
+
+      {error && (
+        <div role="alert" style={{ padding: '0.75rem', margin: '0.5rem 0', borderRadius: '6px', background: 'rgba(255, 107, 107, 0.1)', color: '#ff6b6b', fontSize: '0.875rem' }}>
+          {error}
+        </div>
+      )}
 
       <div className={`${styles.results} scrollbar-visualmemory`}>
         {results.map((game) => {

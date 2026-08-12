@@ -177,7 +177,7 @@ def follow_user(user_id: str, current_user: User, db: Session) -> bool:
             user_id=str(current_user.id),
             game_id=None,
             action_type="FOLLOW",
-            target_user_id=str(user_id)
+            target_user_id=str(user_id),
         )
         db.add(activity)
         db.commit()
@@ -198,7 +198,7 @@ def unfollow_user(user_id: str, current_user: User, db: Session) -> bool:
         db.query(Activity).filter(
             Activity.user_id == current_user.id,
             Activity.target_user_id == user_id,
-            Activity.action_type == "FOLLOW"
+            Activity.action_type == "FOLLOW",
         ).delete(synchronize_session=False)
         db.commit()
     return True
@@ -351,8 +351,8 @@ def get_feed(
 
         activities = format_activities(raw_activities, db, current_user)
 
-    # 3. Buscar lançamentos do RAWG
-    rawg_games = get_weekly_releases_rawg()
+    # 3. Buscar lançamentos da semana (IGDB / RAWG / Local DB)
+    rawg_games = get_weekly_releases_rawg(db=db)
     rawg_releases = [RawgRelease(**g) for g in rawg_games]
 
     return FeedResponse(activities=activities, rawg_releases=rawg_releases)

@@ -261,7 +261,7 @@ def update_user_game(
                 context=db_user_game.status,
             )
         )
-    if (old_rating != db_user_game.rating or old_notes != db_user_game.notes):
+    if old_rating != db_user_game.rating or old_notes != db_user_game.notes:
         log_rated_activity(db, str(current_user.id), db_user_game)
     if old_status != "Platinado" and db_user_game.status == "Platinado":
         db.add(
@@ -370,7 +370,7 @@ def log_rated_activity(
             .filter(
                 Activity.user_id == user_id,
                 Activity.game_id == user_game.game_id,
-                Activity.action_type == "RATED"
+                Activity.action_type == "RATED",
             )
             .all()
         )
@@ -392,7 +392,7 @@ def log_rated_activity(
         db.query(Activity).filter(
             Activity.user_id == user_id,
             Activity.game_id == user_game.game_id,
-            Activity.action_type == "RATED"
+            Activity.action_type == "RATED",
         ).delete()
         return
 
@@ -401,7 +401,7 @@ def log_rated_activity(
         .filter(
             Activity.user_id == user_id,
             Activity.game_id == user_game.game_id,
-            Activity.action_type == "RATED"
+            Activity.action_type == "RATED",
         )
         .all()
     )
@@ -422,10 +422,7 @@ def log_rated_activity(
                 except Exception:
                     pass
 
-    rating_context = json.dumps({
-        "rating": user_game.rating,
-        "notes": user_game.notes or ""
-    })
+    rating_context = json.dumps({"rating": user_game.rating, "notes": user_game.notes or ""})
 
     if matching_activity:
         matching_activity.context = rating_context

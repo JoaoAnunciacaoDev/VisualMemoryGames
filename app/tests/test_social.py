@@ -242,12 +242,7 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
 
     # Post add game first (no rating initially)
     add_resp = client.post(
-        "/user-games/",
-        json={
-            "game_id": game.id,
-            "status": "Quero Jogar"
-        },
-        headers=auth_headers
+        "/user-games/", json={"game_id": game.id, "status": "Quero Jogar"}, headers=auth_headers
     )
     assert add_resp.status_code == 201
     ug_id = add_resp.json()["id"]
@@ -255,12 +250,8 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     # Rate and add review notes via PUT
     client.put(
         f"/user-games/{ug_id}",
-        json={
-            "status": "Zerado",
-            "rating": 5,
-            "notes": "Jogo maravilhoso!"
-        },
-        headers=auth_headers
+        json={"status": "Zerado", "rating": 5, "notes": "Jogo maravilhoso!"},
+        headers=auth_headers,
     )
 
     resp = client.get("/social/activities/me", headers=auth_headers)
@@ -272,14 +263,14 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
 
     # 4. Test year/month query filters on /social/activities/me
     from datetime import datetime, timezone
+
     now = datetime.now(timezone.utc)
     current_month = now.month
     current_year = now.year
 
     # Request current month/year -> should return the activities
     resp_filtered = client.get(
-        f"/social/activities/me?month={current_month}&year={current_year}",
-        headers=auth_headers
+        f"/social/activities/me?month={current_month}&year={current_year}", headers=auth_headers
     )
     assert resp_filtered.status_code == 200
     assert len(resp_filtered.json()) > 0
@@ -288,8 +279,7 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     diff_month = 1 if current_month == 12 else current_month + 1
     diff_year = current_year - 1
     resp_empty = client.get(
-        f"/social/activities/me?month={diff_month}&year={diff_year}",
-        headers=auth_headers
+        f"/social/activities/me?month={diff_month}&year={diff_year}", headers=auth_headers
     )
     assert resp_empty.status_code == 200
     assert len(resp_empty.json()) == 0

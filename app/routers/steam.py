@@ -458,6 +458,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                     )
                 )
                 from app.services.custom_list_service import sync_auto_list
+
                 sync_auto_list(
                     user_id=str(account.user_id),
                     user_game=user_game,
@@ -507,6 +508,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                     )
                 if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
                     from app.services.custom_list_service import sync_auto_list
+
                     sync_auto_list(
                         user_id=str(account.user_id),
                         user_game=user_game,

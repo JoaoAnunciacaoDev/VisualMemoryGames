@@ -240,6 +240,7 @@ def test_sync_steam_games_success(
 
     # Verifica as atividades registradas
     from app.models.activity import Activity
+
     activities = db_session.query(Activity).all()
     # 3 ADDED activities + 1 PLATINUM activity
     assert len(activities) == 4
@@ -253,6 +254,7 @@ def test_sync_steam_games_success(
 
     # Verifica se a lista automática "Platinados 2026" foi criada e o jogo associado
     from app.models.custom_lists import CustomList
+
     plat_list = (
         db_session.query(CustomList)
         .filter(CustomList.list_type == "platinized_year", CustomList.name == "Platinados 2026")
@@ -278,8 +280,10 @@ def test_sync_steam_games_update_activity(
     mock_recent.return_value = []
 
     from datetime import date
+
     async def side_effect_plat(steam_id, appid, *args, **kwargs):
         return date(2026, 7, 2) if appid == 500 else None
+
     mock_plat.side_effect = side_effect_plat
 
     # Mock de jogos da Steam
@@ -317,6 +321,7 @@ def test_sync_steam_games_update_activity(
 
     # Clear previous mock activities
     from app.models.activity import Activity
+
     db_session.query(Activity).delete()
     db_session.commit()
 
@@ -350,6 +355,7 @@ def test_sync_steam_games_update_activity(
 
     # Verifica se a lista automática "Platinados 2026" foi criada e o jogo associado
     from app.models.custom_lists import CustomList
+
     plat_list = (
         db_session.query(CustomList)
         .filter(CustomList.list_type == "platinized_year", CustomList.name == "Platinados 2026")

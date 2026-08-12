@@ -7,17 +7,26 @@ export function useGameSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const searchGames = async (query: string) => {
     if (!query.trim() || query.trim().length < 3) return;
     setIsSearching(true);
     setHasSearched(true);
+    setError(null);
     try {
       const response = await api.get('/games/search', { params: { q: query } });
       const data = response.data.results || response.data;
       setSearchResults(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (err: unknown) {
       setSearchResults([]);
+      const backendErr = err as { response?: { data?: { detail?: string } } };
+      const detail = backendErr.response?.data?.detail;
+      setError(
+        typeof detail === 'string'
+          ? detail
+          : 'Não foi possível comunicar com o serviço de busca de jogos. Tente novamente mais tarde.'
+      );
     } finally {
       setIsSearching(false);
     }
@@ -26,6 +35,7 @@ export function useGameSearch() {
   const clearResults = () => {
     setSearchResults([]);
     setHasSearched(false);
+    setError(null);
   };
 
   const addGameToLibrary = async (game: GameResult): Promise<void> => {
@@ -65,5 +75,5 @@ export function useGameSearch() {
     }
   };
 
-  return { searchResults, isSearching, hasSearched, isAdding, searchGames, clearResults, addGameToLibrary };
+  return { searchResults, isSearching, hasSearched, isAdding, error, searchGames, clearResults, addGameToLibrary };
 }

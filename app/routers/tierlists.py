@@ -51,11 +51,12 @@ def create_tierlist(
     # Registo de atividade para criação de Tier List (apenas se for pública)
     if new_tierlist.is_public:
         from app.models.activity import Activity
+
         activity = Activity(
             user_id=str(current_user.id),
             game_id=None,
             action_type="CREATED_TIERLIST",
-            tierlist_id=str(new_tierlist.id)
+            tierlist_id=str(new_tierlist.id),
         )
         db.add(activity)
         db.commit()
@@ -138,11 +139,12 @@ def update_tierlist(
     db.refresh(tierlist)
 
     from app.models.activity import Activity
+
     if not tierlist.is_public:
         # Se a tier list passou a ser privada, deleta todas as atividades relacionadas a ela
-        db.query(Activity).filter(
-            Activity.tierlist_id == tierlist.id
-        ).delete(synchronize_session=False)
+        db.query(Activity).filter(Activity.tierlist_id == tierlist.id).delete(
+            synchronize_session=False
+        )
         db.commit()
     else:
         # Se a tier list é/continua pública e foi atualizada relevante (título ou se tornou pública)

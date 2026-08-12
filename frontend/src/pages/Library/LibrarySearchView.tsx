@@ -9,6 +9,7 @@ interface Props {
   isSearching: boolean;
   searchResults: GameResult[];
   addedGames: Map<number, string>;
+  error?: string | null;
   onAddGame: (game: GameResult) => void;
   onRemoveGame: (externalId: number) => void;
   onOpenGame: (game: GameResult) => void;
@@ -20,6 +21,7 @@ export default function LibrarySearchView({
   isSearching,
   searchResults,
   addedGames,
+  error,
   onAddGame,
   onRemoveGame,
   onOpenGame,
@@ -28,6 +30,16 @@ export default function LibrarySearchView({
   return (
     <>
       <SearchBar onSearch={searchGames} isSearching={isSearching} onManualAdd={onManualAdd} />
+
+      {error && (
+        <div className={styles.emptyState} role="alert" style={{ borderColor: 'rgba(255, 107, 107, 0.4)', color: '#ff6b6b' }}>
+          <p>{error}</p>
+          <p style={{ fontSize: '0.875rem', marginTop: '0.5rem', opacity: 0.8 }}>
+            Você também pode cadastrar o jogo manualmente se desejar.
+          </p>
+        </div>
+      )}
+
       <GameGrid>
         {searchResults.map((game) => (
           <GameCard
@@ -42,7 +54,7 @@ export default function LibrarySearchView({
           />
         ))}
       </GameGrid>
-      {searchResults.length === 0 && !isSearching && (
+      {searchResults.length === 0 && !isSearching && !error && (
         <div className={styles.emptyState}>
           Pesquise por um título para adicionar à sua coleção.
         </div>

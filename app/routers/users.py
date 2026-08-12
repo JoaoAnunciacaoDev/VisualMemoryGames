@@ -435,7 +435,7 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
         yearly_platinums=yearly_platinums_list,
         favorite_games=favorite_games_list,
         is_following=is_following_val,
-     )
+    )
 
 
 @router.post("/feedback", status_code=status.HTTP_200_OK)

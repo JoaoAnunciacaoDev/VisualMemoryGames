@@ -17,14 +17,14 @@ router = APIRouter(prefix="/games", tags=["Games"])
 
 
 @router.get("/search", response_model=List[GameBase])
-def search_external_games(q: str):
-    """Busca jogos na API externa da RAWG pelo nome."""
+def search_external_games(q: str, db: Session = Depends(get_db)):
+    """Busca jogos por nome (Cache local -> IGDB -> RAWG)."""
     if not q or len(q) < 3:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A busca deve ter pelo menos 3 caracteres.",
         )
-    return search_games_on_rawg(q)
+    return search_games_on_rawg(q, db=db)
 
 
 @router.post("/", response_model=GameResponse, status_code=status.HTTP_201_CREATED)

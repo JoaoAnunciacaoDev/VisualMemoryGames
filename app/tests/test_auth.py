@@ -17,9 +17,7 @@ def test_login_user(client):
         },
     )
 
-    response = client.post(
-        "/login", data={"username": "joaogamer", "password": "SenhaSegura_123!"}
-    )
+    response = client.post("/login", data={"username": "joaogamer", "password": "SenhaSegura_123!"})
 
     assert response.status_code == 200
     assert response.json()["success"] is True
@@ -114,7 +112,7 @@ def test_login_remember_me(client):
     # 1. Test remember_me = True (should set Max-Age to 30 days)
     response_true = client.post(
         "/login",
-        data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "true"}
+        data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "true"},
     )
     assert response_true.status_code == 200
     set_cookie_true = response_true.headers.get("set-cookie", "")
@@ -123,7 +121,7 @@ def test_login_remember_me(client):
     # 2. Test remember_me = False (should set transient session cookie, no Max-Age)
     response_false = client.post(
         "/login",
-        data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "false"}
+        data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "false"},
     )
     assert response_false.status_code == 200
     set_cookie_false = response_false.headers.get("set-cookie", "")

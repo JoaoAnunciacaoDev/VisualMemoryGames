@@ -29,6 +29,14 @@ class ActivityResponse(BaseModel):
     commentary: Optional[str] = None
 
 
+class PaginatedActivities(BaseModel):
+    items: List[ActivityResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
 class RawgRelease(BaseModel):
     title: str
     cover_url: Optional[str]
@@ -37,5 +45,5 @@ class RawgRelease(BaseModel):
 
 
 class FeedResponse(BaseModel):
-    activities: List[ActivityResponse]
+    activities: PaginatedActivities
     rawg_releases: List[RawgRelease]

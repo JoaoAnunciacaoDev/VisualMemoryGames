@@ -125,7 +125,11 @@ def test_get_feed_and_activity_creation(client: TestClient, db_session, auth_hea
     assert response.status_code == 200
     data = response.json()
 
-    activities = data["activities"]
+    activities_data = data["activities"]
+    assert activities_data["total"] >= 1
+    assert activities_data["page"] == 1
+    assert activities_data["total_pages"] >= 1
+    activities = activities_data["items"]
     assert len(activities) > 0
     assert activities[0]["user_id"] == str(user2.id)
     assert activities[0]["action_type"] == "ADDED"
@@ -192,7 +196,9 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     # Check activities/me endpoint
     resp = client.get("/social/activities/me", headers=auth_headers)
     assert resp.status_code == 200
-    activities = resp.json()
+    resp_data = resp.json()
+    assert resp_data["page"] == 1
+    activities = resp_data["items"]
     follow_act = next((a for a in activities if a["action_type"] == "FOLLOW"), None)
     assert follow_act is not None
     assert follow_act["target_user"]["username"] == "targetuser"
@@ -200,7 +206,7 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     # Unfollow
     client.delete(f"/social/users/{user2.id}/follow", headers=auth_headers)
     resp = client.get("/social/activities/me", headers=auth_headers)
-    activities = resp.json()
+    activities = resp.json()["items"]
     follow_act = next((a for a in activities if a["action_type"] == "FOLLOW"), None)
     assert follow_act is None
 
@@ -213,7 +219,7 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     tl_id = tl_resp.json()["id"]
 
     resp = client.get("/social/activities/me", headers=auth_headers)
-    activities = resp.json()
+    activities = resp.json()["items"]
     create_act = next((a for a in activities if a["action_type"] == "CREATED_TIERLIST"), None)
     assert create_act is not None
     assert create_act["tierlist_title"] == "Public TL"
@@ -221,14 +227,14 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     # Update public tier list
     client.put(f"/tierlists/{tl_id}", json={"title": "Updated TL"}, headers=auth_headers)
     resp = client.get("/social/activities/me", headers=auth_headers)
-    activities = resp.json()
+    activities = resp.json()["items"]
     update_act = next((a for a in activities if a["action_type"] == "UPDATED_TIERLIST"), None)
     assert update_act is not None
 
     # Turn private
     client.put(f"/tierlists/{tl_id}", json={"is_public": False}, headers=auth_headers)
     resp = client.get("/social/activities/me", headers=auth_headers)
-    activities = resp.json()
+    activities = resp.json()["items"]
     # Should delete all activities for this tierlist
     tl_acts = [a for a in activities if a["tierlist_id"] == tl_id]
     assert len(tl_acts) == 0
@@ -255,7 +261,7 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     )
 
     resp = client.get("/social/activities/me", headers=auth_headers)
-    activities = resp.json()
+    activities = resp.json()["items"]
     rated_act = next((a for a in activities if a["action_type"] == "RATED"), None)
     assert rated_act is not None
     assert rated_act["context"] == "5.0"
@@ -273,7 +279,7 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
         f"/social/activities/me?month={current_month}&year={current_year}", headers=auth_headers
     )
     assert resp_filtered.status_code == 200
-    assert len(resp_filtered.json()) > 0
+    assert len(resp_filtered.json()["items"]) > 0
 
     # Request a different month/year -> should return 0 activities
     diff_month = 1 if current_month == 12 else current_month + 1
@@ -282,4 +288,5 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
         f"/social/activities/me?month={diff_month}&year={diff_year}", headers=auth_headers
     )
     assert resp_empty.status_code == 200
-    assert len(resp_empty.json()) == 0
+    assert len(resp_empty.json()["items"]) == 0
+

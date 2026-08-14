@@ -22,7 +22,7 @@ const mockGame: GameResult = {
 
 describe('useGameSearch', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it('deve iniciar com estados padrão', () => {
@@ -64,6 +64,12 @@ describe('useGameSearch', () => {
   });
 
   it('loadMore deve paginar e acumular novos resultados', async () => {
+    const firstPageItems: GameResult[] = Array.from({ length: 15 }, (_, i) => ({
+      ...mockGame,
+      external_id: 1000 + i,
+      title: `Game ${i}`,
+    }));
+
     const mockGame2: GameResult = {
       external_id: 10000,
       title: 'Hollow Knight: Silksong',
@@ -74,7 +80,7 @@ describe('useGameSearch', () => {
     };
 
     vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: { results: [mockGame] } })
+      .mockResolvedValueOnce({ data: { results: firstPageItems } })
       .mockResolvedValueOnce({ data: { results: [mockGame2] } });
 
     const { result } = renderHook(() => useGameSearch());
@@ -83,14 +89,14 @@ describe('useGameSearch', () => {
       await result.current.searchGames('hollow');
     });
 
-    expect(result.current.searchResults).toEqual([mockGame]);
+    expect(result.current.searchResults).toEqual(firstPageItems);
 
     await act(async () => {
       await result.current.loadMore();
     });
 
     expect(api.get).toHaveBeenLastCalledWith('/games/search', { params: { q: 'hollow', page: 2 } });
-    expect(result.current.searchResults).toEqual([mockGame, mockGame2]);
+    expect(result.current.searchResults).toEqual([...firstPageItems, mockGame2]);
   });
 
   it('searchGames não deve pesquisar se o query tiver menos de 3 caracteres', async () => {

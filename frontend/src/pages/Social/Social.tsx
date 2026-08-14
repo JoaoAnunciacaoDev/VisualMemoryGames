@@ -45,15 +45,29 @@ interface RawgRelease {
   genres: string[];
 }
 
+interface PaginatedActivities {
+  items: Activity[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 interface FeedData {
-  activities: Activity[];
+  activities: PaginatedActivities;
   rawg_releases: RawgRelease[];
 }
 
 const Social: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"feed" | "my-activities" | "search">("feed");
   const [feedData, setFeedData] = useState<FeedData | null>(null);
+  const [feedPage, setFeedPage] = useState(1);
+  const [feedTotalPages, setFeedTotalPages] = useState(1);
+
   const [myActivities, setMyActivities] = useState<Activity[]>([]);
+  const [myPage, setMyPage] = useState(1);
+  const [myTotalPages, setMyTotalPages] = useState(1);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -83,13 +97,15 @@ const Social: React.FC = () => {
     { value: 12, label: 'Dezembro' }
   ];
 
-  const loadFeed = async (m: number, y: number) => {
+  const loadFeed = async (m: number, y: number, page: number = 1) => {
     setLoading(true);
     try {
       const res = await api.get('/social/feed', {
-        params: { month: m, year: y }
+        params: { month: m, year: y, page }
       });
       setFeedData(res.data);
+      setFeedPage(res.data.activities?.page || page);
+      setFeedTotalPages(res.data.activities?.total_pages || 1);
     } catch (err) {
       console.error(err);
     } finally {
@@ -97,13 +113,15 @@ const Social: React.FC = () => {
     }
   };
 
-  const loadMyActivities = async (m: number, y: number) => {
+  const loadMyActivities = async (m: number, y: number, page: number = 1) => {
     setLoading(true);
     try {
       const res = await api.get('/social/activities/me', {
-        params: { month: m, year: y }
+        params: { month: m, year: y, page }
       });
-      setMyActivities(res.data);
+      setMyActivities(res.data.items || []);
+      setMyPage(res.data.page || page);
+      setMyTotalPages(res.data.total_pages || 1);
     } catch (err) {
       console.error(err);
     } finally {
@@ -114,11 +132,64 @@ const Social: React.FC = () => {
   useEffect(() => {
     if (activeTab === "feed") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadFeed(selectedMonth, selectedYear);
+      loadFeed(selectedMonth, selectedYear, 1);
     } else if (activeTab === "my-activities") {
-      loadMyActivities(selectedMonth, selectedYear);
+      loadMyActivities(selectedMonth, selectedYear, 1);
     }
   }, [activeTab, selectedMonth, selectedYear]);
+
+  const handlePageChange = (newPage: number) => {
+    if (activeTab === "feed") {
+      loadFeed(selectedMonth, selectedYear, newPage);
+    } else if (activeTab === "my-activities") {
+      loadMyActivities(selectedMonth, selectedYear, newPage);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const getPageNumbers = (current: number, total: number): (number | '...')[] => {
+    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    if (current <= 3) return [1, 2, 3, 4, '...', total];
+    if (current >= total - 2) return [1, '...', total - 3, total - 2, total - 1, total];
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
+
+  const renderPagination = (currentPage: number, totalPages: number) => {
+    if (totalPages <= 1) return null;
+    return (
+      <div className={styles.pagination}>
+        <button
+          className={styles.pageBtn}
+          disabled={currentPage === 1}
+          onClick={() => handlePageChange(currentPage - 1)}
+        >
+          ‹ Anterior
+        </button>
+
+        {getPageNumbers(currentPage, totalPages).map((p, i) =>
+          p === '...' ? (
+            <span key={`ellipsis-${i}`} className={styles.ellipsis}>…</span>
+          ) : (
+            <button
+              key={`page-${p}`}
+              className={`${styles.pageBtn} ${p === currentPage ? styles.activePage : ''}`}
+              onClick={() => handlePageChange(p as number)}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button
+          className={styles.pageBtn}
+          disabled={currentPage === totalPages}
+          onClick={() => handlePageChange(currentPage + 1)}
+        >
+          Próximo ›
+        </button>
+      </div>
+    );
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,12 +386,17 @@ const Social: React.FC = () => {
                 </div>
               </div>
               {loading && <Loader message="Carregando feed..." />}
-              {!loading && renderActivityList(feedData?.activities || [], "Nenhuma atividade recente. Siga mais pessoas!")}
+              {!loading && (
+                <>
+                  {renderActivityList(feedData?.activities?.items || [], "Nenhuma atividade recente. Siga mais pessoas!")}
+                  {renderPagination(feedPage, feedTotalPages)}
+                </>
+              )}
             </div>
 
             <div className={styles.sidebarFeed}>
               <h2>Lançamentos da Semana</h2>
-              {feedData?.rawg_releases.map((rel, idx) => (
+              {feedData?.rawg_releases?.map((rel, idx) => (
                 <div key={idx} className={styles.releaseCard}>
                   {rel.cover_url && (
                     <img
@@ -369,7 +445,12 @@ const Social: React.FC = () => {
                 </div>
               </div>
               {loading && <Loader message="Carregando minhas atividades..." />}
-              {!loading && renderActivityList(myActivities, "Você ainda não tem nenhuma atividade registrada no período selecionado.")}
+              {!loading && (
+                <>
+                  {renderActivityList(myActivities, "Você ainda não tem nenhuma atividade registrada no período selecionado.")}
+                  {renderPagination(myPage, myTotalPages)}
+                </>
+              )}
             </div>
           </div>
         )}

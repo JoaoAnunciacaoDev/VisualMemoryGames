@@ -6,7 +6,13 @@ from app.models.activity import Activity
 from app.models.follow import Follow
 from app.models.user import User
 from app.schemas.game import GameResponse
-from app.schemas.social import ActivityResponse, FeedResponse, RawgRelease, UserPublicProfile
+from app.schemas.social import (
+    ActivityResponse,
+    FeedResponse,
+    PaginatedActivities,
+    RawgRelease,
+    UserPublicProfile,
+)
 from app.services.game_provider import get_weekly_releases_rawg
 from app.utils import safe_load_json_list
 
@@ -283,8 +289,10 @@ def get_my_activities(
     db: Session,
     year: Optional[int] = None,
     month: Optional[int] = None,
-) -> List[ActivityResponse]:
-    """Busca as atividades do próprio usuário logado com filtro opcional de ano e mês."""
+    page: int = 1,
+    page_size: int = 10,
+) -> PaginatedActivities:
+    """Busca as atividades do próprio usuário logado com filtro opcional de ano e mês paginadas."""
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
@@ -297,17 +305,30 @@ def get_my_activities(
     else:
         end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
 
+    base_query = db.query(Activity).filter(
+        Activity.user_id == current_user.id,
+        Activity.created_at >= start_date,
+        Activity.created_at < end_date,
+    )
+    total = base_query.count()
+
     raw_activities = (
-        db.query(Activity)
-        .filter(
-            Activity.user_id == current_user.id,
-            Activity.created_at >= start_date,
-            Activity.created_at < end_date,
-        )
+        base_query
         .order_by(Activity.created_at.desc())
+        .offset(max(0, page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-    return format_activities(raw_activities, db, current_user)
+    items = format_activities(raw_activities, db, current_user)
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+
+    return PaginatedActivities(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 def get_feed(
@@ -315,16 +336,19 @@ def get_feed(
     db: Session,
     year: Optional[int] = None,
     month: Optional[int] = None,
+    page: int = 1,
+    page_size: int = 10,
 ) -> FeedResponse:
-    """Busca as atividades dos usuários que eu sigo + lançamentos da semana."""
+    """Busca as atividades dos usuários que eu sigo (paginadas) + lançamentos da semana."""
 
     # 1. Obter IDs que eu sigo
     following_ids = [
         f.following_id for f in db.query(Follow).filter(Follow.follower_id == current_user.id).all()
     ]
 
-    # 2. Buscar atividades recentes
-    activities = []
+    # 2. Buscar atividades recentes paginadas
+    activities_items = []
+    total = 0
     if following_ids:
         from datetime import datetime, timezone
 
@@ -338,21 +362,35 @@ def get_feed(
         else:
             end_date = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
 
+        base_query = db.query(Activity).filter(
+            Activity.user_id.in_(following_ids),
+            Activity.created_at >= start_date,
+            Activity.created_at < end_date,
+        )
+        total = base_query.count()
+
         raw_activities = (
-            db.query(Activity)
-            .filter(
-                Activity.user_id.in_(following_ids),
-                Activity.created_at >= start_date,
-                Activity.created_at < end_date,
-            )
+            base_query
             .order_by(Activity.created_at.desc())
+            .offset(max(0, page - 1) * page_size)
+            .limit(page_size)
             .all()
         )
 
-        activities = format_activities(raw_activities, db, current_user)
+        activities_items = format_activities(raw_activities, db, current_user)
+
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    paginated_activities = PaginatedActivities(
+        items=activities_items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
     # 3. Buscar lançamentos da semana (IGDB / RAWG / Local DB)
     rawg_games = get_weekly_releases_rawg(db=db)
     rawg_releases = [RawgRelease(**g) for g in rawg_games]
 
-    return FeedResponse(activities=activities, rawg_releases=rawg_releases)
+    return FeedResponse(activities=paginated_activities, rawg_releases=rawg_releases)
+

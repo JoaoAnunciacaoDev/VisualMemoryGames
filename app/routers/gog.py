@@ -166,25 +166,45 @@ async def sync_single_account(account: GogAccount, db: Session) -> dict:
 
 
 async def process_gog_games_list(account: GogAccount, gog_games: list, db: Session) -> dict:
-    """Processa a lista de jogos do GOG e persiste no banco de dados."""
+    """Processa a lista de jogos do GOG e persiste no banco em lote com alta performance."""
     new_games_count = 0
     updated_games_count = 0
+
+    if not gog_games:
+        return {"new_games_count": 0, "updated_games_count": 0}
+
+    # 1. Pré-carrega jogos existentes no catálogo em lotes de 500
+    titles_lower = list({g["title"].strip().lower() for g in gog_games if g.get("title")})
+    existing_games = {}
+    for i in range(0, len(titles_lower), 500):
+        chunk = titles_lower[i : i + 500]
+        found = db.query(Game).filter(func.lower(Game.title).in_(chunk)).all()
+        for g_db in found:
+            existing_games[g_db.title.lower().strip()] = g_db
+
+    # 2. Pré-carrega jogos da biblioteca do usuário
+    user_games_map = {
+        ug.game_id: ug
+        for ug in db.query(UserGame).filter(UserGame.user_id == account.user_id).all()
+    }
 
     for g_item in gog_games:
         title = g_item.get("title")
         if not title:
             continue
 
+        clean_title = title.strip()
+        title_key = clean_title.lower()
         cover_url = g_item.get("cover_url")
         hours_played = g_item.get("hours_played", 0.0)
         is_platinized = g_item.get("is_platinized", False)
         platinum_date = g_item.get("platinum_date")
 
-        # 1. Procura se o jogo já existe globalmente no banco por título
-        game = db.query(Game).filter(func.lower(Game.title) == title.lower().strip()).first()
+        # 1. Procura se o jogo já existe globalmente no dicionário em memória
+        game = existing_games.get(title_key)
         if not game:
             game = Game(
-                title=title,
+                title=clean_title,
                 cover_url=cover_url,
                 platforms=["PC"],
                 genres=[],
@@ -193,13 +213,10 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
             )
             db.add(game)
             db.flush()
+            existing_games[title_key] = game
 
-        # 2. Verifica se o usuário já possui este jogo na biblioteca
-        user_game = (
-            db.query(UserGame)
-            .filter(UserGame.user_id == account.user_id, UserGame.game_id == game.id)
-            .first()
-        )
+        # 2. Verifica se o usuário já possui este jogo na biblioteca em memória
+        user_game = user_games_map.get(game.id)
 
         if not user_game:
             # Classifica status inicial

@@ -114,48 +114,77 @@ class GogService:
 
     async def get_public_games(self, username: str) -> List[dict]:
         """Busca os jogos, horas jogadas e conquistas a partir do perfil público do GOG."""
+        import asyncio
+
         headers = {
             "User-Agent": DEFAULT_USER_AGENT,
             "Accept": "application/json, text/plain, */*",
             "X-Requested-With": "XMLHttpRequest",
         }
 
-        games_result = []
-        page = 1
-        max_pages = 50  # Limite de segurança
-
         async with httpx.AsyncClient(
             headers=headers, follow_redirects=True, timeout=15.0
         ) as client:
-            while page <= max_pages:
-                url = f"{GOG_BASE_URL}/u/{username}/games/stats?page={page}"
-                try:
-                    response = await client.get(url)
-                    if response.status_code == 404:
-                        raise HTTPException(
-                            status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Perfil do GOG '{username}' não encontrado.",
-                        )
-                    if response.status_code == 403 or response.status_code == 401:
-                        raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=(
-                                "A biblioteca de jogos deste perfil do GOG está privada. "
-                                "Por favor, acesse suas configurações de privacidade no GOG "
-                                "e defina 'Perfil e Jogos' como Público."
-                            ),
-                        )
-                    if response.status_code != 200:
-                        break
+            # 1. Busca a primeira página para extrair total de páginas
+            first_url = f"{GOG_BASE_URL}/u/{username}/games/stats?page=1"
+            try:
+                first_res = await client.get(first_url)
+                if first_res.status_code == 404:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Perfil do GOG '{username}' não encontrado.",
+                    )
+                if first_res.status_code in (401, 403):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            "A biblioteca de jogos deste perfil do GOG está privada. "
+                            "Por favor, acesse suas configurações de privacidade no GOG "
+                            "e defina 'Perfil e Jogos' como Público."
+                        ),
+                    )
+                if first_res.status_code != 200:
+                    return []
+                first_data = first_res.json()
+            except HTTPException:
+                raise
+            except Exception as e:
+                print(f"Erro ao consultar página 1 do GOG: {e}")
+                return []
 
-                    data = response.json()
-                except HTTPException:
-                    raise
-                except Exception as e:
-                    print(f"Erro ao consultar página {page} de jogos do GOG: {e}")
-                    break
+            all_pages_data = [first_data]
+            total_pages = min(
+                first_data.get("pages")
+                or first_data.get("totalPages")
+                or first_data.get("pages_count")
+                or 1,
+                50,
+            )
 
-                # O JSON do GOG retorna _embedded.items, com fallback para items ou pages
+            # 2. Se houver mais páginas, busca as restantes em paralelo
+            if total_pages > 1:
+                sem = asyncio.Semaphore(5)
+
+                async def fetch_page(p: int):
+                    async with sem:
+                        try:
+                            p_url = f"{GOG_BASE_URL}/u/{username}/games/stats?page={p}"
+                            r = await client.get(p_url)
+                            if r.status_code == 200:
+                                return r.json()
+                        except Exception as err:
+                            print(f"Erro ao buscar página {p} do GOG: {err}")
+                        return None
+
+                tasks = [fetch_page(p) for p in range(2, total_pages + 1)]
+                results = await asyncio.gather(*tasks)
+                for r_data in results:
+                    if r_data:
+                        all_pages_data.append(r_data)
+
+            # 3. Processa os itens de todas as páginas
+            games_result = []
+            for data in all_pages_data:
                 items = (
                     data.get("_embedded", {}).get("items", [])
                     if isinstance(data.get("_embedded"), dict)
@@ -165,13 +194,12 @@ class GogService:
                     items = data
 
                 if not items:
-                    break
+                    continue
 
                 for item in items:
                     game_info = item.get("game", {}) if isinstance(item, dict) else {}
                     stats_raw = item.get("stats", {}) if isinstance(item, dict) else {}
 
-                    # Extrai dados do jogo
                     game_id = game_info.get("id") or item.get("id")
                     title = game_info.get("title") or item.get("title")
                     if not title:
@@ -181,7 +209,6 @@ class GogService:
                     if image_url and image_url.startswith("//"):
                         image_url = f"https:{image_url}"
 
-                    # Extrai user_stats (o GOG mapeia stats por gog_user_id ou dicionário direto)
                     user_stats = {}
                     if isinstance(stats_raw, dict):
                         for k, v in stats_raw.items():
@@ -192,11 +219,9 @@ class GogService:
                                 user_stats = stats_raw
                                 break
 
-                    # Extrai horas jogadas (playtime vem em minutos)
                     playtime_minutes = user_stats.get("playtime", 0) or 0
                     hours_played = round(playtime_minutes / 60.0, 1)
 
-                    # Extrai conquistas e status de platina
                     ach_pct = user_stats.get("achievementsPercentage")
                     ach_data = user_stats.get("achievements")
                     is_platinized = False
@@ -242,14 +267,4 @@ class GogService:
                         }
                     )
 
-                total_pages = (
-                    data.get("pages")
-                    or data.get("totalPages")
-                    or data.get("pages_count")
-                    or 1
-                )
-                if page >= total_pages:
-                    break
-                page += 1
-
-        return games_result
+            return games_result

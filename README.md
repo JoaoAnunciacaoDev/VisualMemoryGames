@@ -1,7 +1,7 @@
 <h1 align="center">🎮 VisualMemory</h1>
 
 <p align="center">
-  <em>Plataforma para gestão de bibliotecas de videojogos, integração com Steam, GOG e Itch.io e criação de tier lists personalizadas.</em>
+  <em>Plataforma para gestão de bibliotecas de videojogos, integração com Steam, GOG, Epic Games e Itch.io e criação de tier lists personalizadas.</em>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 # 🎯 Sobre o Projeto
 
-O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam, GOG e Itch.io para importar jogos automaticamente e organizar jogos em *tier lists*.
+O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam, GOG, Epic Games e Itch.io para importar jogos automaticamente e organizar jogos em *tier lists*.
 
 ---
 
@@ -47,6 +47,10 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
   - Conexão segura e sem OAuth via perfil público ou nome de usuário.
   - Importação de biblioteca completa com capas oficiais, horas jogadas e detecção de conquistas/platinas.
   - Busca paginada e concorrente com inserção em lote para máxima performance.
+- ⚡ **Integração com a Epic Games Store:**
+  - Importação segura e privada via upload de arquivo (`.txt`/`.csv`) gerado pelo usuário ou colando a lista de títulos.
+  - Script de exportação em 1 clique via console do navegador na página oficial de transações da Epic.
+  - Deduplicação inteligente no catálogo e atribuição automática do selo `EPIC`.
 - 🎲 **Integração com o Itch.io:**
   - Vínculo de perfil público e sincronização de jogos da biblioteca indie do Itch.io.
 - 🎨 **Visual Moderno de Capas:**

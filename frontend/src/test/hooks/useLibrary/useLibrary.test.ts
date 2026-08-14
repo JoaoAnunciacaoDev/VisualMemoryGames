@@ -108,4 +108,21 @@ describe('useLibrary', () => {
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(result.current.games).toEqual([mockGames[0]]);
   });
+
+  it('deve recarregar a biblioteca ao disparar o evento epic-synced', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockGames });
+    renderHook(() => useLibrary('user-123'));
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      window.dispatchEvent(new Event('epic-synced'));
+    });
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledTimes(2);
+    });
+  });
 });

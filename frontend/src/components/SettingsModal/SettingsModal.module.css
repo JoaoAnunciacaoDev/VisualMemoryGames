@@ -290,3 +290,202 @@
   color: rgba(255, 255, 255, 0.5);
   margin: 5px 0 0 28px;
 }
+
+/* Epic Games Store Styles */
+.epicHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--gap-xs);
+}
+
+.epicHeader h3 {
+  margin: 0;
+}
+
+.epicBadge {
+  font-size: var(--font-size-xs);
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+
+.epicInstructionsToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-xs);
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-top: var(--gap-xs);
+  margin-bottom: var(--gap-sm);
+  transition: opacity 0.2s ease;
+}
+
+.epicInstructionsToggle:hover {
+  opacity: 0.8;
+}
+
+.epicInstructionsBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--gap-md);
+  margin-bottom: var(--gap-md);
+}
+
+.epicStepList {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.epicStepList a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.epicScriptAction {
+  margin-top: var(--gap-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.copyScriptBtn {
+  font-size: var(--font-size-xs) !important;
+  padding: 6px 12px !important;
+}
+
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-lg);
+  background: var(--surface);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  gap: var(--gap-xs);
+}
+
+.dropZone:hover,
+.dropZoneActive {
+  border-color: var(--primary);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+.dropZoneIcon {
+  font-size: 28px;
+}
+
+.dropZoneText {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.dropZoneSubtext {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.fileInputHidden {
+  display: none;
+}
+
+.epicTextareaDivider {
+  text-align: center;
+  position: relative;
+  margin: var(--gap-md) 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+.epicTextareaDivider::before,
+.epicTextareaDivider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 42%;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.epicTextareaDivider::before {
+  left: 0;
+}
+
+.epicTextareaDivider::after {
+  right: 0;
+}
+
+.epicTextarea {
+  width: 100%;
+  min-height: 80px;
+  max-height: 160px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-primary);
+  padding: var(--gap-sm);
+  font-family: inherit;
+  font-size: var(--font-size-xs);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.epicTextarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.epicPreviewContainer {
+  margin-top: var(--gap-md);
+  padding: var(--gap-md);
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap-md);
+}
+
+.epicPreviewInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.epicPreviewTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.epicPreviewSubtitle {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.epicPreviewActions {
+  display: flex;
+  gap: var(--gap-xs);
+}

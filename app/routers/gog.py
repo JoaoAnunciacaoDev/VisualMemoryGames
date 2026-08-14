@@ -297,6 +297,7 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
             if is_platinized:
                 if user_game.status != "Platinado":
                     user_game.status = "Platinado"
+                    user_game.store = "GOG"
                     has_changes = True
                 if not user_game.platinum_at:
                     user_game.platinum_at = platinum_date or datetime.now(timezone.utc).date()
@@ -304,9 +305,10 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
 
             if user_game.hours_played is None or hours_played > user_game.hours_played:
                 user_game.hours_played = hours_played
+                user_game.store = "GOG"
                 has_changes = True
 
-            if user_game.store != "GOG":
+            if not user_game.store:
                 user_game.store = "GOG"
                 has_changes = True
 

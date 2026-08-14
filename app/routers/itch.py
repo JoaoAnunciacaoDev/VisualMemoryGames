@@ -203,6 +203,8 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
                 )
             )
         else:
+            if not user_game.store:
+                user_game.store = "ITCH"
             updated_games_count += 1
 
     account.last_sync_at = datetime.now(timezone.utc)

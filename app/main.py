@@ -18,6 +18,7 @@ from app.routers import (
     admin,
     auth,
     custom_lists,  # noqa: F811
+    epic,
     games,
     gog,
     itch,
@@ -72,6 +73,7 @@ app.include_router(custom_lists.router)
 app.include_router(steam.router)
 app.include_router(gog.router)
 app.include_router(itch.router)
+app.include_router(epic.router)
 app.include_router(admin.router)
 app.include_router(recommendation.router)
 app.include_router(social.router)

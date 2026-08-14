@@ -50,10 +50,12 @@ export function useLibrary() {
     window.addEventListener('steam-synced', loadLibrary);
     window.addEventListener('gog-synced', loadLibrary);
     window.addEventListener('itch-synced', loadLibrary);
+    window.addEventListener('epic-synced', loadLibrary);
     return () => {
       window.removeEventListener('steam-synced', loadLibrary);
       window.removeEventListener('gog-synced', loadLibrary);
       window.removeEventListener('itch-synced', loadLibrary);
+      window.removeEventListener('epic-synced', loadLibrary);
     };
   }, [loadLibrary]);
 

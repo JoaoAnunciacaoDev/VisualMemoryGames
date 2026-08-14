@@ -146,6 +146,15 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [itchAccounts, setItchAccounts] = useState<ItchAccount[]>([]);
   const [isFetchingItch, setIsFetchingItch] = useState(false);
 
+  // States para Epic Games Store
+  const [epicGamesCount, setEpicGamesCount] = useState<number | null>(null);
+  const [isEpicInstructionsOpen, setIsEpicInstructionsOpen] = useState(false);
+  const [isCopiedScript, setIsCopiedScript] = useState(false);
+  const [epicPastedText, setEpicPastedText] = useState('');
+  const [parsedEpicTitles, setParsedEpicTitles] = useState<string[]>([]);
+  const [isImportingEpic, setIsImportingEpic] = useState(false);
+  const [isEpicDragging, setIsEpicDragging] = useState(false);
+
   const fetchSteamAccounts = useCallback(async () => {
     try {
       const res = await api.get('/users/me/steam/accounts');
@@ -170,6 +179,16 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setItchAccounts(res.data);
     } catch (err) {
       console.error('Erro ao buscar contas Itch.io:', err);
+    }
+  }, []);
+
+  const fetchEpicGamesCount = useCallback(async () => {
+    try {
+      const res = await api.get('/user-games/me');
+      const count = (res.data as Array<{ store?: string }>).filter((g) => g.store === 'EPIC').length;
+      setEpicGamesCount(count);
+    } catch (err) {
+      console.error('Erro ao buscar jogos da Epic:', err);
     }
   }, []);
 
@@ -199,6 +218,17 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       })
       .catch((err) => {
         console.error('Erro ao buscar contas Itch.io:', err);
+      });
+
+    api.get('/user-games/me')
+      .then((res) => {
+        if (active) {
+          const count = (res.data as Array<{ store?: string }>).filter((g) => g.store === 'EPIC').length;
+          setEpicGamesCount(count);
+        }
+      })
+      .catch((err) => {
+        console.error('Erro ao buscar jogos da Epic:', err);
       });
 
     return () => {
@@ -459,6 +489,118 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setError(parseError(err, 'Erro ao sincronizar contas Itch.io.'));
     } finally {
       setIsFetchingItch(false);
+    }
+  };
+
+  const EPIC_EXPORT_SCRIPT = `(async () => {
+    const BASE = "https://accounts.epicgames.com/account/v2/payment/ajaxGetOrderHistory?count=100&sortDir=DESC&sortBy=DATE&locale=en-US";
+    let allGames = [];
+    let nextPageToken = "";
+    let page = 1;
+    console.log("🎮 Iniciando exportação da biblioteca da Epic...");
+    while (true) {
+        const url = nextPageToken ? \`\${BASE}&nextPageToken=\${encodeURIComponent(nextPageToken)}\` : BASE;
+        console.log(\`📦 Buscando página \${page}...\`);
+        const response = await fetch(url, {
+            method: "GET",
+            credentials: "include",
+            headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
+        });
+        if (!response.ok) throw new Error(\`Erro HTTP \${response.status}: \${response.statusText}\`);
+        const data = await response.json();
+        if (!data.orders) break;
+        for (const order of data.orders) {
+            if (!order.items) continue;
+            for (const item of order.items) {
+                if (item.description) allGames.push(item.description);
+            }
+        }
+        nextPageToken = data.nextPageToken;
+        if (!nextPageToken) break;
+        page++;
+    }
+    const uniqueGames = [...new Set(allGames)].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    const txt = uniqueGames.join("\\n");
+    const txtBlob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+    const txtLink = document.createElement("a");
+    txtLink.href = URL.createObjectURL(txtBlob);
+    txtLink.download = "EpicGamesLibrary.txt";
+    txtLink.click();
+    console.log(\`✅ Exportação concluída! \${uniqueGames.length} jogos baixados.\`);
+})();`;
+
+  const parseEpicContent = (rawText: string): string[] => {
+    const lines = rawText.split(/\r?\n/);
+    const titles: string[] = [];
+    for (let line of lines) {
+      line = line.trim();
+      if (!line) continue;
+      if (line.toLowerCase() === 'game' || line.toLowerCase() === '"game"') continue;
+      if (line.startsWith('"') && line.endsWith('"') && line.length > 1) {
+        line = line.slice(1, -1).replace(/""/g, '"').trim();
+      }
+      if (line) {
+        titles.push(line);
+      }
+    }
+    return [...new Set(titles)];
+  };
+
+  const handleCopyEpicScript = async () => {
+    try {
+      await navigator.clipboard.writeText(EPIC_EXPORT_SCRIPT);
+      setIsCopiedScript(true);
+      showToast('Script copiado para a área de transferência!', 'success');
+      setTimeout(() => setIsCopiedScript(false), 3000);
+    } catch {
+      showToast('Erro ao copiar script.', 'error');
+    }
+  };
+
+  const handleEpicFileUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (text) {
+        const titles = parseEpicContent(text);
+        setParsedEpicTitles(titles);
+        setEpicPastedText(titles.join('\n'));
+        if (titles.length === 0) {
+          showToast('Nenhum jogo identificado no arquivo.', 'error');
+        } else {
+          showToast(`${titles.length} jogos identificados do arquivo!`, 'info');
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleEpicTextareaChange = (text: string) => {
+    setEpicPastedText(text);
+    const titles = parseEpicContent(text);
+    setParsedEpicTitles(titles);
+  };
+
+  const handleImportEpic = async () => {
+    if (parsedEpicTitles.length === 0) return;
+    setIsImportingEpic(true);
+    setError('');
+    showToast(`Importando ${parsedEpicTitles.length} jogos da Epic Games...`, 'info');
+    try {
+      const res = await api.post('/users/me/epic/import', { titles: parsedEpicTitles });
+      const { imported_count, skipped_count } = res.data;
+      showToast(
+        `Importação concluída! ${imported_count} novos jogos adicionados${skipped_count > 0 ? ` (${skipped_count} já existiam na biblioteca)` : ''}.`,
+        'success'
+      );
+      setEpicPastedText('');
+      setParsedEpicTitles([]);
+      void fetchEpicGamesCount();
+      window.dispatchEvent(new Event('epic-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao importar jogos da Epic Games.'));
+    } finally {
+      setIsImportingEpic(false);
     }
   };
 
@@ -848,6 +990,136 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                   </div>
                 ) : (
                   <div className={styles.noAccounts}>Nenhuma conta Itch.io vinculada ainda.</div>
+                )}
+              </div>
+
+              <hr className={styles.integrationDivider} />
+
+              <div className={styles.integrationSection}>
+                <div className={styles.epicHeader}>
+                  <h3>Epic Games Store</h3>
+                  {epicGamesCount !== null && (
+                    <span className={styles.epicBadge}>
+                      {epicGamesCount} {epicGamesCount === 1 ? 'jogo na biblioteca' : 'jogos na biblioteca'}
+                    </span>
+                  )}
+                </div>
+                <p className={styles.helpText}>
+                  Importe sua biblioteca da Epic Games Store a partir de um arquivo TXT/CSV ou colando a lista de títulos.
+                </p>
+
+                <button
+                  type="button"
+                  className={styles.epicInstructionsToggle}
+                  onClick={() => setIsEpicInstructionsOpen((prev) => !prev)}
+                >
+                  {isEpicInstructionsOpen ? '▼ Ocultar instruções de exportação' : '▶ Como exportar minha biblioteca da Epic?'}
+                </button>
+
+                {isEpicInstructionsOpen && (
+                  <div className={styles.epicInstructionsBox}>
+                    <ol className={styles.epicStepList}>
+                      <li>
+                        Acesse sua{' '}
+                        <a
+                          href="https://accounts.epicgames.com/account/transactions/purchases?productName=egs"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Página de Transações da Epic Games ↗
+                        </a>{' '}
+                        no navegador.
+                      </li>
+                      <li>Abra as Ferramentas do Desenvolvedor pressionando <strong>F12</strong> e clique na aba <strong>Console</strong>.</li>
+                      <li>Clique no botão abaixo para copiar o script de exportação:</li>
+                    </ol>
+
+                    <div className={styles.epicScriptAction}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className={styles.copyScriptBtn}
+                        onClick={handleCopyEpicScript}
+                      >
+                        {isCopiedScript ? '✅ Script Copiado!' : '📋 Copiar Script de Exportação'}
+                      </Button>
+                    </div>
+
+                    <ol className={styles.epicStepList} start={4} style={{ marginTop: 'var(--gap-sm)' }}>
+                      <li>Cole o script no console e pressione <strong>Enter</strong>.</li>
+                      <li>O download do arquivo <code>EpicGamesLibrary.txt</code> começará automaticamente.</li>
+                      <li>Arraste o arquivo baixado para a área de importação abaixo ou cole seu conteúdo!</li>
+                    </ol>
+                  </div>
+                )}
+
+                {/* Área de Drag & Drop */}
+                <div
+                  className={`${styles.dropZone} ${isEpicDragging ? styles.dropZoneActive : ''}`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsEpicDragging(true);
+                  }}
+                  onDragLeave={() => setIsEpicDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsEpicDragging(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleEpicFileUpload(file);
+                  }}
+                  onClick={() => {
+                    const input = document.getElementById('epic-file-input') as HTMLInputElement;
+                    input?.click();
+                  }}
+                >
+                  <input
+                    id="epic-file-input"
+                    type="file"
+                    accept=".txt,.csv"
+                    className={styles.fileInputHidden}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleEpicFileUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <span className={styles.dropZoneIcon}>📂</span>
+                  <p className={styles.dropZoneText}>
+                    <strong>Clique para selecionar</strong> ou arraste seu <code>EpicGamesLibrary.txt</code> / <code>.csv</code>
+                  </p>
+                  <p className={styles.dropZoneSubtext}>Suporta arquivos .txt e .csv gerados pelo script</p>
+                </div>
+
+                <div className={styles.epicTextareaDivider}>OU COLE A LISTA DE JOGOS</div>
+
+                <textarea
+                  className={styles.epicTextarea}
+                  placeholder="Cole os nomes dos jogos aqui (um por linha)...&#10;Exemplo:&#10;Control&#10;Death Stranding&#10;GTA V"
+                  value={epicPastedText}
+                  onChange={(e) => handleEpicTextareaChange(e.target.value)}
+                  disabled={isImportingEpic}
+                />
+
+                {parsedEpicTitles.length > 0 && (
+                  <div className={styles.epicPreviewContainer}>
+                    <div className={styles.epicPreviewInfo}>
+                      <p className={styles.epicPreviewTitle}>
+                        🎮 {parsedEpicTitles.length} {parsedEpicTitles.length === 1 ? 'jogo pronto para importação' : 'jogos prontos para importação'}
+                      </p>
+                      <p className={styles.epicPreviewSubtitle}>
+                        Serão adicionados à sua biblioteca com o status &quot;Quero Jogar&quot; e loja Epic Games.
+                      </p>
+                    </div>
+                    <div className={styles.epicPreviewActions}>
+                      <Button
+                        type="button"
+                        onClick={handleImportEpic}
+                        disabled={isImportingEpic}
+                      >
+                        {isImportingEpic ? 'Importando...' : 'Importar Jogos'}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

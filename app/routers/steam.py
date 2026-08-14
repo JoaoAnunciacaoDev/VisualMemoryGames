@@ -475,6 +475,7 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             if is_platinized:
                 if user_game.status != "Platinado":
                     user_game.status = "Platinado"
+                    user_game.store = "STEAM"
                     has_changes = True
                 if not user_game.platinum_at:
                     user_game.platinum_at = platinized_game_dates[appid]
@@ -482,8 +483,10 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
 
             if user_game.hours_played is None or hours > user_game.hours_played:
                 user_game.hours_played = hours
+                user_game.store = "STEAM"
                 has_changes = True
-            if user_game.store != "STEAM":
+
+            if not user_game.store:
                 user_game.store = "STEAM"
                 has_changes = True
 

@@ -1,11 +1,13 @@
 import api from '@/services/api';
+
 interface GameRecordSummary {
   id: string;
-  external_id: number;
+  external_id: number | null;
+  title: string;
 }
 
 export interface GameRecordInput {
-  external_id: number;
+  external_id: number | null;
   title: string;
   cover_url: string | null;
   release_year: number | null;
@@ -14,9 +16,13 @@ export interface GameRecordInput {
 }
 
 function isApiConflictError(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'response' in error &&
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
     typeof (error as { response?: { status?: number } }).response?.status === 'number' &&
-    (error as { response?: { status?: number } }).response?.status === 400;
+    (error as { response?: { status?: number } }).response?.status === 400
+  );
 }
 
 export async function ensureGameRecord(game: GameRecordInput): Promise<string> {
@@ -36,9 +42,14 @@ export async function ensureGameRecord(game: GameRecordInput): Promise<string> {
       throw error;
     }
 
+    const cleanTitle = game.title.trim().toLowerCase();
     const gamesResponse = await api.get<GameRecordSummary[]>('/games/');
     const existing = gamesResponse.data.find(
-      (record) => record.external_id === game.external_id
+      (record) =>
+        record.title.trim().toLowerCase() === cleanTitle ||
+        (game.external_id !== null &&
+          record.external_id === game.external_id &&
+          record.title.trim().toLowerCase() === cleanTitle)
     );
 
     if (!existing) {

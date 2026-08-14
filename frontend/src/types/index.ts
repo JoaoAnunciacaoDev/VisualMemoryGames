@@ -1,5 +1,5 @@
 export interface GameResult {
-  external_id: number;
+  external_id: number | null;
   title: string;
   cover_url: string | null;
   release_year: number | null;

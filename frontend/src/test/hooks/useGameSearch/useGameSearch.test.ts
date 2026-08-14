@@ -164,7 +164,7 @@ describe('useGameSearch', () => {
     vi.mocked(api.post)
       .mockRejectedValueOnce({ response: { status: 400 } });
     vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: [{ external_id: mockGame.external_id, id: mockGameId }] });
+      .mockResolvedValueOnce({ data: [{ external_id: mockGame.external_id, id: mockGameId, title: mockGame.title }] });
     vi.mocked(api.post)
       .mockResolvedValueOnce({});
 

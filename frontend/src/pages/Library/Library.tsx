@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -61,7 +61,7 @@ export default function Library() {
   const [selectedSearchGame, setSelectedSearchGame] = useState<GameResult | null>(null);
   const [showManualModal, setShowManualModal] = useState(false);
 
-  const removeConfirm = useConfirmAction<number>();
+  const removeConfirm = useConfirmAction<GameResult>();
 
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
   const [groupMode, setGroupMode] = useState<GroupMode>('status');
@@ -91,13 +91,36 @@ export default function Library() {
     return list;
   }, [games]);
 
-  const addedGames = useMemo(() => {
-    return new Map<number, string>(
-      games
-        .filter((g) => g.external_id !== null)
-        .map((g) => [g.external_id as number, g.id])
-    );
-  }, [games]);
+  const isGameInLibrary = useCallback(
+    (searchGame: GameResult | null) => {
+      if (!searchGame) return false;
+      const cleanTitle = searchGame.title.trim().toLowerCase();
+      return games.some(
+        (g) =>
+          g.title.trim().toLowerCase() === cleanTitle ||
+          (searchGame.external_id !== null &&
+            g.external_id === searchGame.external_id &&
+            g.title.trim().toLowerCase() === cleanTitle)
+      );
+    },
+    [games]
+  );
+
+  const getLibraryUserGameId = useCallback(
+    (searchGame: GameResult | null) => {
+      if (!searchGame) return undefined;
+      const cleanTitle = searchGame.title.trim().toLowerCase();
+      const match = games.find(
+        (g) =>
+          g.title.trim().toLowerCase() === cleanTitle ||
+          (searchGame.external_id !== null &&
+            g.external_id === searchGame.external_id &&
+            g.title.trim().toLowerCase() === cleanTitle)
+      );
+      return match?.id;
+    },
+    [games]
+  );
 
   const handleSaveLibraryGame = async () => {
     try {
@@ -131,7 +154,7 @@ export default function Library() {
   const confirmRemove = async () => {
     if (removeConfirm.target === null) return;
     try {
-      const userGameId = addedGames.get(removeConfirm.target);
+      const userGameId = getLibraryUserGameId(removeConfirm.target);
       if (!userGameId) return;
       await removeGame(userGameId);
       setSelectedSearchGame(null);
@@ -216,14 +239,14 @@ export default function Library() {
         <LibrarySearchView
           searchGames={searchGames}
           isSearching={isSearching}
-          isLoadingMore={isLoadingMore}
           hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
           onLoadMore={loadMore}
           searchResults={searchResults}
-          addedGames={addedGames}
+          isGameAdded={isGameInLibrary}
           error={searchError}
           onAddGame={handleAddGame}
-          onRemoveGame={(externalId) => removeConfirm.open(externalId)}
+          onRemoveGame={(game) => removeConfirm.open(game)}
           onOpenGame={setSelectedSearchGame}
           onManualAdd={() => setShowManualModal(true)}
         />
@@ -261,10 +284,10 @@ export default function Library() {
           platforms: selectedSearchGame.platforms,
           genres: selectedSearchGame.genres,
         } : null}
-        isAdded={selectedSearchGame ? addedGames.has(selectedSearchGame.external_id) : false}
+        isAdded={isGameInLibrary(selectedSearchGame)}
         onClose={() => setSelectedSearchGame(null)}
         onAdd={() => selectedSearchGame && handleAddGame(selectedSearchGame)}
-        onRemove={() => selectedSearchGame && removeConfirm.open(selectedSearchGame.external_id)}
+        onRemove={() => selectedSearchGame && removeConfirm.open(selectedSearchGame)}
       />
 
       <ConfirmModal

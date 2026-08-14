@@ -210,3 +210,43 @@ def test_user_game_reviews_flow(client, auth_headers, setup_game):
     act_resp_del2 = client.get("/social/activities/me", headers=auth_headers)
     rated_acts = [a for a in act_resp_del2.json()["items"] if a["action_type"] == "RATED"]
     assert len(rated_acts) == 0
+
+
+def test_create_game_with_conflicting_external_id(client, auth_headers):
+    """Garante que dois jogos de fontes distintas com o mesmo external_id
+    não retornem o jogo errado.
+    """
+    # Jogo 1 criado com external_id 480
+    res1 = client.post(
+        "/games/",
+        json={
+            "external_id": 480,
+            "title": "Resident Evil 7: Biohazard",
+            "release_year": 2017,
+            "platforms": ["PC"],
+            "genres": ["Horror"],
+        },
+        headers=auth_headers,
+    )
+    assert res1.status_code == 201
+    assert res1.json()["title"] == "Resident Evil 7: Biohazard"
+    id1 = res1.json()["id"]
+
+    # Jogo 2 criado de outra fonte com o mesmo external_id 480 mas título diferente
+    res2 = client.post(
+        "/games/",
+        json={
+            "external_id": 480,
+            "title": "Silent Hill",
+            "release_year": 1999,
+            "platforms": ["PlayStation"],
+            "genres": ["Horror"],
+        },
+        headers=auth_headers,
+    )
+    assert res2.status_code == 201
+    assert res2.json()["title"] == "Silent Hill"
+    id2 = res2.json()["id"]
+
+    # Garante que são jogos distintos e que Silent Hill não virou Resident Evil 7
+    assert id1 != id2

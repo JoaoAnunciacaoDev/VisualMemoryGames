@@ -8,13 +8,13 @@ interface Props {
   searchGames: (query: string) => void;
   isSearching: boolean;
   searchResults: GameResult[];
-  addedGames: Map<number, string>;
+  isGameAdded: (game: GameResult) => boolean;
   error?: string | null;
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
   onAddGame: (game: GameResult) => void;
-  onRemoveGame: (externalId: number) => void;
+  onRemoveGame: (game: GameResult) => void;
   onOpenGame: (game: GameResult) => void;
   onManualAdd: () => void;
 }
@@ -23,7 +23,7 @@ export default function LibrarySearchView({
   searchGames,
   isSearching,
   searchResults,
-  addedGames,
+  isGameAdded,
   error,
   hasMore = false,
   isLoadingMore = false,
@@ -47,15 +47,15 @@ export default function LibrarySearchView({
       )}
 
       <GameGrid>
-        {searchResults.map((game) => (
+        {searchResults.map((game, index) => (
           <GameCard
-            key={game.external_id}
+            key={game.external_id !== null ? `${game.external_id}-${index}` : `${game.title}-${index}`}
             title={game.title}
             coverUrl={game.cover_url}
             releaseYear={game.release_year}
-            isAdded={addedGames.has(game.external_id)}
+            isAdded={isGameAdded(game)}
             onAdd={() => onAddGame(game)}
-            onRemove={() => onRemoveGame(game.external_id)}
+            onRemove={() => onRemoveGame(game)}
             onClick={() => onOpenGame(game)}
           />
         ))}

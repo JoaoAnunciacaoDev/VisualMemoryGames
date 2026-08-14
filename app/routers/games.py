@@ -3,6 +3,7 @@ from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -31,14 +32,45 @@ def search_external_games(q: str, page: int = 1, db: Session = Depends(get_db)):
 def create_game(
     game: GameCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
+    clean_title = game.title.strip()
+
+    # 1. Verifica se já existe o jogo por título exato (case-insensitive)
+    existing_game = (
+        db.query(Game)
+        .filter(func.lower(Game.title) == clean_title.lower())
+        .first()
+    )
+    if existing_game:
+        if game.external_id and not existing_game.external_id:
+            conflict = db.query(Game).filter(Game.external_id == game.external_id).first()
+            if not conflict:
+                existing_game.external_id = game.external_id
+        if game.cover_url and not existing_game.cover_url:
+            existing_game.cover_url = game.cover_url
+        if game.release_year and not existing_game.release_year:
+            existing_game.release_year = game.release_year
+        if game.platforms and not existing_game.platforms:
+            existing_game.platforms = game.platforms
+        if game.genres and not existing_game.genres:
+            existing_game.genres = game.genres
+        db.commit()
+        db.refresh(existing_game)
+        return existing_game
+
+    # 2. Se não encontrou pelo título, verifica por external_id MAS garante que o título seja igual
+    target_external_id = game.external_id
     if game.external_id:
-        existing_game = db.query(Game).filter(Game.external_id == game.external_id).first()
-        if existing_game:
-            return existing_game
+        existing_by_ext = db.query(Game).filter(Game.external_id == game.external_id).first()
+        if existing_by_ext:
+            if existing_by_ext.title.strip().lower() == clean_title.lower():
+                return existing_by_ext
+            else:
+                # Conflito de ID entre provedores diferentes com títulos diferentes
+                target_external_id = None
 
     new_game = Game(
-        external_id=game.external_id,
-        title=game.title,
+        external_id=target_external_id,
+        title=clean_title,
         cover_url=game.cover_url,
         release_year=game.release_year,
         platforms=game.platforms,

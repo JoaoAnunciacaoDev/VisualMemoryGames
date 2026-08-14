@@ -44,10 +44,9 @@ def search_games_in_local_db(query: str, db: Session, limit: int = 15) -> List[D
 
     results = []
     for g in games:
-        ext_id = g.external_id if g.external_id is not None else hash(g.id) % 100000000
         results.append(
             {
-                "external_id": ext_id,
+                "external_id": g.external_id,
                 "title": g.title,
                 "cover_url": g.cover_url,
                 "release_year": g.release_year,
@@ -76,20 +75,19 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
     # 2. Tentar IGDB (Twitch API)
     igdb_results = search_games_on_igdb(query, limit=limit, offset=offset)
     if igdb_results:
+        seen_titles = {r["title"].lower().strip() for r in local_results}
         seen_ids = {r["external_id"] for r in local_results if r.get("external_id") is not None}
-        seen_titles = {r["title"].lower() for r in local_results if r.get("external_id") is None}
         combined = list(local_results)
         for r in igdb_results:
             r_id = r.get("external_id")
-            r_title = r["title"].lower()
+            r_title = r["title"].lower().strip()
+            if r_title in seen_titles:
+                continue
             if r_id is not None and r_id in seen_ids:
                 continue
-            if r_id is None and r_title in seen_titles:
-                continue
+            seen_titles.add(r_title)
             if r_id is not None:
                 seen_ids.add(r_id)
-            else:
-                seen_titles.add(r_title)
             combined.append(r)
         return combined
 
@@ -125,24 +123,21 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
                 )
 
             if results:
+                seen_titles = {r["title"].lower().strip() for r in local_results}
                 seen_ids = {
                     r["external_id"] for r in local_results if r.get("external_id") is not None
-                }
-                seen_titles = {
-                    r["title"].lower() for r in local_results if r.get("external_id") is None
                 }
                 combined = list(local_results)
                 for r in results:
                     r_id = r.get("external_id")
-                    r_title = r["title"].lower()
+                    r_title = r["title"].lower().strip()
+                    if r_title in seen_titles:
+                        continue
                     if r_id is not None and r_id in seen_ids:
                         continue
-                    if r_id is None and r_title in seen_titles:
-                        continue
+                    seen_titles.add(r_title)
                     if r_id is not None:
                         seen_ids.add(r_id)
-                    else:
-                        seen_titles.add(r_title)
                     combined.append(r)
                 return combined
         except Exception as e:

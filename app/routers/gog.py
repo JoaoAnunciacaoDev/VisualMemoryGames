@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models.activity import Activity
 from app.models.custom_lists import CustomList, custom_list_games
 from app.models.game import Game
@@ -20,6 +20,8 @@ from app.services.gog import GogService
 
 router = APIRouter(prefix="/users/me/gog", tags=["GOG Integration"])
 gog_service = GogService()
+ACTIVE_GOG_SYNC_USERS = set()
+db_session_maker = SessionLocal
 
 
 class ConnectGogRequest(BaseModel):
@@ -49,13 +51,46 @@ def get_connected_accounts(
     return db.query(GogAccount).filter(GogAccount.user_id == current_user.id).all()
 
 
+async def sync_gog_account_in_background(account_id: str, user_id: str):
+    """Executa a sincronização completa da biblioteca GOG em segundo plano."""
+    ACTIVE_GOG_SYNC_USERS.add(str(user_id))
+    try:
+        db = db_session_maker()
+        try:
+            account = db.query(GogAccount).filter(GogAccount.id == account_id).first()
+            if not account:
+                return
+            username = account.username
+        finally:
+            db.close()
+
+        # Busca assíncrona dos jogos fora da sessão do banco
+        gog_games = await gog_service.get_public_games(username)
+        if not gog_games:
+            return
+
+        # Abre sessão para persistir em lote
+        db = db_session_maker()
+        try:
+            account = db.query(GogAccount).filter(GogAccount.id == account_id).first()
+            if account:
+                await process_gog_games_list(account, gog_games, db)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Erro no background task de sincronização da GOG: {e}")
+    finally:
+        ACTIVE_GOG_SYNC_USERS.discard(str(user_id))
+
+
 @router.post("/accounts", response_model=GogAccountResponse)
 async def connect_gog_account(
     body: ConnectGogRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Vincula uma nova conta GOG pública ao usuário."""
+    """Vincula uma nova conta GOG pública ao usuário e inicia sincronização em background."""
     username = gog_service.extract_username(body.profile_url)
     if not username:
         raise HTTPException(
@@ -78,11 +113,8 @@ async def connect_gog_account(
             detail="Esta conta GOG já está conectada ao seu perfil.",
         )
 
-    # Valida o perfil e obtém persona_name/avatar
+    # Valida o perfil público de forma leve e rápida
     profile = await gog_service.get_public_profile(username)
-
-    # Busca os jogos antes de persistir a conta para validar privacidade
-    gog_games = await gog_service.get_public_games(username)
 
     new_account = GogAccount(
         user_id=current_user.id,
@@ -95,8 +127,10 @@ async def connect_gog_account(
     db.commit()
     db.refresh(new_account)
 
-    # Processa e persiste os jogos
-    await process_gog_games_list(new_account, gog_games, db)
+    # Dispara a importação dos jogos em segundo plano
+    background_tasks.add_task(
+        sync_gog_account_in_background, new_account.id, str(current_user.id)
+    )
 
     return new_account
 
@@ -159,12 +193,6 @@ async def disconnect_gog_account(
     return {"message": "Conta GOG desconectada com sucesso."}
 
 
-async def sync_single_account(account: GogAccount, db: Session) -> dict:
-    """Função core para sincronizar jogos de uma conta GOG específica."""
-    gog_games = await gog_service.get_public_games(account.username)
-    return await process_gog_games_list(account, gog_games, db)
-
-
 async def process_gog_games_list(account: GogAccount, gog_games: list, db: Session) -> dict:
     """Processa a lista de jogos do GOG e persiste no banco em lote com alta performance."""
     new_games_count = 0
@@ -187,6 +215,8 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
         ug.game_id: ug
         for ug in db.query(UserGame).filter(UserGame.user_id == account.user_id).all()
     }
+
+    platinized_to_sync = []
 
     for g_item in gog_games:
         title = g_item.get("title")
@@ -219,7 +249,6 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
         user_game = user_games_map.get(game.id)
 
         if not user_game:
-            # Classifica status inicial
             status_init = (
                 "Platinado" if is_platinized else ("Jogando" if hours_played > 0 else "Quero Jogar")
             )
@@ -238,6 +267,7 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
                 favorite=False,
             )
             db.add(user_game)
+            user_games_map[game.id] = user_game
             new_games_count += 1
 
             # Registra atividade de adição
@@ -249,7 +279,7 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
                 )
             )
 
-            # Se platinado na criação, registra atividade e auto-list
+            # Se platinado na criação, agenda sync de auto-list
             if status_init == "Platinado":
                 db.add(
                     Activity(
@@ -258,13 +288,7 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
                         action_type="PLATINUM",
                     )
                 )
-                sync_auto_list(
-                    user_id=str(account.user_id),
-                    user_game=user_game,
-                    field_name="platinum_at",
-                    list_type="platinized_year",
-                    db=db,
-                )
+                platinized_to_sync.append(user_game)
         else:
             old_status = user_game.status
             old_platinum = user_game.platinum_at
@@ -306,21 +330,31 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
                         )
                     )
                 if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
-                    sync_auto_list(
-                        user_id=str(account.user_id),
-                        user_game=user_game,
-                        field_name="platinum_at",
-                        list_type="platinized_year",
-                        db=db,
-                    )
+                    platinized_to_sync.append(user_game)
 
     account.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
+
+    # Sincroniza listas automáticas dos jogos platinados
+    for ug in platinized_to_sync:
+        sync_auto_list(
+            user_id=str(account.user_id),
+            user_game=ug,
+            field_name="platinum_at",
+            list_type="platinized_year",
+            db=db,
+        )
 
     return {
         "new_games_count": new_games_count,
         "updated_games_count": updated_games_count,
     }
+
+
+async def sync_single_account(account: GogAccount, db: Session) -> dict:
+    """Função core para sincronizar jogos de uma conta GOG específica."""
+    gog_games = await gog_service.get_public_games(account.username)
+    return await process_gog_games_list(account, gog_games, db)
 
 
 @router.post("/accounts/{account_id}/sync", response_model=SyncResultResponse)
@@ -340,10 +374,10 @@ async def sync_single_gog_account_endpoint(
             status_code=status.HTTP_404_NOT_FOUND, detail="Conta GOG não encontrada."
         )
 
-    result = await sync_single_account(account, db)
+    res = await sync_single_account(account, db)
     return SyncResultResponse(
-        new_games_count=result["new_games_count"],
-        updated_games_count=result["updated_games_count"],
+        new_games_count=res["new_games_count"],
+        updated_games_count=res["updated_games_count"],
     )
 
 
@@ -359,10 +393,9 @@ async def sync_all_gog_accounts_endpoint(
 
     total_new = 0
     total_updated = 0
-
     for account in accounts:
-        result = await sync_single_account(account, db)
-        total_new += result["new_games_count"]
-        total_updated += result["updated_games_count"]
+        res = await sync_single_account(account, db)
+        total_new += res["new_games_count"]
+        total_updated += res["updated_games_count"]
 
     return SyncResultResponse(new_games_count=total_new, updated_games_count=total_updated)

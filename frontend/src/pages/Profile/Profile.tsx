@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, PageTitle, Button, Modal, Loader } from '@/components/Shared';
 import { translateGenre } from '@/utils/genres';
 import { getBestGameCover } from '@/services/media';
+import { getStoreLabel } from '@/types/enums';
 import { LibraryGame } from '@/types';
 import styles from './Profile.module.css';
 import FollowListModal from './FollowListModal';
@@ -13,7 +14,7 @@ import FollowListModal from './FollowListModal';
 interface DashboardGame {
   title: string;
   cover_url: string | null;
-  custom_cover_url: string | null;
+  custom_cover_url?: string | null;
   hours_played: number;
   rating: number | null;
   finished_at: string | null;
@@ -37,9 +38,12 @@ interface DashboardData {
   has_pending_genres: boolean;
   followers_count: number;
   following_count: number;
+  store_distribution: Record<string, number>;
+  playing_games: DashboardGame[];
   yearly_games: YearlyGames[];
   yearly_platinums: YearlyGames[];
   favorite_games: DashboardGame[];
+  is_following?: boolean;
 }
 
 export default function Profile() {
@@ -54,6 +58,7 @@ export default function Profile() {
   const [selectedBoardMonth, setSelectedBoardMonth] = useState<string>('all');
   const [selectedPlatYear, setSelectedPlatYear] = useState<number>(new Date().getFullYear());
   const [selectedPlatMonth, setSelectedPlatMonth] = useState<string>('all');
+  const [playingCollapsed, setPlayingCollapsed] = useState(false);
   const [boardCollapsed, setBoardCollapsed] = useState(false);
   const [platCollapsed, setPlatCollapsed] = useState(false);
   const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
@@ -251,6 +256,21 @@ export default function Profile() {
     'Em Espera': '#6b7280',
   };
 
+  const storeColors: Record<string, string> = {
+    STEAM: '#66c0f4',
+    EPIC: '#0078f2',
+    GOG: '#a855f7',
+    ITCH: '#fa5c5c',
+    PS_STORE: '#0070d1',
+    XBOX: '#107c10',
+    NINTENDO: '#e60012',
+    GOOGLE_PLAY: '#01875f',
+    APP_STORE: '#38bdf8',
+    PHYSICAL: '#f59e0b',
+    OTHER: '#9ca3af',
+    SEM_LOJA: 'var(--text-secondary)',
+  };
+
   return (
     <div className={styles.container}>
       {/* Header do Perfil */}
@@ -293,7 +313,7 @@ export default function Profile() {
               <strong>{data.followers_count}</strong> seguidores
             </span>
             <span 
-              className={styles.followStatItem}
+              className={styles.followStatItem} 
               onClick={() => setFollowModal({ isOpen: true, type: 'following' })}
               style={{ cursor: 'pointer' }}
             >
@@ -365,6 +385,43 @@ export default function Profile() {
           </div>
         </Card>
 
+        {/* Distribuição por Loja */}
+        <Card className={styles.detailsCard}>
+          <h3 className={styles.cardTitle}>Distribuição por Loja</h3>
+          <div className={styles.statusList}>
+            {data.store_distribution &&
+              Object.entries(data.store_distribution)
+                .sort((a, b) => b[1] - a[1])
+                .map(([storeKey, count]) => {
+                  const pct = getStatusPercentage(count);
+                  const label = storeKey === 'SEM_LOJA' ? 'Sem Loja' : getStoreLabel(storeKey);
+                  const color = storeColors[storeKey] || 'var(--primary)';
+                  return (
+                    <div key={storeKey} className={styles.statusItem}>
+                      <div className={styles.statusMeta}>
+                        <span className={styles.statusName}>{label}</span>
+                        <span className={styles.statusCount}>
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className={styles.progressBarBg}>
+                        <div
+                          className={styles.progressBarFill}
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: color,
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+            {(!data.store_distribution || Object.keys(data.store_distribution).length === 0) && (
+              <p className={styles.emptyText}>Nenhum jogo cadastrado com loja.</p>
+            )}
+          </div>
+        </Card>
+
         {/* Gênero Favorito */}
         <Card className={styles.detailsCard}>
           <h3 className={styles.cardTitle}>Gênero Favorito</h3>
@@ -404,6 +461,65 @@ export default function Profile() {
           )}
         </Card>
       </div>
+
+      {/* Board de Jogos em Andamento (Jogando) */}
+      <section className={styles.boardSection}>
+        <Card className={styles.boardCard}>
+          <div
+            className={styles.boardHeader}
+            onClick={() => setPlayingCollapsed(!playingCollapsed)}
+            style={{ cursor: 'pointer' }}
+          >
+            <div className={styles.boardTitleWrapper}>
+              <span className={styles.collapseIcon}>
+                {playingCollapsed ? '▶' : '▼'}
+              </span>
+              <h3 className={styles.boardTitle}>Jogos em Andamento (Jogando)</h3>
+            </div>
+            <div className={styles.boardCounterWrapper} style={{ border: 'none', padding: '0', margin: '0' }}>
+              <span className={styles.boardCountLabel} style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>
+                {data.playing_games ? data.playing_games.length : 0} {data.playing_games?.length === 1 ? 'jogo' : 'jogos'}
+              </span>
+            </div>
+          </div>
+
+          {!playingCollapsed && (
+            <div className={styles.boardContent}>
+              {data.playing_games && data.playing_games.length > 0 ? (
+                <div className={styles.boardGamesGrid}>
+                  {data.playing_games.map((game, index) => (
+                    <div key={index} className={styles.boardGameMiniCard}>
+                      {getBestGameCover(game) ? (
+                        <img
+                          src={getBestGameCover(game)}
+                          alt={game.title}
+                          className={styles.boardGameCover}
+                        />
+                      ) : (
+                        <div className={styles.boardGameCoverPlaceholder}>
+                          <span>Sem capa</span>
+                        </div>
+                      )}
+                      <div className={styles.boardGameDetails}>
+                        <span className={styles.boardGameTitle} title={game.title}>
+                          {game.title}
+                        </span>
+                        <span className={styles.boardGameMeta}>
+                          🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.boardEmptyText}>
+                  Nenhum jogo em andamento no momento.
+                </p>
+              )}
+            </div>
+          )}
+        </Card>
+      </section>
 
       {/* Board de Conclusões Interativo */}
       <section className={styles.boardSection}>

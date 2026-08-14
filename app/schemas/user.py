@@ -131,6 +131,8 @@ class DashboardResponse(BaseModel):
     has_pending_genres: bool = False
     followers_count: int = 0
     following_count: int = 0
+    store_distribution: Dict[str, int] = Field(default_factory=dict)
+    playing_games: List[DashboardGame] = Field(default_factory=list)
     yearly_games: List[YearlyGames]
     yearly_platinums: List[YearlyGames] = Field(default_factory=list)
     favorite_games: List[DashboardGame] = Field(default_factory=list)

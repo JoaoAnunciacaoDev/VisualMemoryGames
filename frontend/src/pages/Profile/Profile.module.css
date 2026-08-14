@@ -114,10 +114,10 @@
   font-weight: 500;
 }
 
-/* Details Section (Status and Genre) */
+/* Details Section (Status, Store and Genre) */
 .detailsSection {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--gap-md);
 }
 
@@ -404,10 +404,13 @@
 }
 
 /* Responsive */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .detailsSection {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 900px) {
   .statsGrid {
     grid-template-columns: repeat(2, 1fr);
   }

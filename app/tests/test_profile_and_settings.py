@@ -80,6 +80,22 @@ def test_dashboard_data(client, auth_headers, db_session):
     db_session.add(user_game)
     db_session.commit()
 
+    # Criar um segundo jogo com status 'Jogando' e loja 'STEAM'
+    new_game_2 = Game(title="Playing Steam Game", genres='["Adventure"]', release_year=2023)
+    db_session.add(new_game_2)
+    db_session.commit()
+
+    user_game_2 = UserGame(
+        user_id=user.id,
+        game_id=new_game_2.id,
+        status="Jogando",
+        store="STEAM",
+        hours_played=25.0,
+        rating=5.0,
+    )
+    db_session.add(user_game_2)
+    db_session.commit()
+
     # Chamar o endpoint do dashboard
     response = client.get(
         "/users/me/dashboard",
@@ -88,9 +104,15 @@ def test_dashboard_data(client, auth_headers, db_session):
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["username"] == user.username
-    assert data["games_count"] == 1
+    assert data["games_count"] == 2
     assert data["status_distribution"]["Zerado"] == 1
-    assert data["most_played_genre"] in ["Action", "RPG"]
+    assert data["status_distribution"]["Jogando"] == 1
+    assert data["store_distribution"]["SEM_LOJA"] == 1
+    assert data["store_distribution"]["STEAM"] == 1
+    assert len(data["playing_games"]) == 1
+    assert data["playing_games"][0]["title"] == "Playing Steam Game"
+    assert data["playing_games"][0]["hours_played"] == 25.0
+    assert data["most_played_genre"] in ["Action", "RPG", "Adventure"]
     assert len(data["yearly_games"]) == 1
     assert data["yearly_games"][0]["year"] == datetime.utcnow().year
     assert data["yearly_games"][0]["games"][0]["title"] == "Test Genre Game"

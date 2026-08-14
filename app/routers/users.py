@@ -403,6 +403,35 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
         reverse=True,
     )
 
+    store_counts = Counter()
+    for ug in user_games:
+        store_key = ug.store if ug.store else "SEM_LOJA"
+        store_counts[store_key] += 1
+    store_distribution = dict(store_counts)
+
+    playing_games_list = []
+    for ug in user_games:
+        if ug.status == "Jogando":
+            cover = ug.custom_cover_url or (ug.game.cover_url if ug.game else None)
+            g_data = DashboardGame(
+                title=ug.game.title if ug.game else "Jogo Desconhecido",
+                cover_url=cover,
+                hours_played=ug.hours_played or 0.0,
+                rating=ug.rating,
+                finished_at=(
+                    datetime.combine(ug.finished_at, datetime.min.time())
+                    if ug.finished_at
+                    else None
+                ),
+            )
+            playing_games_list.append(g_data)
+
+    playing_games_list = sorted(
+        playing_games_list,
+        key=lambda x: (x.hours_played, x.rating or 0.0),
+        reverse=True,
+    )
+
     from app.models.follow import Follow
 
     followers_count = db.query(Follow).filter(Follow.following_id == target_user.id).count()
@@ -430,6 +459,8 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
         has_pending_genres=has_pending_genres,
         followers_count=followers_count,
         following_count=following_count,
+        store_distribution=store_distribution,
+        playing_games=playing_games_list,
         yearly_games=yearly_games_list,
         yearly_platinums=yearly_platinums_list,
         favorite_games=favorite_games_list,

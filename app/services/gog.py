@@ -155,8 +155,12 @@ class GogService:
                     print(f"Erro ao consultar página {page} de jogos do GOG: {e}")
                     break
 
-                # O JSON do endpoint /games/stats pode retornar items ou pages
-                items = data.get("items", []) or data.get("pages", [])
+                # O JSON do GOG retorna _embedded.items, com fallback para items ou pages
+                items = (
+                    data.get("_embedded", {}).get("items", [])
+                    if isinstance(data.get("_embedded"), dict)
+                    else (data.get("items", []) or data.get("pages", []))
+                )
                 if not items and isinstance(data, list):
                     items = data
 
@@ -165,7 +169,7 @@ class GogService:
 
                 for item in items:
                     game_info = item.get("game", {}) if isinstance(item, dict) else {}
-                    stats_info = item.get("stats", {}) if isinstance(item, dict) else {}
+                    stats_raw = item.get("stats", {}) if isinstance(item, dict) else {}
 
                     # Extrai dados do jogo
                     game_id = game_info.get("id") or item.get("id")
@@ -177,41 +181,55 @@ class GogService:
                     if image_url and image_url.startswith("//"):
                         image_url = f"https:{image_url}"
 
+                    # Extrai user_stats (o GOG mapeia stats por gog_user_id ou dicionário direto)
+                    user_stats = {}
+                    if isinstance(stats_raw, dict):
+                        for k, v in stats_raw.items():
+                            if isinstance(v, dict):
+                                user_stats = v
+                                break
+                            elif isinstance(stats_raw.get("playtime"), (int, float)):
+                                user_stats = stats_raw
+                                break
+
                     # Extrai horas jogadas (playtime vem em minutos)
-                    playtime_minutes = (
-                        stats_info.get("playtime")
-                        if isinstance(stats_info, dict)
-                        else item.get("playtime", 0)
-                    ) or 0
+                    playtime_minutes = user_stats.get("playtime", 0) or 0
                     hours_played = round(playtime_minutes / 60.0, 1)
 
-                    # Extrai conquistas
-                    achievements_data = (
-                        stats_info.get("achievements")
-                        if isinstance(stats_info, dict)
-                        else item.get("achievements")
-                    )
+                    # Extrai conquistas e status de platina
+                    ach_pct = user_stats.get("achievementsPercentage")
+                    ach_data = user_stats.get("achievements")
                     is_platinized = False
                     platinum_date = None
 
-                    if isinstance(achievements_data, dict):
-                        total_ach = achievements_data.get("total", 0) or 0
-                        unlocked_ach = achievements_data.get("unlocked", 0) or 0
+                    if ach_pct is not None and ach_pct >= 100:
+                        is_platinized = True
+                    elif isinstance(ach_data, dict):
+                        total_ach = ach_data.get("total", 0) or 0
+                        unlocked_ach = ach_data.get("unlocked", 0) or 0
                         if total_ach > 0 and unlocked_ach >= total_ach:
                             is_platinized = True
-                            # Tenta obter data da última atividade/conquista se presente
-                            last_date_str = stats_info.get("last_played") or achievements_data.get(
-                                "last_unlocked"
-                            )
-                            if last_date_str:
-                                try:
-                                    platinum_date = datetime.fromisoformat(
-                                        last_date_str.replace("Z", "+00:00")
-                                    ).date()
-                                except Exception:
-                                    platinum_date = datetime.now(timezone.utc).date()
-                            else:
+
+                    if is_platinized:
+                        last_unlocked_date = (
+                            ach_data.get("last_unlocked")
+                            if isinstance(ach_data, dict)
+                            else None
+                        )
+                        last_date_str = (
+                            user_stats.get("lastSession")
+                            or user_stats.get("last_played")
+                            or last_unlocked_date
+                        )
+                        if last_date_str:
+                            try:
+                                platinum_date = datetime.fromisoformat(
+                                    last_date_str.replace("Z", "+00:00")
+                                ).date()
+                            except Exception:
                                 platinum_date = datetime.now(timezone.utc).date()
+                        else:
+                            platinum_date = datetime.now(timezone.utc).date()
 
                     games_result.append(
                         {
@@ -224,7 +242,12 @@ class GogService:
                         }
                     )
 
-                total_pages = data.get("totalPages") or data.get("pages_count") or 1
+                total_pages = (
+                    data.get("pages")
+                    or data.get("totalPages")
+                    or data.get("pages_count")
+                    or 1
+                )
                 if page >= total_pages:
                     break
                 page += 1

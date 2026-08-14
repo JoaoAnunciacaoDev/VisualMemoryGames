@@ -46,33 +46,61 @@ class GogService:
                     )
 
                 html = response.text
-                # Tenta extrair o avatar do HTML do perfil do GOG
                 avatar_url = None
-                avatar_match = re.search(
-                    r'<img[^>]+class="[^"]*profile-header__avatar[^"]*"[^>]+src="([^"]+)"',
+                persona_name = username
+                resolved_username = username
+
+                # 1. Tenta extrair do window.profilesData.profileUser embedded no HTML
+                import json
+
+                profile_match = re.search(
+                    r"window\.profilesData\.profileUser\s*=\s*(\{.*?\});\s*(?:window\.|\n|<)",
                     html,
                 )
-                if not avatar_match:
+                if not profile_match:
+                    profile_match = re.search(
+                        r"window\.profilesData\.profileUser\s*=\s*(\{.*?\});", html
+                    )
+
+                if profile_match:
+                    try:
+                        p_data = json.loads(profile_match.group(1))
+                        resolved_username = p_data.get("username") or username
+                        persona_name = resolved_username
+                        avatar_url = p_data.get("avatar") or (
+                            p_data.get("avatars", {}).get("large")
+                            if isinstance(p_data.get("avatars"), dict)
+                            else None
+                        )
+                    except Exception as e:
+                        print(f"Erro ao fazer parse do JSON do perfil GOG: {e}")
+
+                # 2. Fallbacks via regex no HTML caso o JSON não esteja presente
+                if not avatar_url:
                     avatar_match = re.search(
-                        r'<img[^>]+src="([^"]+)"[^>]+class="[^"]*avatar[^"]*"',
+                        r'<img[^>]+class="[^"]*profile-header__avatar[^"]*"[^>]+src="([^"]+)"',
                         html,
                     )
-                if avatar_match:
-                    avatar_url = avatar_match.group(1)
-                    if avatar_url.startswith("//"):
-                        avatar_url = f"https:{avatar_url}"
+                    if not avatar_match:
+                        avatar_match = re.search(
+                            r'<img[^>]+src="([^"]+)"[^>]+class="[^"]*avatar[^"]*"',
+                            html,
+                        )
+                    if avatar_match:
+                        avatar_url = avatar_match.group(1)
+                        if avatar_url.startswith("//"):
+                            avatar_url = f"https:{avatar_url}"
 
-                # Tenta extrair o nome de exibição (persona name)
-                persona_name = username
-                name_match = re.search(
-                    r'<h1[^>]*class="[^"]*profile-header__title[^"]*"[^>]*>\s*([^<]+)\s*</h1>',
-                    html,
-                )
-                if name_match:
-                    persona_name = name_match.group(1).strip()
+                if persona_name == username:
+                    name_match = re.search(
+                        r'<h1[^>]*class="[^"]*profile-header__title[^"]*"[^>]*>\s*([^<]+)\s*</h1>',
+                        html,
+                    )
+                    if name_match:
+                        persona_name = name_match.group(1).strip()
 
                 return {
-                    "username": username,
+                    "username": resolved_username,
                     "persona_name": persona_name,
                     "avatar_url": avatar_url,
                 }

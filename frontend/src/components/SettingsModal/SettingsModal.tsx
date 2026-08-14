@@ -211,19 +211,20 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     if (!steamUrl.trim()) return;
     setIsFetchingSteam(true);
     setError('');
+    showToast('Conectando à Steam e importando biblioteca...', 'info');
     try {
       await api.post('/users/me/steam/accounts', { profile_url: steamUrl.trim() });
-      showToast('Conta Steam conectada e biblioteca importada!', 'success');
+      showToast('Conta Steam conectada e biblioteca importada com sucesso!', 'success');
       setSteamUrl('');
       void fetchSteamAccounts();
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(
-        parseError(
-          err,
-          'Erro ao conectar conta Steam. Verifique se o perfil e os detalhes de jogo estão públicos.'
-        )
+      const msg = parseError(
+        err,
+        'Erro ao conectar conta Steam. Verifique se o perfil e os detalhes de jogo estão públicos.'
       );
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsFetchingSteam(false);
     }
@@ -246,7 +247,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       void fetchSteamAccounts();
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao desconectar conta Steam.'));
+      const msg = parseError(err, 'Erro ao desconectar conta Steam.');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setPendingDisconnectAccountId(null);
     }
@@ -255,6 +258,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const handleSyncSteam = async () => {
     setIsFetchingSteam(true);
     setError('');
+    showToast('Sincronizando jogos da Steam...', 'info');
     try {
       const res = await api.post('/users/me/steam/sync');
       const { new_games_count } = res.data;
@@ -265,7 +269,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       void fetchSteamAccounts();
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao sincronizar contas Steam.'));
+      const msg = parseError(err, 'Erro ao sincronizar contas Steam.');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsFetchingSteam(false);
     }
@@ -274,6 +280,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const handleSyncSingleSteam = async (accountId: string) => {
     setIsFetchingSteam(true);
     setError('');
+    showToast('Sincronizando conta Steam...', 'info');
     try {
       const res = await api.post(`/users/me/steam/accounts/${accountId}/sync`);
       const { new_games_count } = res.data;
@@ -284,7 +291,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       void fetchSteamAccounts();
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao sincronizar conta Steam.'));
+      const msg = parseError(err, 'Erro ao sincronizar conta Steam.');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsFetchingSteam(false);
     }
@@ -295,20 +304,21 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     if (!gogUrl.trim()) return;
     setIsFetchingGog(true);
     setError('');
+    showToast('Conectando à GOG e importando biblioteca...', 'info');
     try {
       await api.post('/users/me/gog/accounts', { profile_url: gogUrl.trim() });
-      showToast('Conta GOG conectada e biblioteca importada!', 'success');
+      showToast('Conta GOG conectada e biblioteca importada com sucesso!', 'success');
       setGogUrl('');
       void fetchGogAccounts();
       window.dispatchEvent(new Event('gog-synced'));
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(
-        parseError(
-          err,
-          'Erro ao conectar conta GOG. Verifique se o perfil e os jogos estão configurados como públicos no GOG.'
-        )
+      const msg = parseError(
+        err,
+        'Erro ao conectar conta GOG. Verifique se o perfil e os jogos estão configurados como públicos no GOG.'
       );
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsFetchingGog(false);
     }
@@ -332,7 +342,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       window.dispatchEvent(new Event('gog-synced'));
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao desconectar conta GOG.'));
+      const msg = parseError(err, 'Erro ao desconectar conta GOG.');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setPendingDisconnectAccountId(null);
     }
@@ -341,6 +353,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const handleSyncGog = async () => {
     setIsFetchingGog(true);
     setError('');
+    showToast('Sincronizando biblioteca GOG...', 'info');
     try {
       const res = await api.post('/users/me/gog/sync');
       const { new_games_count, updated_games_count } = res.data;
@@ -352,7 +365,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       window.dispatchEvent(new Event('gog-synced'));
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao sincronizar contas GOG.'));
+      const msg = parseError(err, 'Erro ao sincronizar contas GOG.');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsFetchingGog(false);
     }
@@ -361,6 +376,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const handleSyncSingleGog = async (accountId: string) => {
     setIsFetchingGog(true);
     setError('');
+    showToast('Sincronizando conta GOG...', 'info');
     try {
       const res = await api.post(`/users/me/gog/accounts/${accountId}/sync`);
       const { new_games_count, updated_games_count } = res.data;
@@ -372,7 +388,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       window.dispatchEvent(new Event('gog-synced'));
       window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao sincronizar conta GOG.'));
+      const msg = parseError(err, 'Erro ao sincronizar conta GOG.');
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsFetchingGog(false);
     }

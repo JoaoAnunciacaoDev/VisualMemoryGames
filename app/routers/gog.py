@@ -81,6 +81,9 @@ async def connect_gog_account(
     # Valida o perfil e obtém persona_name/avatar
     profile = await gog_service.get_public_profile(username)
 
+    # Busca os jogos antes de persistir a conta para validar privacidade
+    gog_games = await gog_service.get_public_games(username)
+
     new_account = GogAccount(
         user_id=current_user.id,
         username=profile.get("username", username),
@@ -92,8 +95,8 @@ async def connect_gog_account(
     db.commit()
     db.refresh(new_account)
 
-    # Sincroniza imediatamente os jogos da nova conta inline
-    await sync_single_account(new_account, db)
+    # Processa e persiste os jogos
+    await process_gog_games_list(new_account, gog_games, db)
 
     return new_account
 
@@ -159,7 +162,11 @@ async def disconnect_gog_account(
 async def sync_single_account(account: GogAccount, db: Session) -> dict:
     """Função core para sincronizar jogos de uma conta GOG específica."""
     gog_games = await gog_service.get_public_games(account.username)
+    return await process_gog_games_list(account, gog_games, db)
 
+
+async def process_gog_games_list(account: GogAccount, gog_games: list, db: Session) -> dict:
+    """Processa a lista de jogos do GOG e persiste no banco de dados."""
     new_games_count = 0
     updated_games_count = 0
 

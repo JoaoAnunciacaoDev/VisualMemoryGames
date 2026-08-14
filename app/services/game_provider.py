@@ -125,8 +125,12 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
                 )
 
             if results:
-                seen_ids = {r["external_id"] for r in local_results if r.get("external_id") is not None}
-                seen_titles = {r["title"].lower() for r in local_results if r.get("external_id") is None}
+                seen_ids = {
+                    r["external_id"] for r in local_results if r.get("external_id") is not None
+                }
+                seen_titles = {
+                    r["title"].lower() for r in local_results if r.get("external_id") is None
+                }
                 combined = list(local_results)
                 for r in results:
                     r_id = r.get("external_id")

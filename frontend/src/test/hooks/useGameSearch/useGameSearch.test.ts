@@ -43,7 +43,7 @@ describe('useGameSearch', () => {
       await result.current.searchGames('hollow');
     });
 
-    expect(api.get).toHaveBeenCalledWith('/games/search', { params: { q: 'hollow' } });
+    expect(api.get).toHaveBeenCalledWith('/games/search', { params: { q: 'hollow', page: 1 } });
     expect(result.current.searchResults).toEqual([mockGame]);
     expect(result.current.hasSearched).toBe(true);
     expect(result.current.isSearching).toBe(false);
@@ -59,7 +59,38 @@ describe('useGameSearch', () => {
       await result.current.searchGames('hollow');
     });
 
+    expect(api.get).toHaveBeenCalledWith('/games/search', { params: { q: 'hollow', page: 1 } });
     expect(result.current.searchResults).toEqual([mockGame]);
+  });
+
+  it('loadMore deve paginar e acumular novos resultados', async () => {
+    const mockGame2: GameResult = {
+      external_id: 10000,
+      title: 'Hollow Knight: Silksong',
+      cover_url: 'https://example.com/silksong.jpg',
+      release_year: 2025,
+      platforms: ['PC'],
+      genres: ['Metroidvania'],
+    };
+
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: [mockGame] } })
+      .mockResolvedValueOnce({ data: { results: [mockGame2] } });
+
+    const { result } = renderHook(() => useGameSearch());
+
+    await act(async () => {
+      await result.current.searchGames('hollow');
+    });
+
+    expect(result.current.searchResults).toEqual([mockGame]);
+
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(api.get).toHaveBeenLastCalledWith('/games/search', { params: { q: 'hollow', page: 2 } });
+    expect(result.current.searchResults).toEqual([mockGame, mockGame2]);
   });
 
   it('searchGames não deve pesquisar se o query tiver menos de 3 caracteres', async () => {

@@ -71,7 +71,7 @@ def _is_nsfw_igdb(item: Dict) -> bool:
 
 
 def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[Dict]:
-    """Busca jogos na API do IGDB pelo nome."""
+    """Busca jogos na API do IGDB pelo nome priorizando popularidade e relevância."""
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID:
         return []
@@ -82,23 +82,55 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
         "Authorization": f"Bearer {token}",
     }
 
-    # Query Apicalypse do IGDB
-    # category in (0, 8, 9, 10, 11) -> Main Game, Remake, Remaster, Expanded Game, Port
     sanitized_query = query.replace('"', '\\"')
-    body = (
-        f'search "{sanitized_query}"; '
-        f"fields name, cover.url, first_release_date, platforms.name, genres.name, themes, category; "
-        f"where category = (0, 8, 9, 10, 11); "
+    fields = "fields name, cover.url, first_release_date, platforms.name, genres.name, themes; "
+
+    # 1. Busca por substring no título ordenada por popularidade / total de avaliações
+    # Filtra por game_type (jogos principais, remakes, remasters, expanded, ports ou nulo)
+    body_popular = (
+        f"{fields}"
+        f'where name ~ *"{sanitized_query}"* & '
+        f"(game_type = 0 | game_type = 8 | game_type = 9 | game_type = 10 | "
+        f"game_type = 11 | game_type = null); "
+        f"sort total_rating_count desc; "
         f"offset {offset}; "
         f"limit {limit};"
     )
 
+    items = []
     try:
         with httpx.Client(timeout=3) as client:
-            response = client.post(url, headers=headers, content=body)
-            response.raise_for_status()
-            items = response.json()
+            response = client.post(url, headers=headers, content=body_popular)
+            if response.status_code == 200:
+                items = response.json()
+    except Exception as e:
+        logger.warning(f"Erro na busca por popularidade IGDB: {e}")
 
+    # 2. Fallback / Complemento: Se a busca exata retornou menos que o limite (ex: siglas como SH1)
+    if len(items) < limit:
+        needed = limit - len(items)
+        body_search = (
+            f'search "{sanitized_query}"; '
+            f"{fields}"
+            f"where game_type = (0, 8, 9, 10, 11); "
+            f"offset {offset}; "
+            f"limit {needed * 2};"
+        )
+        try:
+            with httpx.Client(timeout=3) as client:
+                response = client.post(url, headers=headers, content=body_search)
+                if response.status_code == 200:
+                    seen = {i["id"] for i in items}
+                    for item in response.json():
+                        if item["id"] not in seen:
+                            items.append(item)
+                            seen.add(item["id"])
+                        if len(items) >= limit:
+                            break
+        except Exception as e:
+            logger.warning(f"Erro na busca complementar IGDB: {e}")
+
+    try:
         results = []
         for item in items:
             if _is_nsfw_igdb(item):
@@ -140,9 +172,9 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
                 }
             )
 
-        return results
+        return results[:limit]
     except Exception as e:
-        logger.error(f"Erro ao pesquisar no IGDB: {e}")
+        logger.error(f"Erro ao processar dados do IGDB: {e}")
         return []
 
 

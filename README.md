@@ -1,7 +1,7 @@
 <h1 align="center">🎮 VisualMemory</h1>
 
 <p align="center">
-  <em>Plataforma para gestão de bibliotecas de videojogos, integração com a Steam e Itch.io e criação de tier lists personalizadas.</em>
+  <em>Plataforma para gestão de bibliotecas de videojogos, integração com Steam, GOG e Itch.io e criação de tier lists personalizadas.</em>
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 # 🎯 Sobre o Projeto
 
-O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam para importar jogos automaticamente e organizar jogos em *tier lists*.
+O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam, GOG e Itch.io para importar jogos automaticamente e organizar jogos em *tier lists*.
 
 ---
 
@@ -43,6 +43,12 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
   - Sincronização automatizada em segundo plano a cada nova sessão ou manual instantânea.
   - Detecção real de platinas (100% de conquistas obtidas) rodando chamadas em paralelo de forma otimizada.
   - Classificação inteligente de status inicial: *"Platinado"* para conquistas completas, *"Jogando"* para jogos iniciados nas últimas 2 semanas, e *"Quero Jogar"* para os demais.
+- 🌌 **Integração com a GOG (Good Old Games):**
+  - Conexão segura e sem OAuth via perfil público ou nome de usuário.
+  - Importação de biblioteca completa com capas oficiais, horas jogadas e detecção de conquistas/platinas.
+  - Busca paginada e concorrente com inserção em lote para máxima performance.
+- 🎲 **Integração com o Itch.io:**
+  - Vínculo de perfil público e sincronização de jogos da biblioteca indie do Itch.io.
 - 🎨 **Visual Moderno de Capas:**
   - Badge dinâmico com o ícone e nome da loja (ex: `🎮 Steam`, `PlayStation Store`, `Xbox Store`) sobreposto nos cards da biblioteca.
   - Indicador de estrela dourada (`⭐`) no topo direito para os jogos favoritados.
@@ -207,11 +213,11 @@ VisualMemory/
 ├── alembic/               # Histórico de migrações do banco de dados
 ├── app/                   # Código-fonte do Backend (FastAPI)
 │   ├── enums/             # Enums compartilhados (status do jogo, lojas)
-│   ├── models/            # Modelos do ORM SQLAlchemy 2.0 (User, Game, SteamAccount)
-│   ├── routers/           # Roteadores/Endpoints da API (auth, games, steam, admin)
+│   ├── models/            # Modelos do ORM SQLAlchemy 2.0 (User, Game, SteamAccount, GogAccount, ItchAccount)
+│   ├── routers/           # Roteadores/Endpoints da API (auth, games, steam, gog, itch, admin)
 │   ├── schemas/           # Esquemas de validação Pydantic v2
 │   ├── scripts/           # Scripts utilitários de CLI (manage_admin.py)
-│   ├── services/          # Serviços externos e lógicas complexas (Steam API, storage)
+│   ├── services/          # Serviços externos e lógicas complexas (Steam, GOG, Itch.io, IGDB)
 │   ├── tests/             # Suíte de testes unitários do backend (Pytest)
 │   ├── database.py        # Inicialização do DB Session
 │   ├── limiter.py         # Configuração de limitação de requisições

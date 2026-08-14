@@ -3,6 +3,7 @@ from app.models.custom_lists import CustomList, CustomListGame
 from app.models.email_verification import EmailVerification
 from app.models.follow import Follow
 from app.models.game import Game
+from app.models.gog_account import GogAccount
 from app.models.itch_account import ItchAccount
 from app.models.password_reset import PasswordReset
 from app.models.patch_note import PatchNote
@@ -24,6 +25,7 @@ __all__ = [
     "CustomList",
     "CustomListGame",
     "EmailVerification",
+    "GogAccount",
     "ItchAccount",
     "PasswordReset",
     "PatchNote",

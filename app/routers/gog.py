@@ -1,0 +1,344 @@
+from datetime import datetime, timezone
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models.activity import Activity
+from app.models.custom_lists import CustomList, custom_list_games
+from app.models.game import Game
+from app.models.gog_account import GogAccount
+from app.models.tierlist import TierCategory, TierItem, TierList
+from app.models.user import User
+from app.models.user_game import UserGame
+from app.security import get_current_user
+from app.services.custom_list_service import cleanup_empty_auto_lists, sync_auto_list
+from app.services.gog import GogService
+
+router = APIRouter(prefix="/users/me/gog", tags=["GOG Integration"])
+gog_service = GogService()
+
+
+class ConnectGogRequest(BaseModel):
+    profile_url: str
+
+
+class GogAccountResponse(BaseModel):
+    id: str
+    username: str
+    persona_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    last_sync_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class SyncResultResponse(BaseModel):
+    new_games_count: int
+    updated_games_count: int
+
+
+@router.get("/accounts", response_model=List[GogAccountResponse])
+def get_connected_accounts(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Lista todas as contas GOG conectadas do usuário."""
+    return db.query(GogAccount).filter(GogAccount.user_id == current_user.id).all()
+
+
+@router.post("/accounts", response_model=GogAccountResponse)
+async def connect_gog_account(
+    body: ConnectGogRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Vincula uma nova conta GOG pública ao usuário."""
+    username = gog_service.extract_username(body.profile_url)
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nome de usuário ou URL do perfil GOG inválido.",
+        )
+
+    # Verifica se a conta já está conectada para este usuário
+    existing = (
+        db.query(GogAccount)
+        .filter(
+            GogAccount.user_id == current_user.id,
+            func.lower(GogAccount.username) == username.lower(),
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Esta conta GOG já está conectada ao seu perfil.",
+        )
+
+    # Valida o perfil e obtém persona_name/avatar
+    profile = await gog_service.get_public_profile(username)
+
+    new_account = GogAccount(
+        user_id=current_user.id,
+        username=profile.get("username", username),
+        persona_name=profile.get("persona_name"),
+        avatar_url=profile.get("avatar_url"),
+        last_sync_at=None,
+    )
+    db.add(new_account)
+    db.commit()
+    db.refresh(new_account)
+
+    # Sincroniza imediatamente os jogos da nova conta inline
+    await sync_single_account(new_account, db)
+
+    return new_account
+
+
+@router.delete("/accounts/{account_id}")
+async def disconnect_gog_account(
+    account_id: str,
+    delete_games: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Desvincula uma conta GOG conectada e opcionalmente remove seus jogos."""
+    account = (
+        db.query(GogAccount)
+        .filter(GogAccount.id == account_id, GogAccount.user_id == current_user.id)
+        .first()
+    )
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conta GOG não encontrada."
+        )
+
+    if delete_games:
+        # Encontra jogos associados à loja GOG para este usuário
+        gog_user_games_query = db.query(UserGame).filter(
+            UserGame.user_id == current_user.id,
+            UserGame.store == "GOG",
+        )
+        game_ids = [ug.game_id for ug in gog_user_games_query.all()]
+
+        if game_ids:
+            # Deleta as associações em Custom Lists
+            db.execute(
+                custom_list_games.delete().where(
+                    custom_list_games.c.game_id.in_(game_ids),
+                    custom_list_games.c.custom_list_id.in_(
+                        db.query(CustomList.id).filter(CustomList.user_id == current_user.id)
+                    ),
+                )
+            )
+
+            # Deleta os itens em Tier Lists
+            db.query(TierItem).filter(
+                TierItem.game_id.in_(game_ids),
+                TierItem.category_id.in_(
+                    db.query(TierCategory.id)
+                    .join(TierList)
+                    .filter(TierList.user_id == current_user.id)
+                ),
+            ).delete(synchronize_session=False)
+
+            # Deleta os registros em UserGame
+            gog_user_games_query.delete(synchronize_session=False)
+
+        cleanup_empty_auto_lists(current_user.id, db)
+
+    db.delete(account)
+    db.commit()
+
+    return {"message": "Conta GOG desconectada com sucesso."}
+
+
+async def sync_single_account(account: GogAccount, db: Session) -> dict:
+    """Função core para sincronizar jogos de uma conta GOG específica."""
+    gog_games = await gog_service.get_public_games(account.username)
+
+    new_games_count = 0
+    updated_games_count = 0
+
+    for g_item in gog_games:
+        title = g_item.get("title")
+        if not title:
+            continue
+
+        cover_url = g_item.get("cover_url")
+        hours_played = g_item.get("hours_played", 0.0)
+        is_platinized = g_item.get("is_platinized", False)
+        platinum_date = g_item.get("platinum_date")
+
+        # 1. Procura se o jogo já existe globalmente no banco por título
+        game = db.query(Game).filter(func.lower(Game.title) == title.lower().strip()).first()
+        if not game:
+            game = Game(
+                title=title,
+                cover_url=cover_url,
+                platforms=["PC"],
+                genres=[],
+                release_year=None,
+                is_manual=False,
+            )
+            db.add(game)
+            db.flush()
+
+        # 2. Verifica se o usuário já possui este jogo na biblioteca
+        user_game = (
+            db.query(UserGame)
+            .filter(UserGame.user_id == account.user_id, UserGame.game_id == game.id)
+            .first()
+        )
+
+        if not user_game:
+            # Classifica status inicial
+            status_init = (
+                "Platinado" if is_platinized else ("Jogando" if hours_played > 0 else "Quero Jogar")
+            )
+            plat_at = platinum_date if is_platinized else None
+
+            user_game = UserGame(
+                user_id=account.user_id,
+                game_id=game.id,
+                game=game,
+                rating=None,
+                status=status_init,
+                hours_played=hours_played,
+                store="GOG",
+                acquired_at=None,
+                platinum_at=plat_at,
+                favorite=False,
+            )
+            db.add(user_game)
+            new_games_count += 1
+
+            # Registra atividade de adição
+            db.add(
+                Activity(
+                    user_id=str(account.user_id),
+                    game_id=str(game.id),
+                    action_type="ADDED",
+                )
+            )
+
+            # Se platinado na criação, registra atividade e auto-list
+            if status_init == "Platinado":
+                db.add(
+                    Activity(
+                        user_id=str(account.user_id),
+                        game_id=str(game.id),
+                        action_type="PLATINUM",
+                    )
+                )
+                sync_auto_list(
+                    user_id=str(account.user_id),
+                    user_game=user_game,
+                    field_name="platinum_at",
+                    list_type="platinized_year",
+                    db=db,
+                )
+        else:
+            old_status = user_game.status
+            old_platinum = user_game.platinum_at
+            has_changes = False
+
+            if is_platinized:
+                if user_game.status != "Platinado":
+                    user_game.status = "Platinado"
+                    has_changes = True
+                if not user_game.platinum_at:
+                    user_game.platinum_at = platinum_date or datetime.now(timezone.utc).date()
+                    has_changes = True
+
+            if user_game.hours_played is None or hours_played > user_game.hours_played:
+                user_game.hours_played = hours_played
+                has_changes = True
+
+            if user_game.store != "GOG":
+                user_game.store = "GOG"
+                has_changes = True
+
+            if has_changes:
+                updated_games_count += 1
+                if old_status != user_game.status:
+                    db.add(
+                        Activity(
+                            user_id=str(account.user_id),
+                            game_id=str(game.id),
+                            action_type="UPDATED_STATUS",
+                            context=user_game.status,
+                        )
+                    )
+                if old_status != "Platinado" and user_game.status == "Platinado":
+                    db.add(
+                        Activity(
+                            user_id=str(account.user_id),
+                            game_id=str(game.id),
+                            action_type="PLATINUM",
+                        )
+                    )
+                if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
+                    sync_auto_list(
+                        user_id=str(account.user_id),
+                        user_game=user_game,
+                        field_name="platinum_at",
+                        list_type="platinized_year",
+                        db=db,
+                    )
+
+    account.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.commit()
+
+    return {
+        "new_games_count": new_games_count,
+        "updated_games_count": updated_games_count,
+    }
+
+
+@router.post("/accounts/{account_id}/sync", response_model=SyncResultResponse)
+async def sync_single_gog_account_endpoint(
+    account_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sincroniza os jogos de uma conta GOG específica."""
+    account = (
+        db.query(GogAccount)
+        .filter(GogAccount.id == account_id, GogAccount.user_id == current_user.id)
+        .first()
+    )
+    if not account:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Conta GOG não encontrada."
+        )
+
+    result = await sync_single_account(account, db)
+    return SyncResultResponse(
+        new_games_count=result["new_games_count"],
+        updated_games_count=result["updated_games_count"],
+    )
+
+
+@router.post("/sync", response_model=SyncResultResponse)
+async def sync_all_gog_accounts_endpoint(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Sincroniza os jogos de todas as contas GOG conectadas do usuário."""
+    accounts = db.query(GogAccount).filter(GogAccount.user_id == current_user.id).all()
+    if not accounts:
+        return SyncResultResponse(new_games_count=0, updated_games_count=0)
+
+    total_new = 0
+    total_updated = 0
+
+    for account in accounts:
+        result = await sync_single_account(account, db)
+        total_new += result["new_games_count"]
+        total_updated += result["updated_games_count"]
+
+    return SyncResultResponse(new_games_count=total_new, updated_games_count=total_updated)

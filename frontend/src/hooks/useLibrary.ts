@@ -48,8 +48,12 @@ export function useLibrary() {
 
   useEffect(() => {
     window.addEventListener('steam-synced', loadLibrary);
+    window.addEventListener('gog-synced', loadLibrary);
+    window.addEventListener('itch-synced', loadLibrary);
     return () => {
       window.removeEventListener('steam-synced', loadLibrary);
+      window.removeEventListener('gog-synced', loadLibrary);
+      window.removeEventListener('itch-synced', loadLibrary);
     };
   }, [loadLibrary]);
 

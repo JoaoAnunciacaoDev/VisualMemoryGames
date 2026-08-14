@@ -38,7 +38,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [showDeleteGamesConfirm, setShowDeleteGamesConfirm] = useState(false);
   const [pendingDisconnectAccountId, setPendingDisconnectAccountId] = useState<string | null>(null);
-  const [disconnectProvider, setDisconnectProvider] = useState<'steam' | 'itch' | null>(null);
+  const [disconnectProvider, setDisconnectProvider] = useState<'steam' | 'itch' | 'gog' | null>(null);
   
   // States para Alteração de Dados
   const [newUsername, setNewUsername] = useState(user?.username || '');
@@ -123,6 +123,18 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [steamUrl, setSteamUrl] = useState('');
   const [isFetchingSteam, setIsFetchingSteam] = useState(false);
 
+  // States para GOG
+  interface GogAccount {
+    id: string;
+    username: string;
+    persona_name: string | null;
+    avatar_url: string | null;
+    last_sync_at: string | null;
+  }
+  const [gogAccounts, setGogAccounts] = useState<GogAccount[]>([]);
+  const [gogUrl, setGogUrl] = useState('');
+  const [isFetchingGog, setIsFetchingGog] = useState(false);
+
   // States para Itch.io
   interface ItchAccount {
     id: string;
@@ -140,6 +152,15 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setSteamAccounts(res.data);
     } catch (err) {
       console.error('Erro ao buscar contas Steam:', err);
+    }
+  }, []);
+
+  const fetchGogAccounts = useCallback(async () => {
+    try {
+      const res = await api.get('/users/me/gog/accounts');
+      setGogAccounts(res.data);
+    } catch (err) {
+      console.error('Erro ao buscar contas GOG:', err);
     }
   }, []);
 
@@ -162,6 +183,14 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       })
       .catch((err) => {
         console.error('Erro ao buscar contas Steam:', err);
+      });
+
+    api.get('/users/me/gog/accounts')
+      .then((res) => {
+        if (active) setGogAccounts(res.data);
+      })
+      .catch((err) => {
+        console.error('Erro ao buscar contas GOG:', err);
       });
       
     api.get('/users/me/itch/accounts')
@@ -258,6 +287,94 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setError(parseError(err, 'Erro ao sincronizar conta Steam.'));
     } finally {
       setIsFetchingSteam(false);
+    }
+  };
+
+  const handleConnectGog = async (e: SyntheticEvent) => {
+    e.preventDefault();
+    if (!gogUrl.trim()) return;
+    setIsFetchingGog(true);
+    setError('');
+    try {
+      await api.post('/users/me/gog/accounts', { profile_url: gogUrl.trim() });
+      showToast('Conta GOG conectada e biblioteca importada!', 'success');
+      setGogUrl('');
+      void fetchGogAccounts();
+      window.dispatchEvent(new Event('gog-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(
+        parseError(
+          err,
+          'Erro ao conectar conta GOG. Verifique se o perfil e os jogos estão configurados como públicos no GOG.'
+        )
+      );
+    } finally {
+      setIsFetchingGog(false);
+    }
+  };
+
+  const handleDisconnectGog = (accountId: string) => {
+    setPendingDisconnectAccountId(accountId);
+    setDisconnectProvider('gog');
+    setShowDisconnectConfirm(true);
+  };
+
+  const executeDisconnectGog = async (deleteGames: boolean) => {
+    if (!pendingDisconnectAccountId) return;
+    setError('');
+    try {
+      await api.delete(
+        `/users/me/gog/accounts/${pendingDisconnectAccountId}?delete_games=${deleteGames}`
+      );
+      showToast('Conta GOG desconectada com sucesso.', 'success');
+      void fetchGogAccounts();
+      window.dispatchEvent(new Event('gog-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao desconectar conta GOG.'));
+    } finally {
+      setPendingDisconnectAccountId(null);
+    }
+  };
+
+  const handleSyncGog = async () => {
+    setIsFetchingGog(true);
+    setError('');
+    try {
+      const res = await api.post('/users/me/gog/sync');
+      const { new_games_count, updated_games_count } = res.data;
+      showToast(
+        `Sincronização GOG concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
+        'success'
+      );
+      void fetchGogAccounts();
+      window.dispatchEvent(new Event('gog-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao sincronizar contas GOG.'));
+    } finally {
+      setIsFetchingGog(false);
+    }
+  };
+
+  const handleSyncSingleGog = async (accountId: string) => {
+    setIsFetchingGog(true);
+    setError('');
+    try {
+      const res = await api.post(`/users/me/gog/accounts/${accountId}/sync`);
+      const { new_games_count, updated_games_count } = res.data;
+      showToast(
+        `Sincronização GOG concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
+        'success'
+      );
+      void fetchGogAccounts();
+      window.dispatchEvent(new Event('gog-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao sincronizar conta GOG.'));
+    } finally {
+      setIsFetchingGog(false);
     }
   };
 
@@ -611,6 +728,65 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
               <hr className={styles.integrationDivider} />
 
               <div className={styles.integrationSection}>
+                <h3>GOG (Good Old Games)</h3>
+                <p className={styles.helpText}>
+                  Conecte sua conta GOG para importar sua biblioteca, tempo jogado e conquistas.
+                  <strong> Nota:</strong> O perfil e os jogos devem estar configurados como <strong>Públicos</strong> nas opções de privacidade do GOG.
+                </p>
+
+                <form onSubmit={handleConnectGog} className={styles.integrationForm}>
+                  <div className={styles.inputRow}>
+                    <Input
+                      placeholder="URL do perfil GOG ou nome de usuário (ex: usuario)"
+                      value={gogUrl}
+                      onChange={(e) => setGogUrl(e.target.value)}
+                      disabled={isFetchingGog}
+                      required
+                    />
+                    <Button type="submit" disabled={isFetchingGog || !gogUrl.trim()}>
+                      {isFetchingGog ? 'Conectando...' : 'Conectar'}
+                    </Button>
+                  </div>
+                </form>
+
+                {gogAccounts.length > 0 ? (
+                  <div className={styles.accountsList}>
+                    <div className={styles.listHeader}>
+                      <h4>Contas Conectadas ({gogAccounts.length})</h4>
+                      <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingGog} onClick={handleSyncGog}>
+                        🔄 Sincronizar Tudo
+                      </Button>
+                    </div>
+                    
+                    {gogAccounts.map((acc) => (
+                      <div key={acc.id} className={acc.avatar_url ? styles.accountCard : `${styles.accountCard} ${styles.accountCardNoAvatar}`}>
+                        <img src={acc.avatar_url || 'https://avatars.githubusercontent.com/u/0?v=4'} alt={acc.persona_name || acc.username} className={acc.avatar_url ? styles.accountAvatar : styles.accountAvatarPlaceholder} />
+                        <div className={styles.accountInfo}>
+                          <strong>{acc.persona_name || acc.username}</strong>
+                          <span>@{acc.username}</span>
+                          {acc.last_sync_at && (
+                            <small>Sincronizado em: {formatDateTime(acc.last_sync_at)}</small>
+                          )}
+                        </div>
+                        <div className={styles.accountActions}>
+                          <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingGog} onClick={() => handleSyncSingleGog(acc.id)}>
+                            🔄
+                          </Button>
+                          <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectGog(acc.id)}>
+                            Desconectar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.noAccounts}>Nenhuma conta GOG vinculada ainda.</div>
+                )}
+              </div>
+
+              <hr className={styles.integrationDivider} />
+
+              <div className={styles.integrationSection}>
                 <h3>Itch.io</h3>
                 <p className={styles.helpText}>
                   Conecte sua conta Itch.io para sincronizar sua biblioteca. O redirecionamento utilizará o fluxo seguro do OAuth da itch.io.
@@ -666,8 +842,8 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     {showDisconnectConfirm && (
       <ConfirmModal
         isOpen={showDisconnectConfirm}
-        title={`Desconectar Conta ${disconnectProvider === 'steam' ? 'Steam' : 'Itch.io'}`}
-        message={`Tem certeza que deseja desconectar esta conta ${disconnectProvider === 'steam' ? 'Steam' : 'Itch.io'}? Ela não será mais sincronizada.`}
+        title={`Desconectar Conta ${disconnectProvider === 'steam' ? 'Steam' : disconnectProvider === 'gog' ? 'GOG' : 'Itch.io'}`}
+        message={`Tem certeza que deseja desconectar esta conta ${disconnectProvider === 'steam' ? 'Steam' : disconnectProvider === 'gog' ? 'GOG' : 'Itch.io'}? Ela não será mais sincronizada.`}
         confirmText="Confirmar"
         cancelText="Cancelar"
         onConfirm={() => {
@@ -693,11 +869,13 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
         isDestructive
         onConfirm={() => {
           if (disconnectProvider === 'steam') executeDisconnectSteam(true);
+          else if (disconnectProvider === 'gog') executeDisconnectGog(true);
           else if (disconnectProvider === 'itch') executeDisconnectItch(true);
           setShowDeleteGamesConfirm(false);
         }}
         onCancel={() => {
           if (disconnectProvider === 'steam') executeDisconnectSteam(false);
+          else if (disconnectProvider === 'gog') executeDisconnectGog(false);
           else if (disconnectProvider === 'itch') executeDisconnectItch(false);
           setShowDeleteGamesConfirm(false);
         }}

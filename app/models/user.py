@@ -46,6 +46,7 @@ class User(Base):
         "SteamAccount", back_populates="user", cascade="all, delete-orphan"
     )
     itch_accounts = relationship("ItchAccount", back_populates="user", cascade="all, delete-orphan")
+    gog_accounts = relationship("GogAccount", back_populates="user", cascade="all, delete-orphan")
 
 
 from app.models.user_game import UserGame  # noqa: E402

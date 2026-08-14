@@ -79,3 +79,9 @@ app.include_router(patch_notes.router)
 @app.get("/")
 def read_root():
     return {"message": "VisualMemory API rodando liso, liso!"}
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+

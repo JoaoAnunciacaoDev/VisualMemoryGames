@@ -39,10 +39,15 @@ export function useLibraryFilters(games: LibraryGame[]) {
       result = result.filter((g) => g.is_manual);
     }
 
-    // Pesquisa por título
+    // Pesquisa por título (com normalização de acentos/diacríticos)
     if (search.trim()) {
-      const query = search.toLowerCase();
-      result = result.filter((g) => g.title.toLowerCase().includes(query));
+      const normalize = (str: string) =>
+        str
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase();
+      const query = normalize(search);
+      result = result.filter((g) => normalize(g.title).includes(query));
     }
 
     // Filtro por ano

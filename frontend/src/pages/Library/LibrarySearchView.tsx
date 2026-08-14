@@ -10,6 +10,9 @@ interface Props {
   searchResults: GameResult[];
   addedGames: Map<number, string>;
   error?: string | null;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   onAddGame: (game: GameResult) => void;
   onRemoveGame: (externalId: number) => void;
   onOpenGame: (game: GameResult) => void;
@@ -22,6 +25,9 @@ export default function LibrarySearchView({
   searchResults,
   addedGames,
   error,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
   onAddGame,
   onRemoveGame,
   onOpenGame,
@@ -54,6 +60,20 @@ export default function LibrarySearchView({
           />
         ))}
       </GameGrid>
+
+      {hasMore && onLoadMore && (
+        <div className={styles.loadMoreContainer}>
+          <button
+            type="button"
+            className={styles.loadMoreBtn}
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? 'Carregando mais jogos...' : 'Carregar mais resultados'}
+          </button>
+        </div>
+      )}
+
       {searchResults.length === 0 && !isSearching && !error && (
         <div className={styles.emptyState}>
           Pesquise por um título para adicionar à sua coleção.

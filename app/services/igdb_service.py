@@ -70,7 +70,7 @@ def _is_nsfw_igdb(item: Dict) -> bool:
     return False
 
 
-def search_games_on_igdb(query: str, limit: int = 15) -> List[Dict]:
+def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[Dict]:
     """Busca jogos na API do IGDB pelo nome."""
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID:
@@ -83,10 +83,13 @@ def search_games_on_igdb(query: str, limit: int = 15) -> List[Dict]:
     }
 
     # Query Apicalypse do IGDB
+    # category in (0, 8, 9, 10, 11) -> Main Game, Remake, Remaster, Expanded Game, Port
     sanitized_query = query.replace('"', '\\"')
     body = (
         f'search "{sanitized_query}"; '
-        f"fields name, cover.url, first_release_date, platforms.name, genres.name, themes; "
+        f"fields name, cover.url, first_release_date, platforms.name, genres.name, themes, category; "
+        f"where category = (0, 8, 9, 10, 11); "
+        f"offset {offset}; "
         f"limit {limit};"
     )
 

@@ -58,28 +58,40 @@ def search_games_in_local_db(query: str, db: Session, limit: int = 15) -> List[D
     return results
 
 
-def search_games_on_rawg(query: str, db: Optional[Session] = None) -> List[Dict]:
-    """Busca jogos por nome (Cache-First DB Local -> IGDB -> RAWG)."""
+def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1) -> List[Dict]:
+    """Busca jogos por nome (Cache-First DB Local -> IGDB -> RAWG) com paginação."""
 
-    # 1. Tentar Banco Local primeiro se o db session estiver disponível
+    page = max(1, page)
+    limit = 15
+    offset = (page - 1) * limit
+
+    # 1. Tentar Banco Local apenas na primeira página (page == 1) se o db session estiver disponível
     local_results = []
-    if db is not None:
+    if db is not None and page == 1:
         try:
-            local_results = search_games_in_local_db(query, db, limit=15)
+            local_results = search_games_in_local_db(query, db, limit=limit)
         except Exception as e:
             logger.warning(f"Erro ao buscar no DB local: {e}")
 
     # 2. Tentar IGDB (Twitch API)
-    igdb_results = search_games_on_igdb(query)
+    igdb_results = search_games_on_igdb(query, limit=limit, offset=offset)
     if igdb_results:
-        # Mesclar local + IGDB desduplicando pelo external_id ou título
-        seen_titles = {r["title"].lower() for r in local_results}
+        seen_ids = {r["external_id"] for r in local_results if r.get("external_id") is not None}
+        seen_titles = {r["title"].lower() for r in local_results if r.get("external_id") is None}
         combined = list(local_results)
         for r in igdb_results:
-            if r["title"].lower() not in seen_titles:
-                combined.append(r)
-                seen_titles.add(r["title"].lower())
-        return combined[:15]
+            r_id = r.get("external_id")
+            r_title = r["title"].lower()
+            if r_id is not None and r_id in seen_ids:
+                continue
+            if r_id is None and r_title in seen_titles:
+                continue
+            if r_id is not None:
+                seen_ids.add(r_id)
+            else:
+                seen_titles.add(r_title)
+            combined.append(r)
+        return combined
 
     # 3. Tentar RAWG com timeout curto (3s) se RAWG_API_KEY estiver configurado
     if RAWG_API_KEY:
@@ -87,7 +99,8 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None) -> List[Dict]
         params = {
             "key": RAWG_API_KEY,
             "search": query,
-            "page_size": 15,
+            "page_size": limit,
+            "page": page,
             "search_precise": True,
         }
 
@@ -112,13 +125,22 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None) -> List[Dict]
                 )
 
             if results:
-                seen_titles = {r["title"].lower() for r in local_results}
+                seen_ids = {r["external_id"] for r in local_results if r.get("external_id") is not None}
+                seen_titles = {r["title"].lower() for r in local_results if r.get("external_id") is None}
                 combined = list(local_results)
                 for r in results:
-                    if r["title"].lower() not in seen_titles:
-                        combined.append(r)
-                        seen_titles.add(r["title"].lower())
-                return combined[:15]
+                    r_id = r.get("external_id")
+                    r_title = r["title"].lower()
+                    if r_id is not None and r_id in seen_ids:
+                        continue
+                    if r_id is None and r_title in seen_titles:
+                        continue
+                    if r_id is not None:
+                        seen_ids.add(r_id)
+                    else:
+                        seen_titles.add(r_title)
+                    combined.append(r)
+                return combined
         except Exception as e:
             logger.warning(f"RAWG indisponível ou timeout na busca: {e}")
 

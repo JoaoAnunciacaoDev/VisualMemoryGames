@@ -44,7 +44,16 @@ export default function Library() {
     hoursOperator, setHoursOperator, hoursValue, setHoursValue, hoursValueMax, setHoursValueMax,
     clearAllFilters,
   } = useLibraryFilters(games);
-  const { searchResults, isSearching, error: searchError, searchGames, addGameToLibrary } = useGameSearch();
+  const {
+    searchResults,
+    isSearching,
+    isLoadingMore,
+    hasMore,
+    error: searchError,
+    searchGames,
+    loadMore,
+    addGameToLibrary,
+  } = useGameSearch();
   const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<LibraryTab>('library');
@@ -105,6 +114,15 @@ export default function Library() {
       await addGameToLibrary(game);
       await loadLibrary();
       showToast('Jogo adicionado à biblioteca!', 'success');
+
+      // Navega para a biblioteca, descolapsa "Quero Jogar" e foca na busca
+      setActiveTab('library');
+      setSearch(game.title);
+      setCollapsedStatuses((prev) => {
+        const next = new Set(prev);
+        next.delete('Quero Jogar');
+        return next;
+      });
     } catch {
       showToast('Erro ao adicionar jogo.', 'error');
     }
@@ -198,6 +216,9 @@ export default function Library() {
         <LibrarySearchView
           searchGames={searchGames}
           isSearching={isSearching}
+          isLoadingMore={isLoadingMore}
+          hasMore={hasMore}
+          onLoadMore={loadMore}
           searchResults={searchResults}
           addedGames={addedGames}
           error={searchError}

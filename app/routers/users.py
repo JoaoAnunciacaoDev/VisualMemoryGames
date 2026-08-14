@@ -419,7 +419,6 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
 
     return DashboardResponse(
         username=target_user.username,
-        email=target_user.email,
         created_at=target_user.created_at,
         games_count=games_count,
         lists_count=lists_count,

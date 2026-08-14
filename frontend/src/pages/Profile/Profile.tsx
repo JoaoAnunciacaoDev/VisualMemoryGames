@@ -26,7 +26,6 @@ interface YearlyGames {
 
 interface DashboardData {
   username: string;
-  email: string;
   created_at: string | null;
   games_count: number;
   lists_count: number;
@@ -282,7 +281,6 @@ export default function Profile() {
               </button>
             )}
           </div>
-          <p className={styles.emailText}>{data.email}</p>
           <p className={styles.joinedText}>
             Membro desde {formatDate(data.created_at)}
           </p>

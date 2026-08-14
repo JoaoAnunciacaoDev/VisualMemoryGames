@@ -120,7 +120,6 @@ class YearlyGames(BaseModel):
 
 class DashboardResponse(BaseModel):
     username: str
-    email: str
     created_at: Optional[datetime] = None
     games_count: int
     lists_count: int

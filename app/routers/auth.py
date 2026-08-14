@@ -74,6 +74,15 @@ def token_login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+def is_secure_request(request: Request) -> bool:
+    """Verifica se a requisição está em ambiente seguro / produção / HTTPS."""
+    return (
+        os.getenv("ENVIRONMENT") == "production"
+        or request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+    )
+
+
 @router.post("/login")
 @limiter.limit("5/minute")
 def login(
@@ -119,15 +128,17 @@ def login(
 
     access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=expires_delta)
 
-    is_prod = os.getenv("ENVIRONMENT") == "production"
+    is_secure = is_secure_request(request)
+    expires_date = datetime.now(timezone.utc) + expires_delta if remember_me else None
+
     response.set_cookie(
         key="token",
         value=access_token,
         httponly=True,
         max_age=max_age,
-        expires=datetime.now(timezone.utc) + expires_delta if remember_me else None,
-        samesite="none" if is_prod else "lax",
-        secure=is_prod,
+        expires=expires_date,
+        samesite="none" if is_secure else "lax",
+        secure=is_secure,
         path="/",
     )
     return {"success": True, "message": "Login realizado com sucesso"}
@@ -220,14 +231,14 @@ def confirm_password_reset(
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(request: Request, response: Response):
     """Exclui o cookie de autenticação do usuário."""
-    is_prod = os.getenv("ENVIRONMENT") == "production"
+    is_secure = is_secure_request(request)
     response.delete_cookie(
         key="token",
         httponly=True,
-        samesite="none" if is_prod else "lax",
-        secure=is_prod,
+        samesite="none" if is_secure else "lax",
+        secure=is_secure,
         path="/",
     )
     return {"message": "Desconectado com sucesso"}

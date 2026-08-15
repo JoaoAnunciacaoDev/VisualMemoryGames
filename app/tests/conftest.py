@@ -44,16 +44,25 @@ def client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     app.state.limiter.reset()
 
+    import app.routers.epic as epic_router
+    import app.routers.gog as gog_router
     import app.routers.steam as steam_router
 
-    original_session_maker = steam_router.db_session_maker
+    orig_steam = steam_router.db_session_maker
+    orig_gog = gog_router.db_session_maker
+    orig_epic = epic_router.db_session_maker
+
     steam_router.db_session_maker = TestingSessionLocal
+    gog_router.db_session_maker = TestingSessionLocal
+    epic_router.db_session_maker = TestingSessionLocal
 
     with TestClient(app) as c:
         yield c
 
     app.dependency_overrides.clear()
-    steam_router.db_session_maker = original_session_maker
+    steam_router.db_session_maker = orig_steam
+    gog_router.db_session_maker = orig_gog
+    epic_router.db_session_maker = orig_epic
 
 
 @pytest.fixture

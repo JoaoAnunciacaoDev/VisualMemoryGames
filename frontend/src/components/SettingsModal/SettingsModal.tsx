@@ -153,7 +153,9 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [epicPastedText, setEpicPastedText] = useState('');
   const [parsedEpicTitles, setParsedEpicTitles] = useState<string[]>([]);
   const [isImportingEpic, setIsImportingEpic] = useState(false);
+  const [isFetchingEpic, setIsFetchingEpic] = useState(false);
   const [isEpicDragging, setIsEpicDragging] = useState(false);
+  const [showEpicDeleteConfirm, setShowEpicDeleteConfirm] = useState(false);
 
   const fetchSteamAccounts = useCallback(async () => {
     try {
@@ -597,10 +599,48 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setParsedEpicTitles([]);
       void fetchEpicGamesCount();
       window.dispatchEvent(new Event('epic-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao importar jogos da Epic Games.'));
     } finally {
       setIsImportingEpic(false);
+    }
+  };
+
+  const handleEnrichEpic = async () => {
+    setIsFetchingEpic(true);
+    setError('');
+    showToast('Atualizando metadados dos jogos da Epic Games...', 'info');
+    try {
+      const res = await api.post('/users/me/epic/enrich');
+      const { games_to_enrich_count } = res.data;
+      showToast(
+        `Atualização iniciada! ${games_to_enrich_count} jogos estão tendo capas e gêneros buscados em segundo plano.`,
+        'success'
+      );
+      window.dispatchEvent(new Event('epic-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao atualizar metadados dos jogos da Epic Games.'));
+    } finally {
+      setIsFetchingEpic(false);
+    }
+  };
+
+  const handleDeleteEpicGames = async () => {
+    setIsFetchingEpic(true);
+    setError('');
+    try {
+      const res = await api.delete('/users/me/epic/games');
+      const { removed_count } = res.data;
+      showToast(`${removed_count} jogos da Epic Games foram removidos da biblioteca.`, 'success');
+      void fetchEpicGamesCount();
+      window.dispatchEvent(new Event('epic-synced'));
+      window.dispatchEvent(new Event('steam-synced'));
+    } catch (err: unknown) {
+      setError(parseError(err, 'Erro ao remover jogos da Epic Games.'));
+    } finally {
+      setIsFetchingEpic(false);
     }
   };
 
@@ -1008,6 +1048,29 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                   Importe sua biblioteca da Epic Games Store a partir de um arquivo TXT/CSV ou colando a lista de títulos.
                 </p>
 
+                {epicGamesCount !== null && epicGamesCount > 0 && (
+                  <div className={styles.epicManagementActions}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={styles.syncAllButton}
+                      disabled={isFetchingEpic}
+                      onClick={handleEnrichEpic}
+                    >
+                      🔄 Atualizar Metadados (Capas e Gêneros)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={styles.disconnectButton}
+                      disabled={isFetchingEpic}
+                      onClick={() => setShowEpicDeleteConfirm(true)}
+                    >
+                      🗑️ Remover Jogos da Epic
+                    </Button>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   className={styles.epicInstructionsToggle}
@@ -1169,6 +1232,23 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
           else if (disconnectProvider === 'itch') executeDisconnectItch(false);
           setShowDeleteGamesConfirm(false);
         }}
+      />
+    )}
+
+    {/* Modal de confirmação: Remover todos os jogos da Epic Games */}
+    {showEpicDeleteConfirm && (
+      <ConfirmModal
+        isOpen={showEpicDeleteConfirm}
+        title="Remover Jogos da Epic Games?"
+        message="Tem certeza que deseja remover todos os jogos importados da Epic Games da sua biblioteca? Esta ação não pode ser desfeita."
+        confirmText="Sim, remover jogos"
+        cancelText="Cancelar"
+        isDestructive
+        onConfirm={() => {
+          setShowEpicDeleteConfirm(false);
+          void handleDeleteEpicGames();
+        }}
+        onCancel={() => setShowEpicDeleteConfirm(false)}
       />
     )}
   </>

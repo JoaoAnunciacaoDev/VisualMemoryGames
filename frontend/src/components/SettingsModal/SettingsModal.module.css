@@ -489,3 +489,13 @@
   display: flex;
   gap: var(--gap-xs);
 }
+
+.epicManagementActions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  margin-top: var(--gap-sm);
+  margin-bottom: var(--gap-sm);
+  flex-wrap: wrap;
+}
+

@@ -416,8 +416,8 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
             # Classifica o status inicial:
             # - Se platinou: "Platinado"
             # - Se jogou recentemente: "Jogando"
-            # - Senão: "Quero Jogar"
-            status_init = "Quero Jogar"
+            # - Senão: "Na biblioteca"
+            status_init = "Na biblioteca"
             platinum_date = None
             if is_platinized:
                 status_init = "Platinado"

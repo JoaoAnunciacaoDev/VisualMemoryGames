@@ -118,7 +118,7 @@ def import_epic_games(
     Importa jogos da Epic Games Store a partir de títulos extraídos via arquivo/texto.
     - Se o jogo já existir no catálogo global, vincula. Caso contrário, cria no catálogo.
     - Se o usuário já tiver o jogo na biblioteca, não sobrescreve e contabiliza como ignorado.
-    - Jogos novos entram como store='EPIC', status='Quero Jogar' e hours_played=0.0.
+    - Jogos novos entram como store='EPIC', status='Na biblioteca' e hours_played=0.0.
     - Dispara tarefa em background para buscar capas e gêneros faltantes.
     """
     raw_titles = payload.titles
@@ -189,7 +189,7 @@ def import_epic_games(
                 game_id=game.id,
                 game=game,
                 rating=None,
-                status="Quero Jogar",
+                status="Na biblioteca",
                 hours_played=0.0,
                 store="EPIC",
                 acquired_at=None,

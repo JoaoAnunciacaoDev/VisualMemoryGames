@@ -16,7 +16,7 @@ import styles from '@/pages/TierList/TierList.module.css';
 import TierListCreateModal, { type TierListCreateValues } from '@/pages/TierList/TierListCreateModal';
 import TierListGrid from '@/pages/TierList/TierListGrid';
 
-const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Quero Jogar', 'Abandonado', 'Em Espera'];
+const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Na biblioteca', 'Quero Jogar', 'Abandonado', 'Em Espera'];
 
 export default function TierLists() {
   const navigate = useNavigate();

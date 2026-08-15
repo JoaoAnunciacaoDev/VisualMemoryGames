@@ -14,7 +14,7 @@ interface Props {
   onSelectGame: (game: LibraryGame) => void;
 }
 
-const STATUS_ORDER = ['Jogando', 'Zerado', 'Platinado', 'Em Espera', 'Abandonado', 'Quero Jogar'];
+const STATUS_ORDER = ['Jogando', 'Zerado', 'Platinado', 'Em Espera', 'Abandonado', 'Quero Jogar', 'Na biblioteca'];
 
 export default function LibraryGamesView({
   games,

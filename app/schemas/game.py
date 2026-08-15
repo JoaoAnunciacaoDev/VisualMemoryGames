@@ -104,7 +104,7 @@ class GameResponse(GameBase):
 
 class UserGameBase(BaseModel):
     rating: Optional[float] = Field(default=None, ge=0, le=10)
-    status: GameStatus = GameStatus.WANT_TO_PLAY
+    status: GameStatus = GameStatus.IN_LIBRARY
 
     started_at: Optional[date] = None
     finished_at: Optional[date] = None

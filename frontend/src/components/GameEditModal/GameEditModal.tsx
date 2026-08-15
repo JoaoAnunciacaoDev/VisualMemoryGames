@@ -377,8 +377,8 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                 )
               )}
 
-              <span className={`${styles.statusTag} ${styles[`status_${(form.status || 'Quero Jogar').replace(/\s+/g, '_')}`]}`}>
-                {(form.status || 'Quero Jogar').toUpperCase()}
+              <span className={`${styles.statusTag} ${styles[`status_${(form.status || 'Na biblioteca').replace(/\s+/g, '_')}`]}`}>
+                {(form.status || 'Na biblioteca').toUpperCase()}
               </span>
             </div>
           </div>
@@ -465,6 +465,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
             <span className={styles.statusSectionLabel}>Status</span>
             <div className={styles.statusButtonsGrid}>
               {[
+                { name: 'Na biblioteca', icon: '📚', class: 'inLibrary' },
                 { name: 'Quero Jogar', icon: '🎯', class: 'wantToPlay' },
                 { name: 'Jogando', icon: '🎮', class: 'playing' },
                 { name: 'Zerado', icon: '✅', class: 'completed' },
@@ -472,7 +473,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                 { name: 'Abandonado', icon: '🚫', class: 'abandoned' },
                 { name: 'Platinado', icon: '🏆', class: 'platinized' },
               ].map((item) => {
-                const isSelected = (form.status || 'Quero Jogar') === item.name;
+                const isSelected = (form.status || 'Na biblioteca') === item.name;
                 return (
                   <button
                     key={item.name}
@@ -626,7 +627,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                 </div>
               )}
 
-              {canReview && ((form.status || 'Quero Jogar') === 'Zerado' || (form.status || 'Quero Jogar') === 'Platinado') && (
+              {canReview && ((form.status || 'Na biblioteca') === 'Zerado' || (form.status || 'Na biblioteca') === 'Platinado') && (
                 <div 
                   className={`${styles.dateInputWrapper} ${activeEditField === 'finished_at' ? styles.dateInputWrapperEditing : ''}`}
                   onClick={() => toggleEditField('finished_at')}
@@ -655,7 +656,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                 </div>
               )}
 
-              {canReview && (form.status || 'Quero Jogar') === 'Platinado' && (
+              {canReview && (form.status || 'Na biblioteca') === 'Platinado' && (
                 <div 
                   className={`${styles.dateInputWrapper} ${activeEditField === 'platinum_at' ? styles.dateInputWrapperEditing : ''}`}
                   onClick={() => toggleEditField('platinum_at')}

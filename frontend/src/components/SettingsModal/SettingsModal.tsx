@@ -1170,7 +1170,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                         🎮 {parsedEpicTitles.length} {parsedEpicTitles.length === 1 ? 'jogo pronto para importação' : 'jogos prontos para importação'}
                       </p>
                       <p className={styles.epicPreviewSubtitle}>
-                        Serão adicionados à sua biblioteca com o status &quot;Quero Jogar&quot; e loja Epic Games.
+                        Serão adicionados à sua biblioteca com o status &quot;Na biblioteca&quot; e loja Epic Games.
                       </p>
                     </div>
                     <div className={styles.epicPreviewActions}>

@@ -24,7 +24,7 @@ def test_add_game_to_library(client, auth_headers, setup_game):
     assert response.status_code == 201
     data = response.json()
     assert data["game_id"] == setup_game
-    assert data["status"] == "Quero Jogar"
+    assert data["status"] == "Na biblioteca"
 
 
 def test_add_same_game_twice(client, auth_headers, setup_game):

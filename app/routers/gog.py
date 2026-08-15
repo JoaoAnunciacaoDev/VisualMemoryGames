@@ -250,7 +250,9 @@ async def process_gog_games_list(account: GogAccount, gog_games: list, db: Sessi
 
         if not user_game:
             status_init = (
-                "Platinado" if is_platinized else ("Jogando" if hours_played > 0 else "Quero Jogar")
+                "Platinado"
+                if is_platinized
+                else ("Jogando" if hours_played > 0 else "Na biblioteca")
             )
             plat_at = platinum_date if is_platinized else None
 

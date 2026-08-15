@@ -196,7 +196,7 @@ def test_sync_steam_games_success(
             "appid": 600,
             "name": "Half-Life 2",
             "playtime_forever": 0,
-        },  # 0 horas -> status Quero Jogar
+        },  # 0 horas -> status Na biblioteca
     ]
 
     # Inicia com mock de sync zerado durante o connect
@@ -235,7 +235,7 @@ def test_sync_steam_games_success(
 
     hl2_ug = db_session.query(UserGame).join(Game).filter(Game.steam_appid == 600).first()
     assert hl2_ug.hours_played == 0.0
-    assert hl2_ug.status == "Quero Jogar"
+    assert hl2_ug.status == "Na biblioteca"
     assert hl2_ug.acquired_at is None
 
     # Verifica as atividades registradas

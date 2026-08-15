@@ -28,7 +28,7 @@ class UserGame(Base):
     )
 
     rating: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    status: Mapped[str] = mapped_column(String, nullable=False, default="Quero Jogar")
+    status: Mapped[str] = mapped_column(String, nullable=False, default="Na biblioteca")
     started_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     finished_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     acquired_at: Mapped[Optional[date]] = mapped_column(Date, nullable=True)

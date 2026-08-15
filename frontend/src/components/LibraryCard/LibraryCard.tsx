@@ -18,6 +18,7 @@ interface Props {
 }
 
 const STATUS_CLASSES: Record<string, string> = {
+  'Na biblioteca': styles.statusInLibrary,
   'Quero Jogar': styles.statusWantToPlay,
   'Jogando': styles.statusPlaying,
   'Zerado': styles.statusCompleted,
@@ -31,6 +32,9 @@ const getStoreEmoji = (storeKey: string): string => {
   if (lower.includes('steam')) return '🎮';
   if (lower.includes('epic')) return '🔌';
   if (lower.includes('gog')) return '🟣';
+  if (lower.includes('ea')) return '🟧';
+  if (lower.includes('ubisoft')) return '🌀';
+  if (lower.includes('amazon') || lower.includes('prime')) return '📦';
   if (lower.includes('playstation') || lower.includes('ps')) return '💙';
   if (lower.includes('xbox')) return '💚';
   if (lower.includes('nintendo') || lower.includes('switch')) return '❤️';

@@ -28,7 +28,7 @@ import styles from '@/pages/Library/Library.module.css';
 import { STORE_OPTIONS, getStoreLabel } from '@/types/enums';
 
 const STATUS_OPTIONS = [
-  'Todos', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
+  'Todos', 'Na biblioteca', 'Quero Jogar', 'Jogando', 'Zerado', 'Platinado', 'Abandonado', 'Em Espera',
 ];
 
 export default function Library() {
@@ -143,7 +143,7 @@ export default function Library() {
       setSearch(game.title);
       setCollapsedStatuses((prev) => {
         const next = new Set(prev);
-        next.delete('Quero Jogar');
+        next.delete('Na biblioteca');
         return next;
       });
     } catch {

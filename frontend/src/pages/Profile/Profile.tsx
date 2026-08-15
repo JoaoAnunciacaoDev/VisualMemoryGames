@@ -248,6 +248,7 @@ export default function Profile() {
   };
 
   const statusColors: Record<string, string> = {
+    'Na biblioteca': '#64748b',
     'Quero Jogar': 'var(--primary)',
     'Jogando': '#3b82f6',
     'Zerado': '#10b981',
@@ -264,6 +265,9 @@ export default function Profile() {
     PS_STORE: '#0070d1',
     XBOX: '#107c10',
     NINTENDO: '#e60012',
+    EA_APP: '#ff4747',
+    UBISOFT: '#0070ff',
+    AMAZON: '#ff9900',
     GOOGLE_PLAY: '#01875f',
     APP_STORE: '#38bdf8',
     PHYSICAL: '#f59e0b',

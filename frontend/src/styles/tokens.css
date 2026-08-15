@@ -15,6 +15,7 @@
   --primary-rgb: 222, 29, 106;
 
   /* STATUS COLORS */
+  --status-in-library: #64748b;
   --status-want-to-play: #6c757d;
   --status-playing: #007BFF;
   --status-completed: #28a745;

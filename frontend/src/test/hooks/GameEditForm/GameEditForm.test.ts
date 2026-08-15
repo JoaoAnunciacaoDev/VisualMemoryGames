@@ -86,6 +86,21 @@ describe('useGameEditForm', () => {
     expect(result.current.canReview).toBe(false);
   });
 
+  it('handleStatusChange para "Na biblioteca" deve limpar campos', () => {
+    const { result } = renderHook(() => useGameEditForm(mockGame));
+
+    act(() => {
+      result.current.handleStatusChange('Na biblioteca');
+    });
+
+    expect(result.current.form.status).toBe('Na biblioteca');
+    expect(result.current.form.rating).toBeNull();
+    expect(result.current.form.finished_at).toBe('');
+    expect(result.current.form.notes).toBe('');
+    expect(result.current.form.platinum_at).toBe('');
+    expect(result.current.canReview).toBe(false);
+  });
+
   it('handleFileChange deve actualizar coverFile e coverPreview', () => {
     const { result } = renderHook(() => useGameEditForm(mockGame));
     const file = new File([''], 'test.png', { type: 'image/png' });

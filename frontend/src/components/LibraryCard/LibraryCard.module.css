@@ -156,6 +156,7 @@
   z-index: 1;
 }
 
+.statusInLibrary { background: var(--status-in-library); }
 .statusWantToPlay { background: var(--status-want-to-play); }
 .statusPlaying { background: var(--status-playing); }
 .statusCompleted { background: var(--status-completed); }

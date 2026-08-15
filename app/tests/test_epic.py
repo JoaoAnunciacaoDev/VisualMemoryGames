@@ -38,14 +38,14 @@ def test_import_epic_games_success(client, auth_headers, db_session):
     assert data["skipped_count"] == 2  # 1 whitespace/empty handled, 1 duplicate in payload
     assert data["total_received"] == 5
 
-    # Verifica se os jogos foram criados no banco com store='EPIC' e status='Quero Jogar'
+    # Verifica se os jogos foram criados no banco com store='EPIC' e status='Na biblioteca'
     user_games = db_session.query(UserGame).filter(UserGame.store == "EPIC").all()
     assert len(user_games) == 3
     titles_in_db = {ug.game.title for ug in user_games}
     assert titles_in_db == {"Control", "Death Stranding", "GTA V"}
 
     for ug in user_games:
-        assert ug.status == "Quero Jogar"
+        assert ug.status == "Na biblioteca"
         assert ug.hours_played == 0.0
 
     # Verifica atividades registradas

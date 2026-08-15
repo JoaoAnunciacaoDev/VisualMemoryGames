@@ -179,7 +179,7 @@ def update_user_game(
 
     validation_data.update(update_data)
 
-    if new_status == GameStatus.WANT_TO_PLAY:
+    if new_status in (GameStatus.WANT_TO_PLAY, GameStatus.IN_LIBRARY):
         validation_data.update(
             {
                 "rating": None,
@@ -206,7 +206,7 @@ def update_user_game(
             status_code=status.HTTP_400_BAD_REQUEST, detail="; ".join(error_messages)
         )
 
-    if new_status == GameStatus.WANT_TO_PLAY:
+    if new_status in (GameStatus.WANT_TO_PLAY, GameStatus.IN_LIBRARY):
         update_data.update(
             {
                 "rating": None,
@@ -493,7 +493,7 @@ def create_user_game_review(
     """Cria uma nova avaliação para um jogo da biblioteca."""
     db_user_game: UserGame = get_owned_or_raise(UserGame, user_game_id, str(current_user.id), db)
 
-    if db_user_game.status == GameStatus.WANT_TO_PLAY:
+    if db_user_game.status in (GameStatus.WANT_TO_PLAY, GameStatus.IN_LIBRARY):
         raise HTTPException(status_code=400, detail="Mude o status para avaliar o jogo.")
 
     db_review = UserGameReview(

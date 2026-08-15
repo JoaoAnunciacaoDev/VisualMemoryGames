@@ -119,6 +119,7 @@
   letter-spacing: 0.05em;
 }
 
+.status_Na_biblioteca { background: var(--status-in-library) !important; }
 .status_Quero_Jogar { background: var(--status-want-to-play) !important; }
 .status_Jogando { background: var(--status-playing) !important; }
 .status_Zerado { background: var(--status-completed) !important; }
@@ -569,6 +570,12 @@
 }
 
 /* Selected button colors */
+.statusGridBtn_inLibrary {
+  background: var(--status-in-library) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+
 .statusGridBtn_wantToPlay {
   background: var(--status-want-to-play) !important;
   border-color: transparent !important;

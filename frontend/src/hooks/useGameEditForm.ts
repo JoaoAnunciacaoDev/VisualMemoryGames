@@ -33,7 +33,7 @@ export function useGameEditForm(game: LibraryGame) {
   const [editPlatforms, setEditPlatforms] = useState<string[]>(game.platforms ?? []);
   const [editGenres, setEditGenres] = useState<string[]>(game.genres ?? []);
 
-  const canReview = form.status !== 'Quero Jogar';
+  const canReview = form.status !== 'Quero Jogar' && form.status !== 'Na biblioteca';
 
   const updateField = useCallback(
     <K extends keyof UpdateLibraryGame>(field: K, value: UpdateLibraryGame[K]) => {
@@ -44,14 +44,14 @@ export function useGameEditForm(game: LibraryGame) {
 
   const handleStatusChange = (newStatus: string) => {
     setForm((prev) => {
-      const isWantToPlay = newStatus === 'Quero Jogar';
+      const isNoReview = newStatus === 'Quero Jogar' || newStatus === 'Na biblioteca';
       return {
         ...prev,
         status: newStatus,
-        rating: isWantToPlay ? null : prev.rating,
-        finished_at: isWantToPlay ? '' : prev.finished_at,
-        notes: isWantToPlay ? '' : prev.notes,
-        platinum_at: isWantToPlay ? '' : prev.platinum_at,
+        rating: isNoReview ? null : prev.rating,
+        finished_at: isNoReview ? '' : prev.finished_at,
+        notes: isNoReview ? '' : prev.notes,
+        platinum_at: isNoReview ? '' : prev.platinum_at,
       };
     });
   };

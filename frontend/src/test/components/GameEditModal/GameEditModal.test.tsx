@@ -84,6 +84,22 @@ describe('GameEditModal', () => {
     expect(screen.queryByText('Comentário')).toBeNull();
   });
 
+  it('deve esconder campos de review quando status é Na biblioteca', () => {
+    vi.mocked(useGameEditForm).mockReturnValue({
+      ...baseForm,
+      form: { ...baseForm.form, status: 'Na biblioteca', rating: null, finished_at: '', notes: '', platinum_at: '' },
+      canReview: false,
+    });
+    renderModal({ ...mockGame, status: 'Na biblioteca' });
+
+    expect(screen.queryByText('Data de início')).toBeNull();
+    expect(screen.queryByText('Data de conclusão')).toBeNull();
+    expect(screen.queryByText('Platinado em')).toBeNull();
+    expect(screen.queryByText('Horas jogadas')).toBeNull();
+    expect(screen.queryByTestId('rating-stars')).toBeNull();
+    expect(screen.queryByText('Comentário')).toBeNull();
+  });
+
   it('deve mostrar data de conclusão e platinado para status Platinado', () => {
     vi.mocked(useGameEditForm).mockReturnValue({
       ...baseForm,

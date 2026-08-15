@@ -187,7 +187,7 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
                 user_id=account.user_id,
                 game_id=game_db.id,
                 game=game_db,
-                status="Quero Jogar",  # Valor padrão
+                status="Na biblioteca",  # Valor padrão
                 store="ITCH",
             )
             db.add(user_game)

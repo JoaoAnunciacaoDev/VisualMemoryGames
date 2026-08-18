@@ -4,6 +4,12 @@
 # Cache Python
 __pycache__/
 
+# Virtual environment
+.venv/
+
+# Node
+node_modules/
+
 # Arquivos de IDE
 .vscode/
 
@@ -17,4 +23,3 @@ visualmemory.db
 # Docker volumes locais (dados e uploads)
 uploads_prod/
 data_prod/
-

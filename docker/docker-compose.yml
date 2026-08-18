@@ -1,16 +1,16 @@
 services:
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.back
+      context: ..
+      dockerfile: docker/Dockerfile.back
     ports:
       - "8000:8000"
     volumes:
       # Monta a pasta de dados e uploads localmente para persistência total
-      - ./data_prod:/app/data
-      - ./uploads_prod:/app/uploads
+      - ../data_prod:/app/data
+      - ../uploads_prod:/app/uploads
     env_file:
-      - .env
+      - ../.env
     environment:
       - DATABASE_URL=sqlite:///data/visualmemory.db
       - ALLOWED_ORIGINS=http://localhost,http://localhost:5173,http://127.0.0.1:5173
@@ -18,8 +18,8 @@ services:
 
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.front
+      context: ..
+      dockerfile: docker/Dockerfile.front
       args:
         - VITE_API_URL=http://localhost:8000
     ports:

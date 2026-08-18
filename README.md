@@ -127,17 +127,17 @@ O projeto utiliza:
 
 ## 🐳 Via Docker (Recomendado / Produção)
 
-O projeto conta com suporte completo para Docker e Docker Compose.
+O projeto conta com suporte completo para Docker e Docker Compose. Os ficheiros Docker encontram-se na pasta `docker/`.
 
 1. **Subir toda a infraestrutura:**
    ```bash
-   docker compose up --build -d
+   docker compose -f docker/docker-compose.yml up --build -d
    ```
    *O frontend estará disponível em `http://localhost` e o backend em `http://localhost:8000`.*
 
 2. **Promover uma conta a administrador pelo Docker:**
    ```bash
-   docker compose exec backend poetry run python -m app.scripts.manage_admin --email seu-email@email.com --action promote
+   docker compose -f docker/docker-compose.yml exec backend poetry run python -m app.scripts.manage_admin --email seu-email@email.com --action promote
    ```
 
 ---
@@ -229,6 +229,11 @@ VisualMemory/
 │   ├── security.py        # Auxiliares de hashing e geração de tokens JWT
 │   └── utils.py           # Utilitários globais de tratamento de dados
 │
+├── docker/                # Configuração Docker para produção
+│   ├── Dockerfile.back    # Imagem do backend (Python 3.12 + Poetry)
+│   ├── Dockerfile.front   # Imagem do frontend (Node 20 → Nginx)
+│   └── docker-compose.yml # Orquestração dos serviços
+│
 ├── frontend/              # Código-fonte do Frontend (Vite + React + TS)
 │   ├── public/            # Recursos e mídias estáticas
 │   ├── src/
@@ -242,6 +247,9 @@ VisualMemory/
 │   │   ├── test/          # Testes unitários de componentes e hooks (Vitest)
 │   │   └── types/         # Definições de tipagem do TypeScript
 │   └── tests/             # Testes End-to-End (Playwright)
+│
+├── scripts/               # Scripts utilitários do projeto
+│   └── run_e2e_server.py  # Servidor backend para testes E2E locais
 │
 ├── uploads/               # Diretório local para uploads de capas personalizadas
 ├── data_prod/             # Volume local persistido do banco de dados SQLite no Docker

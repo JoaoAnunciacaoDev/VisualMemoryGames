@@ -41,6 +41,17 @@ const requireAdmin = async ({ context }: { context: RouterContext }) => {
   return user;
 };
 
+const redirectIfAuthenticated = async ({ context }: { context: RouterContext }) => {
+  let authenticated = false;
+  try {
+    await context.queryClient.ensureQueryData(currentUserQuery());
+    authenticated = true;
+  } catch {
+    // Guests may access the login route.
+  }
+  if (authenticated) throw redirect({ to: '/library' });
+};
+
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   notFoundComponent: NotFound,
@@ -48,7 +59,12 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/', component: Home }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/login', component: Login }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/login',
+    beforeLoad: redirectIfAuthenticated,
+    component: Login,
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: '/library', beforeLoad: requireAuth, component: Library }),
   createRoute({ getParentRoute: () => rootRoute, path: '/tierlists', beforeLoad: requireAuth, component: TierList }),
   createRoute({ getParentRoute: () => rootRoute, path: '/tierlists/$id', beforeLoad: requireAuth, component: TierListEditor }),

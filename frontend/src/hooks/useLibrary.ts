@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/services/api';
 import { UpdateLibraryGame } from '@/types/updateGame';
@@ -12,19 +12,6 @@ export function useLibrary() {
   const loadLibrary = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: libraryKeys.mine() });
   }, [queryClient]);
-
-  useEffect(() => {
-    window.addEventListener('steam-synced', loadLibrary);
-    window.addEventListener('gog-synced', loadLibrary);
-    window.addEventListener('itch-synced', loadLibrary);
-    window.addEventListener('epic-synced', loadLibrary);
-    return () => {
-      window.removeEventListener('steam-synced', loadLibrary);
-      window.removeEventListener('gog-synced', loadLibrary);
-      window.removeEventListener('itch-synced', loadLibrary);
-      window.removeEventListener('epic-synced', loadLibrary);
-    };
-  }, [loadLibrary]);
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<UpdateLibraryGame> }) =>

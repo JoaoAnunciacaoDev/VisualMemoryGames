@@ -1,24 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 
 import AuthForm from '@/components/AuthForm/AuthForm';
 
 import { useToast } from '@/hooks/useToast';
 
-import api from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  confirmPasswordReset,
+  confirmRegistration,
+  initiatePasswordReset,
+  initiateRegistration,
+  loginUser,
+} from '@/features/auth/mutations';
 
 export default function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { user, reloadUser } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      navigate({ to: '/library', replace: true });
-    }
-  }, [user, navigate]);
+  const { reloadUser } = useAuth();
+  const loginMutation = useMutation({ mutationFn: loginUser });
+  const registerInitiateMutation = useMutation({ mutationFn: initiateRegistration });
+  const registerConfirmMutation = useMutation({ mutationFn: confirmRegistration });
+  const passwordResetInitiateMutation = useMutation({ mutationFn: initiatePasswordReset });
+  const passwordResetConfirmMutation = useMutation({ mutationFn: confirmPasswordReset });
 
   interface BackendError {
     response?: {
@@ -90,11 +96,7 @@ export default function Login() {
   const handleLogin = async (username: string, password: string, rememberMe: boolean) => {
     setError('');
     try {
-      const params = new URLSearchParams();
-      params.append('username', username);
-      params.append('password', password);
-      params.append('remember_me', rememberMe.toString());
-      await api.post('/login', params);
+      await loginMutation.mutateAsync({ username, password, rememberMe });
       await reloadUser();
       navigate({ to: '/library' });
     } catch (err) {
@@ -105,7 +107,7 @@ export default function Login() {
   const handleRegisterInitiate = async (username: string, email: string, password: string) => {
     setError('');
     try {
-      await api.post('/users/register/initiate', { username, email, password });
+      await registerInitiateMutation.mutateAsync({ username, email, password });
       showToast('Código de verificação enviado! Verifique seu e-mail.', 'info');
     } catch (err) {
       const parsed = parseError(err);
@@ -117,7 +119,7 @@ export default function Login() {
   const handleRegisterConfirm = async (username: string, email: string, password: string, code: string) => {
     setError('');
     try {
-      await api.post('/users/', { username, email, password, code });
+      await registerConfirmMutation.mutateAsync({ username, email, password, code });
       showToast('Conta criada com sucesso! Faça o login agora.', 'success');
     } catch (err) {
       const parsed = parseError(err);
@@ -129,7 +131,7 @@ export default function Login() {
   const handlePasswordResetInitiate = async (email: string) => {
     setError('');
     try {
-      await api.post('/password-reset/initiate', { email });
+      await passwordResetInitiateMutation.mutateAsync(email);
       showToast('Se o e-mail estiver cadastrado, um código foi enviado.', 'info');
     } catch (err) {
       const parsed = parseError(err);
@@ -141,7 +143,7 @@ export default function Login() {
   const handlePasswordResetConfirm = async (email: string, code: string, new_password: string) => {
     setError('');
     try {
-      await api.post('/password-reset/confirm', { email, code, new_password });
+      await passwordResetConfirmMutation.mutateAsync({ email, code, newPassword: new_password });
       showToast('Senha redefinida com sucesso! Faça login com a nova senha.', 'success');
     } catch (err) {
       const parsed = parseError(err);

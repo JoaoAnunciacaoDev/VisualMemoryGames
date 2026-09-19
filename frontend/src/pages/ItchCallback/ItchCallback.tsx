@@ -1,14 +1,25 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../hooks/useToast';
-import api from '../../services/api';
 import styles from './ItchCallback.module.css';
+import { connectItchAccount } from '@/features/integrations/mutations';
+import { integrationKeys } from '@/features/integrations/queries';
+import { libraryKeys } from '@/features/library/queries';
 
 export default function ItchCallback() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { showToast } = useToast();
   const hasFetched = useRef(false);
   const status = 'Processando autenticação...';
+  const { mutateAsync: connectItch } = useMutation({
+    mutationFn: connectItchAccount,
+    onSuccess: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: integrationKeys.itch() }),
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all }),
+    ]),
+  });
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -27,12 +38,8 @@ export default function ItchCallback() {
 
     const connectAccount = async () => {
       try {
-        await api.post('/users/me/itch/accounts', { access_token: accessToken });
+        await connectItch(accessToken);
         showToast('Conta Itch.io conectada e biblioteca importada!', 'success');
-        
-        // Notifica outros componentes se estiverem abertos
-        window.dispatchEvent(new Event('itch-synced'));
-        
         navigate({ to: '/profile' });
       } catch (err: unknown) {
         console.error(err);
@@ -44,7 +51,7 @@ export default function ItchCallback() {
     };
 
     connectAccount();
-  }, [navigate, showToast]);
+  }, [connectItch, navigate, showToast]);
 
   return (
     <div className={styles.container}>

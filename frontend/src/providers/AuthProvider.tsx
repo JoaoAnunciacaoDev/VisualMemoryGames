@@ -1,10 +1,10 @@
 import { ReactNode, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import api from '@/services/api';
 import { User } from '@/types';
 import { AuthContext } from '@/hooks/useAuthContext';
 import { authKeys, currentUserQuery } from '@/features/auth/queries';
+import { logoutUser } from '@/features/auth/mutations';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await api.post('/logout');
+      await logoutUser();
     } catch (err) {
       console.error('Erro ao fazer logout no servidor:', err);
     } finally {

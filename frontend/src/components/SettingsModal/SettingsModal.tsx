@@ -1,6 +1,5 @@
 import { useState, SyntheticEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import api from '@/services/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
@@ -25,6 +24,14 @@ import {
   steamAccountsQuery,
 } from '@/features/integrations/queries';
 import { myLibraryQuery } from '@/features/library/queries';
+import { libraryKeys } from '@/features/library/queries';
+import { runIntegrationAction } from '@/features/integrations/mutations';
+import { integrationKeys } from '@/features/integrations/queries';
+import {
+  changeAccountPassword,
+  deactivateAccount,
+  updateAccountProfile,
+} from '@/features/account/mutations';
 
 interface Props {
   onClose: () => void;
@@ -49,6 +56,7 @@ interface AxiosErrorDetail {
 export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
   const { user, reloadUser } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
 
   // States para Desconexão da Steam
@@ -78,7 +86,6 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   // States para Desativação
   const [deactivatePassword, setDeactivatePassword] = useState('');
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const parseError = (err: unknown, fallback = 'Ocorreu um erro no servidor.'): string => {
@@ -130,22 +137,17 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
 
   // States para Steam
   const [steamUrl, setSteamUrl] = useState('');
-  const [isFetchingSteam, setIsFetchingSteam] = useState(false);
 
   // States para GOG
   const [gogUrl, setGogUrl] = useState('');
-  const [isFetchingGog, setIsFetchingGog] = useState(false);
 
   // States para Itch.io
-  const [isFetchingItch, setIsFetchingItch] = useState(false);
 
   // States para Epic Games Store
   const [isEpicInstructionsOpen, setIsEpicInstructionsOpen] = useState(false);
   const [isCopiedScript, setIsCopiedScript] = useState(false);
   const [epicPastedText, setEpicPastedText] = useState('');
   const [parsedEpicTitles, setParsedEpicTitles] = useState<string[]>([]);
-  const [isImportingEpic, setIsImportingEpic] = useState(false);
-  const [isFetchingEpic, setIsFetchingEpic] = useState(false);
   const [isEpicDragging, setIsEpicDragging] = useState(false);
   const [showEpicDeleteConfirm, setShowEpicDeleteConfirm] = useState(false);
 
@@ -162,23 +164,37 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     ? libraryQuery.data.filter((game) => game.store === 'EPIC').length
     : null;
 
-  const fetchSteamAccounts = () => steamQuery.refetch().then(() => undefined);
-  const fetchGogAccounts = () => gogQuery.refetch().then(() => undefined);
-  const fetchItchAccounts = () => itchQuery.refetch().then(() => undefined);
-  const fetchEpicGamesCount = () => libraryQuery.refetch().then(() => undefined);
+  const integrationMutation = useMutation({
+    mutationFn: runIntegrationAction,
+    onSuccess: (_result, action) => {
+      if (action.provider !== 'epic') {
+        queryClient.invalidateQueries({ queryKey: integrationKeys[action.provider]() });
+      }
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+    },
+  });
+  const profileMutation = useMutation({ mutationFn: updateAccountProfile });
+  const passwordMutation = useMutation({ mutationFn: changeAccountPassword });
+  const deactivateMutation = useMutation({ mutationFn: deactivateAccount });
+
+  const isFetchingSteam = integrationMutation.isPending && integrationMutation.variables?.provider === 'steam';
+  const isFetchingGog = integrationMutation.isPending && integrationMutation.variables?.provider === 'gog';
+  const isFetchingItch = integrationMutation.isPending && integrationMutation.variables?.provider === 'itch';
+  const isFetchingEpic = integrationMutation.isPending && integrationMutation.variables?.provider === 'epic';
+  const isImportingEpic = isFetchingEpic && integrationMutation.variables?.type === 'import';
+  const isSubmitting = profileMutation.isPending || passwordMutation.isPending || deactivateMutation.isPending;
 
   const handleConnectSteam = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!steamUrl.trim()) return;
-    setIsFetchingSteam(true);
     setError('');
     showToast('Conectando à Steam e importando biblioteca...', 'info');
     try {
-      await api.post('/users/me/steam/accounts', { profile_url: steamUrl.trim() });
+      await integrationMutation.mutateAsync({
+        provider: 'steam', type: 'connect', profileUrl: steamUrl.trim(),
+      });
       showToast('Conta Steam conectada e biblioteca importada com sucesso!', 'success');
       setSteamUrl('');
-      void fetchSteamAccounts();
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(
         err,
@@ -186,8 +202,6 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       );
       setError(msg);
       showToast(msg, 'error');
-    } finally {
-      setIsFetchingSteam(false);
     }
   };
 
@@ -201,12 +215,10 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     if (!pendingDisconnectAccountId) return;
     setError('');
     try {
-      await api.delete(
-        `/users/me/steam/accounts/${pendingDisconnectAccountId}?delete_games=${deleteGames}`
-      );
+      await integrationMutation.mutateAsync({
+        provider: 'steam', type: 'disconnect', accountId: pendingDisconnectAccountId, deleteGames,
+      });
       showToast('Conta Steam desconectada com sucesso.', 'success');
-      void fetchSteamAccounts();
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(err, 'Erro ao desconectar conta Steam.');
       setError(msg);
@@ -217,62 +229,52 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   };
 
   const handleSyncSteam = async () => {
-    setIsFetchingSteam(true);
     setError('');
     showToast('Sincronizando jogos da Steam...', 'info');
     try {
-      const res = await api.post('/users/me/steam/sync');
-      const { new_games_count } = res.data;
+      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'steam', type: 'sync-all',
+      });
       showToast(
         `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
         'success'
       );
-      void fetchSteamAccounts();
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(err, 'Erro ao sincronizar contas Steam.');
       setError(msg);
       showToast(msg, 'error');
-    } finally {
-      setIsFetchingSteam(false);
     }
   };
 
   const handleSyncSingleSteam = async (accountId: string) => {
-    setIsFetchingSteam(true);
     setError('');
     showToast('Sincronizando conta Steam...', 'info');
     try {
-      const res = await api.post(`/users/me/steam/accounts/${accountId}/sync`);
-      const { new_games_count } = res.data;
+      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'steam', type: 'sync-one', accountId,
+      });
       showToast(
         `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
         'success'
       );
-      void fetchSteamAccounts();
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(err, 'Erro ao sincronizar conta Steam.');
       setError(msg);
       showToast(msg, 'error');
-    } finally {
-      setIsFetchingSteam(false);
     }
   };
 
   const handleConnectGog = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!gogUrl.trim()) return;
-    setIsFetchingGog(true);
     setError('');
     showToast('Conectando à GOG e importando biblioteca...', 'info');
     try {
-      await api.post('/users/me/gog/accounts', { profile_url: gogUrl.trim() });
+      await integrationMutation.mutateAsync({
+        provider: 'gog', type: 'connect', profileUrl: gogUrl.trim(),
+      });
       showToast('Conta GOG conectada e biblioteca importada com sucesso!', 'success');
       setGogUrl('');
-      void fetchGogAccounts();
-      window.dispatchEvent(new Event('gog-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(
         err,
@@ -280,8 +282,6 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       );
       setError(msg);
       showToast(msg, 'error');
-    } finally {
-      setIsFetchingGog(false);
     }
   };
 
@@ -295,13 +295,10 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     if (!pendingDisconnectAccountId) return;
     setError('');
     try {
-      await api.delete(
-        `/users/me/gog/accounts/${pendingDisconnectAccountId}?delete_games=${deleteGames}`
-      );
+      await integrationMutation.mutateAsync({
+        provider: 'gog', type: 'disconnect', accountId: pendingDisconnectAccountId, deleteGames,
+      });
       showToast('Conta GOG desconectada com sucesso.', 'success');
-      void fetchGogAccounts();
-      window.dispatchEvent(new Event('gog-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(err, 'Erro ao desconectar conta GOG.');
       setError(msg);
@@ -312,48 +309,38 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   };
 
   const handleSyncGog = async () => {
-    setIsFetchingGog(true);
     setError('');
     showToast('Sincronizando biblioteca GOG...', 'info');
     try {
-      const res = await api.post('/users/me/gog/sync');
-      const { new_games_count, updated_games_count } = res.data;
+      const { new_games_count = 0, updated_games_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'gog', type: 'sync-all',
+      });
       showToast(
         `Sincronização GOG concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
         'success'
       );
-      void fetchGogAccounts();
-      window.dispatchEvent(new Event('gog-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(err, 'Erro ao sincronizar contas GOG.');
       setError(msg);
       showToast(msg, 'error');
-    } finally {
-      setIsFetchingGog(false);
     }
   };
 
   const handleSyncSingleGog = async (accountId: string) => {
-    setIsFetchingGog(true);
     setError('');
     showToast('Sincronizando conta GOG...', 'info');
     try {
-      const res = await api.post(`/users/me/gog/accounts/${accountId}/sync`);
-      const { new_games_count, updated_games_count } = res.data;
+      const { new_games_count = 0, updated_games_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'gog', type: 'sync-one', accountId,
+      });
       showToast(
         `Sincronização GOG concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
         'success'
       );
-      void fetchGogAccounts();
-      window.dispatchEvent(new Event('gog-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       const msg = parseError(err, 'Erro ao sincronizar conta GOG.');
       setError(msg);
       showToast(msg, 'error');
-    } finally {
-      setIsFetchingGog(false);
     }
   };
 
@@ -378,12 +365,10 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     if (!pendingDisconnectAccountId) return;
     setError('');
     try {
-      await api.delete(
-        `/users/me/itch/accounts/${pendingDisconnectAccountId}?delete_games=${deleteGames}`
-      );
+      await integrationMutation.mutateAsync({
+        provider: 'itch', type: 'disconnect', accountId: pendingDisconnectAccountId, deleteGames,
+      });
       showToast('Conta Itch.io desconectada com sucesso.', 'success');
-      void fetchItchAccounts();
-      window.dispatchEvent(new Event('itch-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao desconectar conta Itch.io.'));
     } finally {
@@ -392,34 +377,26 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   };
 
   const handleSyncItch = async (accountId: string) => {
-    setIsFetchingItch(true);
     setError('');
     try {
-      const res = await api.post(`/users/me/itch/accounts/${accountId}/sync`);
-      const { new_games_count } = res.data;
+      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'itch', type: 'sync-one', accountId,
+      });
       showToast(`Sincronização concluída! ${new_games_count} novos jogos adicionados.`, 'success');
-      void fetchItchAccounts();
-      window.dispatchEvent(new Event('itch-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao sincronizar conta Itch.io.'));
-    } finally {
-      setIsFetchingItch(false);
     }
   };
 
   const handleSyncAllItch = async () => {
-    setIsFetchingItch(true);
     setError('');
     try {
-      const res = await api.post('/users/me/itch/sync');
-      const { new_games_count } = res.data;
+      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'itch', type: 'sync-all',
+      });
       showToast(`Sincronização concluída! ${new_games_count} novos jogos adicionados.`, 'success');
-      void fetchItchAccounts();
-      window.dispatchEvent(new Event('itch-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao sincronizar contas Itch.io.'));
-    } finally {
-      setIsFetchingItch(false);
     }
   };
 
@@ -514,86 +491,66 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
 
   const handleImportEpic = async () => {
     if (parsedEpicTitles.length === 0) return;
-    setIsImportingEpic(true);
     setError('');
     showToast(`Importando ${parsedEpicTitles.length} jogos da Epic Games...`, 'info');
     try {
-      const res = await api.post('/users/me/epic/import', { titles: parsedEpicTitles });
-      const { imported_count, skipped_count } = res.data;
+      const { imported_count = 0, skipped_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'epic', type: 'import', titles: parsedEpicTitles,
+      });
       showToast(
         `Importação concluída! ${imported_count} novos jogos adicionados${skipped_count > 0 ? ` (${skipped_count} já existiam na biblioteca)` : ''}.`,
         'success'
       );
       setEpicPastedText('');
       setParsedEpicTitles([]);
-      void fetchEpicGamesCount();
-      window.dispatchEvent(new Event('epic-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao importar jogos da Epic Games.'));
-    } finally {
-      setIsImportingEpic(false);
     }
   };
 
   const handleEnrichEpic = async () => {
-    setIsFetchingEpic(true);
     setError('');
     showToast('Atualizando metadados dos jogos da Epic Games...', 'info');
     try {
-      const res = await api.post('/users/me/epic/enrich');
-      const { games_to_enrich_count } = res.data;
+      const { games_to_enrich_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'epic', type: 'enrich',
+      });
       showToast(
         `Atualização iniciada! ${games_to_enrich_count} jogos estão tendo capas e gêneros buscados em segundo plano.`,
         'success'
       );
-      window.dispatchEvent(new Event('epic-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao atualizar metadados dos jogos da Epic Games.'));
-    } finally {
-      setIsFetchingEpic(false);
     }
   };
 
   const handleDeleteEpicGames = async () => {
-    setIsFetchingEpic(true);
     setError('');
     try {
-      const res = await api.delete('/users/me/epic/games');
-      const { removed_count } = res.data;
+      const { removed_count = 0 } = await integrationMutation.mutateAsync({
+        provider: 'epic', type: 'delete-games',
+      });
       showToast(`${removed_count} jogos da Epic Games foram removidos da biblioteca.`, 'success');
-      void fetchEpicGamesCount();
-      window.dispatchEvent(new Event('epic-synced'));
-      window.dispatchEvent(new Event('steam-synced'));
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao remover jogos da Epic Games.'));
-    } finally {
-      setIsFetchingEpic(false);
     }
   };
 
   const handleUpdateProfile = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!newUsername.trim()) return;
-    setIsSubmitting(true);
     setError('');
 
     try {
-      if (newUsername.trim() !== user?.username) {
-        await api.put('/users/me', { username: newUsername.trim() });
-      }
-      if (isPublic !== user?.is_public) {
-        await api.patch('/users/me/visibility', { is_public: isPublic });
-      }
+      await profileMutation.mutateAsync({
+        username: newUsername.trim() !== user?.username ? newUsername.trim() : undefined,
+        isPublic: isPublic !== user?.is_public ? isPublic : undefined,
+      });
       showToast('Perfil atualizado com sucesso!', 'success');
       await reloadUser();
-      window.dispatchEvent(new Event('user-updated'));
       onClose();
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao atualizar perfil.'));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -603,14 +560,10 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setError('As senhas não coincidem.');
       return;
     }
-    setIsSubmitting(true);
     setError('');
 
     try {
-      await api.put('/users/me/password', {
-        current_password: currentPassword,
-        new_password: newPassword,
-      });
+      await passwordMutation.mutateAsync({ currentPassword, newPassword });
       showToast('Senha alterada com sucesso!', 'success');
       setCurrentPassword('');
       setNewPassword('');
@@ -618,29 +571,22 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       onClose();
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao alterar senha.'));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleDeactivate = async (e: SyntheticEvent) => {
     e.preventDefault();
     if (!deactivatePassword) return;
-    setIsSubmitting(true);
     setError('');
 
     try {
-      await api.post('/users/me/deactivate', {
-        password: deactivatePassword,
-      });
+      await deactivateMutation.mutateAsync(deactivatePassword);
       showToast('Conta desativada. Seus dados serão mantidos por 15 dias.', 'info');
       setDeactivatePassword('');
       onClose();
       onLogout(); // Desloga o usuário
     } catch (err: unknown) {
       setError(parseError(err, 'Erro ao desativar conta.'));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

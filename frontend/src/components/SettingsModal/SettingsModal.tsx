@@ -32,13 +32,18 @@ import {
   deactivateAccount,
   updateAccountProfile,
 } from '@/features/account/mutations';
+import {
+  DeactivateSettingsForm,
+  PasswordSettingsForm,
+  ProfileSettingsForm,
+  SettingsTabs,
+  type SettingsTab,
+} from './SettingsAccountForms';
 
 interface Props {
   onClose: () => void;
   onLogout: () => void;
 }
-
-type Tab = 'profile' | 'password' | 'deactivate' | 'integrations';
 
 interface PydanticErrorDetail {
   msg?: string;
@@ -57,7 +62,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
   const { user, reloadUser } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
   // States para Desconexão da Steam
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
@@ -598,147 +603,49 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
           <h3>Configurações de Conta</h3>
         </div>
 
-        <div className={styles.tabs}>
-          <button
-            type="button"
-            className={`${styles.tabButton} ${activeTab === 'profile' ? styles.activeTab : ''}`}
-            onClick={() => { setActiveTab('profile'); setError(''); }}
-            disabled={isSubmitting}
-          >
-            Nome de Usuário
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabButton} ${activeTab === 'password' ? styles.activeTab : ''}`}
-            onClick={() => { setActiveTab('password'); setError(''); }}
-            disabled={isSubmitting}
-          >
-            Alterar Senha
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabButton} ${activeTab === 'deactivate' ? styles.activeTab : ''}`}
-            onClick={() => { setActiveTab('deactivate'); setError(''); }}
-            disabled={isSubmitting}
-          >
-            Excluir Conta
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabButton} ${activeTab === 'integrations' ? styles.activeTab : ''}`}
-            onClick={() => { setActiveTab('integrations'); setError(''); }}
-            disabled={isSubmitting}
-          >
-            Integrações
-          </button>
-        </div>
+        <SettingsTabs
+          activeTab={activeTab}
+          disabled={isSubmitting}
+          onChange={(tab) => {
+            setActiveTab(tab);
+            setError('');
+          }}
+        />
 
         <div className={styles.modalBody}>
           {error && <p className={styles.error}>{error}</p>}
 
           {activeTab === 'profile' && (
-            <form onSubmit={handleUpdateProfile} className={styles.form}>
-              <p className={styles.helpText}>Escolha um novo nome de usuário único para sua conta.</p>
-              <label className={styles.label}>
-                Novo Nome de Usuário
-                <Input
-                  placeholder="Ex: novo_usuario"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                  maxLength={30}
-                />
-              </label>
-
-              <div className={styles.visibilityToggle}>
-                <label className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                    disabled={isSubmitting}
-                  />
-                  <span>Tornar meu perfil público</span>
-                </label>
-                <p className={styles.helpTextSmall}>
-                  Perfis públicos podem ser encontrados na aba Social e seus seguidores verão suas atividades.
-                </p>
-              </div>
-
-              <Button type="submit" disabled={isSubmitting} fullWidth>
-                {isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-              </Button>
-            </form>
+            <ProfileSettingsForm
+              username={newUsername}
+              isPublic={isPublic}
+              isSubmitting={isSubmitting}
+              onUsernameChange={setNewUsername}
+              onVisibilityChange={setIsPublic}
+              onSubmit={handleUpdateProfile}
+            />
           )}
 
           {activeTab === 'password' && (
-            <form onSubmit={handleChangePassword} className={styles.form}>
-              <p className={styles.helpText}>Para sua segurança, informe sua senha atual para definir a nova senha forte.</p>
-              <label className={styles.label}>
-                Senha Atual
-                <Input
-                  type="password"
-                  placeholder="Sua senha atual"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </label>
-              <label className={styles.label}>
-                Nova Senha
-                <Input
-                  type="password"
-                  placeholder="Nova senha forte"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </label>
-              <label className={styles.label}>
-                Confirmar Nova Senha
-                <Input
-                  type="password"
-                  placeholder="Repita a nova senha"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </label>
-              <Button type="submit" disabled={isSubmitting} fullWidth>
-                {isSubmitting ? 'Alterando...' : 'Alterar Senha'}
-              </Button>
-            </form>
+            <PasswordSettingsForm
+              currentPassword={currentPassword}
+              newPassword={newPassword}
+              confirmPassword={confirmPassword}
+              isSubmitting={isSubmitting}
+              onCurrentPasswordChange={setCurrentPassword}
+              onNewPasswordChange={setNewPassword}
+              onConfirmPasswordChange={setConfirmPassword}
+              onSubmit={handleChangePassword}
+            />
           )}
 
           {activeTab === 'deactivate' && (
-            <form onSubmit={handleDeactivate} className={styles.form}>
-              <div className={styles.alertBox}>
-                <strong>Atenção:</strong>
-                <p>
-                  Ao solicitar a exclusão, sua conta e biblioteca ficarão indisponíveis e ocultas. 
-                  Você terá um período de carência de <strong>15 dias</strong> para reativar sua conta simplesmente fazendo login novamente. 
-                  Após os 15 dias, a conta e todos os dados associados serão apagados permanentemente.
-                </p>
-              </div>
-              <label className={styles.label}>
-                Para confirmar, insira sua senha:
-                <Input
-                  type="password"
-                  placeholder="Sua senha"
-                  value={deactivatePassword}
-                  onChange={(e) => setDeactivatePassword(e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </label>
-              <Button type="submit" variant="ghost" className={styles.dangerButton} disabled={isSubmitting} fullWidth>
-                {isSubmitting ? 'Processando...' : 'Solicitar Exclusão de Conta'}
-              </Button>
-            </form>
+            <DeactivateSettingsForm
+              password={deactivatePassword}
+              isSubmitting={isSubmitting}
+              onPasswordChange={setDeactivatePassword}
+              onSubmit={handleDeactivate}
+            />
           )}
 
           {activeTab === 'integrations' && (

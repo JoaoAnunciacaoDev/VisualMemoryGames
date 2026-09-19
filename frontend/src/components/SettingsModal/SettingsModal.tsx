@@ -1,5 +1,5 @@
 import { useState, SyntheticEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
@@ -19,15 +19,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import {
-  gogAccountsQuery,
-  itchAccountsQuery,
-  steamAccountsQuery,
-} from '@/features/integrations/queries';
-import { myLibraryQuery } from '@/features/library/queries';
-import { libraryKeys } from '@/features/library/queries';
-import { runIntegrationAction } from '@/features/integrations/mutations';
-import { integrationKeys } from '@/features/integrations/queries';
-import {
   changeAccountPassword,
   deactivateAccount,
   updateAccountProfile,
@@ -39,29 +30,17 @@ import {
   SettingsTabs,
   type SettingsTab,
 } from './SettingsAccountForms';
+import { parseSettingsError } from './settingsErrors';
+import { useSettingsIntegrations } from './useSettingsIntegrations';
 
 interface Props {
   onClose: () => void;
   onLogout: () => void;
 }
 
-interface PydanticErrorDetail {
-  msg?: string;
-  loc?: Array<string | number>;
-}
-
-interface AxiosErrorDetail {
-  response?: {
-    data?: {
-      detail?: string | PydanticErrorDetail[];
-    };
-  };
-}
-
 export default function SettingsModal({ onClose, onLogout }: Props) {
   const { showToast } = useToast();
   const { user, reloadUser } = useAuth();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
 
   // States para Desconexão da Steam
@@ -92,123 +71,30 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [deactivatePassword, setDeactivatePassword] = useState('');
 
   const [error, setError] = useState('');
-
-  const parseError = (err: unknown, fallback = 'Ocorreu um erro no servidor.'): string => {
-    const errorObj = err as AxiosErrorDetail;
-    const detail = errorObj.response?.data?.detail;
-    
-    if (!detail) return fallback;
-    if (typeof detail === 'string') return detail;
-    if (Array.isArray(detail)) {
-      return detail.map((d: PydanticErrorDetail) => {
-        const msg = d.msg || '';
-        const loc = d.loc || [];
-        const isPassword = loc.includes('password') || loc.includes('new_password') || loc.includes('current_password');
-        const isUsername = loc.includes('username');
-        const isEmail = loc.includes('email');
-
-        if (msg.includes('should have at least')) {
-          const match = msg.match(/\d+/);
-          const num = match ? match[0] : '';
-          if (isPassword) return `A senha deve ter pelo menos ${num} caracteres.`;
-          if (isUsername) return `O nome de usuário deve ter pelo menos ${num} caracteres.`;
-          return `O campo deve ter pelo menos ${num} caracteres.`;
-        }
-
-        if (msg.includes('should have at most')) {
-          const match = msg.match(/\d+/);
-          const num = match ? match[0] : '';
-          if (isUsername) return `O nome de usuário deve ter no máximo ${num} caracteres.`;
-          if (isPassword) return `A senha deve ter no máximo ${num} caracteres.`;
-          return `O campo deve ter no máximo ${num} caracteres.`;
-        }
-        
-        if (msg.includes('value is not a valid email')) {
-          return 'E-mail inválido.';
-        }
-
-        if (msg.includes('Field required')) {
-          if (isPassword) return 'A senha é obrigatória.';
-          if (isUsername) return 'O nome de usuário é obrigatório.';
-          if (isEmail) return 'O e-mail é obrigatório.';
-          return 'Campo obrigatório.';
-        }
-
-        return msg.replace(/^Value error,\s*/i, '');
-      }).join('\n');
-    }
-    return fallback;
-  };
-
-  // States para Steam
-  const [steamUrl, setSteamUrl] = useState('');
-
-  // States para GOG
-  const [gogUrl, setGogUrl] = useState('');
-
-  // States para Itch.io
-
-  // States para Epic Games Store
-  const [isEpicInstructionsOpen, setIsEpicInstructionsOpen] = useState(false);
-  const [isCopiedScript, setIsCopiedScript] = useState(false);
-  const [epicPastedText, setEpicPastedText] = useState('');
-  const [parsedEpicTitles, setParsedEpicTitles] = useState<string[]>([]);
-  const [isEpicDragging, setIsEpicDragging] = useState(false);
   const [showEpicDeleteConfirm, setShowEpicDeleteConfirm] = useState(false);
-
-  const integrationsEnabled = activeTab === 'integrations';
-  const steamQuery = useQuery({ ...steamAccountsQuery(), enabled: integrationsEnabled });
-  const gogQuery = useQuery({ ...gogAccountsQuery(), enabled: integrationsEnabled });
-  const itchQuery = useQuery({ ...itchAccountsQuery(), enabled: integrationsEnabled });
-  const libraryQuery = useQuery({ ...myLibraryQuery(), enabled: integrationsEnabled });
-
-  const steamAccounts = steamQuery.data ?? [];
-  const gogAccounts = gogQuery.data ?? [];
-  const itchAccounts = itchQuery.data ?? [];
-  const epicGamesCount = libraryQuery.data
-    ? libraryQuery.data.filter((game) => game.store === 'EPIC').length
-    : null;
-
-  const integrationMutation = useMutation({
-    mutationFn: runIntegrationAction,
-    onSuccess: (_result, action) => {
-      if (action.provider !== 'epic') {
-        queryClient.invalidateQueries({ queryKey: integrationKeys[action.provider]() });
-      }
-      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
-    },
-  });
   const profileMutation = useMutation({ mutationFn: updateAccountProfile });
   const passwordMutation = useMutation({ mutationFn: changeAccountPassword });
   const deactivateMutation = useMutation({ mutationFn: deactivateAccount });
-
-  const isFetchingSteam = integrationMutation.isPending && integrationMutation.variables?.provider === 'steam';
-  const isFetchingGog = integrationMutation.isPending && integrationMutation.variables?.provider === 'gog';
-  const isFetchingItch = integrationMutation.isPending && integrationMutation.variables?.provider === 'itch';
-  const isFetchingEpic = integrationMutation.isPending && integrationMutation.variables?.provider === 'epic';
-  const isImportingEpic = isFetchingEpic && integrationMutation.variables?.type === 'import';
   const isSubmitting = profileMutation.isPending || passwordMutation.isPending || deactivateMutation.isPending;
 
-  const handleConnectSteam = async (e: SyntheticEvent) => {
-    e.preventDefault();
-    if (!steamUrl.trim()) return;
-    setError('');
-    showToast('Conectando à Steam e importando biblioteca...', 'info');
-    try {
-      await integrationMutation.mutateAsync({
-        provider: 'steam', type: 'connect', profileUrl: steamUrl.trim(),
-      });
-      showToast('Conta Steam conectada e biblioteca importada com sucesso!', 'success');
-      setSteamUrl('');
-    } catch (err: unknown) {
-      const msg = parseError(
-        err,
-        'Erro ao conectar conta Steam. Verifique se o perfil e os detalhes de jogo estão públicos.'
-      );
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
+  const {
+    steamAccounts, gogAccounts, itchAccounts, epicGamesCount,
+    steamUrl, setSteamUrl, gogUrl, setGogUrl,
+    isFetchingSteam, isFetchingGog, isFetchingItch, isFetchingEpic, isImportingEpic,
+    isEpicInstructionsOpen, setIsEpicInstructionsOpen, isCopiedScript,
+    epicPastedText, parsedEpicTitles, isEpicDragging, setIsEpicDragging,
+    connectSteam: handleConnectSteam,
+    connectGog: handleConnectGog,
+    connectItch: handleConnectItch,
+    disconnectAccount,
+    sync,
+    copyEpicScript: handleCopyEpicScript,
+    setEpicContent: handleEpicTextareaChange,
+    uploadEpicFile: handleEpicFileUpload,
+    importEpic: handleImportEpic,
+    enrichEpic: handleEnrichEpic,
+    deleteEpicGames: handleDeleteEpicGames,
+  } = useSettingsIntegrations({ enabled: activeTab === 'integrations', setError });
 
   const handleDisconnectSteam = (accountId: string) => {
     setPendingDisconnectAccountId(accountId);
@@ -216,79 +102,8 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     setShowDisconnectConfirm(true);
   };
 
-  const executeDisconnectSteam = async (deleteGames: boolean) => {
-    if (!pendingDisconnectAccountId) return;
-    setError('');
-    try {
-      await integrationMutation.mutateAsync({
-        provider: 'steam', type: 'disconnect', accountId: pendingDisconnectAccountId, deleteGames,
-      });
-      showToast('Conta Steam desconectada com sucesso.', 'success');
-    } catch (err: unknown) {
-      const msg = parseError(err, 'Erro ao desconectar conta Steam.');
-      setError(msg);
-      showToast(msg, 'error');
-    } finally {
-      setPendingDisconnectAccountId(null);
-    }
-  };
-
-  const handleSyncSteam = async () => {
-    setError('');
-    showToast('Sincronizando jogos da Steam...', 'info');
-    try {
-      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'steam', type: 'sync-all',
-      });
-      showToast(
-        `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
-        'success'
-      );
-    } catch (err: unknown) {
-      const msg = parseError(err, 'Erro ao sincronizar contas Steam.');
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
-
-  const handleSyncSingleSteam = async (accountId: string) => {
-    setError('');
-    showToast('Sincronizando conta Steam...', 'info');
-    try {
-      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'steam', type: 'sync-one', accountId,
-      });
-      showToast(
-        `Sincronização concluída! ${new_games_count} novos jogos adicionados. Detalhes e gêneros estão sendo preenchidos em segundo plano.`,
-        'success'
-      );
-    } catch (err: unknown) {
-      const msg = parseError(err, 'Erro ao sincronizar conta Steam.');
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
-
-  const handleConnectGog = async (e: SyntheticEvent) => {
-    e.preventDefault();
-    if (!gogUrl.trim()) return;
-    setError('');
-    showToast('Conectando à GOG e importando biblioteca...', 'info');
-    try {
-      await integrationMutation.mutateAsync({
-        provider: 'gog', type: 'connect', profileUrl: gogUrl.trim(),
-      });
-      showToast('Conta GOG conectada e biblioteca importada com sucesso!', 'success');
-      setGogUrl('');
-    } catch (err: unknown) {
-      const msg = parseError(
-        err,
-        'Erro ao conectar conta GOG. Verifique se o perfil e os jogos estão configurados como públicos no GOG.'
-      );
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
+  const handleSyncSteam = () => void sync('steam');
+  const handleSyncSingleSteam = (accountId: string) => void sync('steam', accountId);
 
   const handleDisconnectGog = (accountId: string) => {
     setPendingDisconnectAccountId(accountId);
@@ -296,69 +111,8 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     setShowDisconnectConfirm(true);
   };
 
-  const executeDisconnectGog = async (deleteGames: boolean) => {
-    if (!pendingDisconnectAccountId) return;
-    setError('');
-    try {
-      await integrationMutation.mutateAsync({
-        provider: 'gog', type: 'disconnect', accountId: pendingDisconnectAccountId, deleteGames,
-      });
-      showToast('Conta GOG desconectada com sucesso.', 'success');
-    } catch (err: unknown) {
-      const msg = parseError(err, 'Erro ao desconectar conta GOG.');
-      setError(msg);
-      showToast(msg, 'error');
-    } finally {
-      setPendingDisconnectAccountId(null);
-    }
-  };
-
-  const handleSyncGog = async () => {
-    setError('');
-    showToast('Sincronizando biblioteca GOG...', 'info');
-    try {
-      const { new_games_count = 0, updated_games_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'gog', type: 'sync-all',
-      });
-      showToast(
-        `Sincronização GOG concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
-        'success'
-      );
-    } catch (err: unknown) {
-      const msg = parseError(err, 'Erro ao sincronizar contas GOG.');
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
-
-  const handleSyncSingleGog = async (accountId: string) => {
-    setError('');
-    showToast('Sincronizando conta GOG...', 'info');
-    try {
-      const { new_games_count = 0, updated_games_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'gog', type: 'sync-one', accountId,
-      });
-      showToast(
-        `Sincronização GOG concluída! ${new_games_count} novos jogos adicionados, ${updated_games_count} atualizados.`,
-        'success'
-      );
-    } catch (err: unknown) {
-      const msg = parseError(err, 'Erro ao sincronizar conta GOG.');
-      setError(msg);
-      showToast(msg, 'error');
-    }
-  };
-
-  const handleConnectItch = () => {
-    const clientId = import.meta.env.VITE_ITCH_CLIENT_ID;
-    if (!clientId) {
-      setError('A integração com Itch.io não está configurada neste ambiente.');
-      return;
-    }
-    const redirectUri = `${window.location.origin}/settings/integrations/itch/callback`;
-    const authUrl = `https://itch.io/user/oauth?client_id=${clientId}&scope=profile:me%20profile:owned%20profile:games&response_type=token&redirect_uri=${encodeURIComponent(redirectUri)}`;
-    window.location.href = authUrl;
-  };
+  const handleSyncGog = () => void sync('gog');
+  const handleSyncSingleGog = (accountId: string) => void sync('gog', accountId);
 
   const handleDisconnectItch = (accountId: string) => {
     setPendingDisconnectAccountId(accountId);
@@ -366,178 +120,16 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     setShowDisconnectConfirm(true);
   };
 
-  const executeDisconnectItch = async (deleteGames: boolean) => {
-    if (!pendingDisconnectAccountId) return;
-    setError('');
+  const handleSyncItch = (accountId: string) => void sync('itch', accountId);
+  const handleSyncAllItch = () => void sync('itch');
+
+  const executeDisconnect = async (deleteGames: boolean) => {
+    if (!disconnectProvider || !pendingDisconnectAccountId) return;
     try {
-      await integrationMutation.mutateAsync({
-        provider: 'itch', type: 'disconnect', accountId: pendingDisconnectAccountId, deleteGames,
-      });
-      showToast('Conta Itch.io desconectada com sucesso.', 'success');
-    } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao desconectar conta Itch.io.'));
+      await disconnectAccount(disconnectProvider, pendingDisconnectAccountId, deleteGames);
     } finally {
       setPendingDisconnectAccountId(null);
-    }
-  };
-
-  const handleSyncItch = async (accountId: string) => {
-    setError('');
-    try {
-      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'itch', type: 'sync-one', accountId,
-      });
-      showToast(`Sincronização concluída! ${new_games_count} novos jogos adicionados.`, 'success');
-    } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao sincronizar conta Itch.io.'));
-    }
-  };
-
-  const handleSyncAllItch = async () => {
-    setError('');
-    try {
-      const { new_games_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'itch', type: 'sync-all',
-      });
-      showToast(`Sincronização concluída! ${new_games_count} novos jogos adicionados.`, 'success');
-    } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao sincronizar contas Itch.io.'));
-    }
-  };
-
-  const EPIC_EXPORT_SCRIPT = `(async () => {
-    const BASE = "https://accounts.epicgames.com/account/v2/payment/ajaxGetOrderHistory?count=100&sortDir=DESC&sortBy=DATE&locale=en-US";
-    let allGames = [];
-    let nextPageToken = "";
-    let page = 1;
-    console.log("Iniciando exportação da biblioteca da Epic...");
-    while (true) {
-        const url = nextPageToken ? \`\${BASE}&nextPageToken=\${encodeURIComponent(nextPageToken)}\` : BASE;
-        console.log(\`Buscando página \${page}...\`);
-        const response = await fetch(url, {
-            method: "GET",
-            credentials: "include",
-            headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" }
-        });
-        if (!response.ok) throw new Error(\`Erro HTTP \${response.status}: \${response.statusText}\`);
-        const data = await response.json();
-        if (!data.orders) break;
-        for (const order of data.orders) {
-            if (!order.items) continue;
-            for (const item of order.items) {
-                if (item.description) allGames.push(item.description);
-            }
-        }
-        nextPageToken = data.nextPageToken;
-        if (!nextPageToken) break;
-        page++;
-    }
-    const uniqueGames = [...new Set(allGames)].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-    const txt = uniqueGames.join("\\n");
-    const txtBlob = new Blob([txt], { type: "text/plain;charset=utf-8" });
-    const txtLink = document.createElement("a");
-    txtLink.href = URL.createObjectURL(txtBlob);
-    txtLink.download = "EpicGamesLibrary.txt";
-    txtLink.click();
-    console.log(\`Exportação concluída! \${uniqueGames.length} jogos baixados.\`);
-})();`;
-
-  const parseEpicContent = (rawText: string): string[] => {
-    const lines = rawText.split(/\r?\n/);
-    const titles: string[] = [];
-    for (let line of lines) {
-      line = line.trim();
-      if (!line) continue;
-      if (line.toLowerCase() === 'game' || line.toLowerCase() === '"game"') continue;
-      if (line.startsWith('"') && line.endsWith('"') && line.length > 1) {
-        line = line.slice(1, -1).replace(/""/g, '"').trim();
-      }
-      if (line) {
-        titles.push(line);
-      }
-    }
-    return [...new Set(titles)];
-  };
-
-  const handleCopyEpicScript = async () => {
-    try {
-      await navigator.clipboard.writeText(EPIC_EXPORT_SCRIPT);
-      setIsCopiedScript(true);
-      showToast('Script copiado para a área de transferência!', 'success');
-      setTimeout(() => setIsCopiedScript(false), 3000);
-    } catch {
-      showToast('Erro ao copiar script.', 'error');
-    }
-  };
-
-  const handleEpicFileUpload = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      if (text) {
-        const titles = parseEpicContent(text);
-        setParsedEpicTitles(titles);
-        setEpicPastedText(titles.join('\n'));
-        if (titles.length === 0) {
-          showToast('Nenhum jogo identificado no arquivo.', 'error');
-        } else {
-          showToast(`${titles.length} jogos identificados do arquivo!`, 'info');
-        }
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleEpicTextareaChange = (text: string) => {
-    setEpicPastedText(text);
-    const titles = parseEpicContent(text);
-    setParsedEpicTitles(titles);
-  };
-
-  const handleImportEpic = async () => {
-    if (parsedEpicTitles.length === 0) return;
-    setError('');
-    showToast(`Importando ${parsedEpicTitles.length} jogos da Epic Games...`, 'info');
-    try {
-      const { imported_count = 0, skipped_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'epic', type: 'import', titles: parsedEpicTitles,
-      });
-      showToast(
-        `Importação concluída! ${imported_count} novos jogos adicionados${skipped_count > 0 ? ` (${skipped_count} já existiam na biblioteca)` : ''}.`,
-        'success'
-      );
-      setEpicPastedText('');
-      setParsedEpicTitles([]);
-    } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao importar jogos da Epic Games.'));
-    }
-  };
-
-  const handleEnrichEpic = async () => {
-    setError('');
-    showToast('Atualizando metadados dos jogos da Epic Games...', 'info');
-    try {
-      const { games_to_enrich_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'epic', type: 'enrich',
-      });
-      showToast(
-        `Atualização iniciada! ${games_to_enrich_count} jogos estão tendo capas e gêneros buscados em segundo plano.`,
-        'success'
-      );
-    } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao atualizar metadados dos jogos da Epic Games.'));
-    }
-  };
-
-  const handleDeleteEpicGames = async () => {
-    setError('');
-    try {
-      const { removed_count = 0 } = await integrationMutation.mutateAsync({
-        provider: 'epic', type: 'delete-games',
-      });
-      showToast(`${removed_count} jogos da Epic Games foram removidos da biblioteca.`, 'success');
-    } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao remover jogos da Epic Games.'));
+      setDisconnectProvider(null);
     }
   };
 
@@ -555,7 +147,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       await reloadUser();
       onClose();
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao atualizar perfil.'));
+      setError(parseSettingsError(err, 'Erro ao atualizar perfil.'));
     }
   };
 
@@ -575,7 +167,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       setConfirmPassword('');
       onClose();
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao alterar senha.'));
+      setError(parseSettingsError(err, 'Erro ao alterar senha.'));
     }
   };
 
@@ -591,7 +183,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
       onClose();
       onLogout(); // Desloga o usuário
     } catch (err: unknown) {
-      setError(parseError(err, 'Erro ao desativar conta.'));
+      setError(parseSettingsError(err, 'Erro ao desativar conta.'));
     }
   };
 
@@ -1003,15 +595,11 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
         cancelText="Manter jogos na biblioteca"
         isDestructive
         onConfirm={() => {
-          if (disconnectProvider === 'steam') executeDisconnectSteam(true);
-          else if (disconnectProvider === 'gog') executeDisconnectGog(true);
-          else if (disconnectProvider === 'itch') executeDisconnectItch(true);
+          void executeDisconnect(true);
           setShowDeleteGamesConfirm(false);
         }}
         onCancel={() => {
-          if (disconnectProvider === 'steam') executeDisconnectSteam(false);
-          else if (disconnectProvider === 'gog') executeDisconnectGog(false);
-          else if (disconnectProvider === 'itch') executeDisconnectItch(false);
+          void executeDisconnect(false);
           setShowDeleteGamesConfirm(false);
         }}
       />

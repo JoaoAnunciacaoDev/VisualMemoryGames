@@ -10,10 +10,8 @@ import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useAuth } from '@/hooks/useAuth';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
 import { useDragHandlers } from '@/hooks/useDragHandlers';
-import {
-  reorderTierListCategories,
-  type TierListEditorInitialGame,
-} from '@/services/tierlistEditor';
+import type { TierListEditorInitialGame } from '@/services/tierlistEditor';
+import { runTierListEditorAction } from '@/features/tierlists/mutations';
 import { tierListEditorQuery } from '@/features/tierlists/queries';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
@@ -38,13 +36,7 @@ export default function TierListEditor() {
   const loadEditor = useCallback(async () => {
     await refetchEditor();
   }, [refetchEditor]);
-  const { mutateAsync: reorderCategories } = useMutation({ mutationFn: ({
-    tierListId,
-    categoryIds,
-  }: {
-    tierListId: string;
-    categoryIds: string[];
-  }) => reorderTierListCategories(tierListId, categoryIds) });
+  const { mutateAsync: mutateEditor } = useMutation({ mutationFn: runTierListEditorAction });
 
   const { userId } = useAuth();
 
@@ -97,12 +89,12 @@ export default function TierListEditor() {
     // Persistir no backend
     const newOrderIds = reordered.map((t) => t.id);
     try {
-      await reorderCategories({ tierListId: id, categoryIds: newOrderIds });
+      await mutateEditor({ type: 'reorder-categories', tierListId: id, categoryIds: newOrderIds });
     } catch {
       // Em caso de erro, recarrega os dados originais
       loadEditor();
     }
-  }, [tiers, id, loadEditor, reorderCategories, setTiers]);
+  }, [tiers, id, loadEditor, mutateEditor, setTiers]);
   // Fim dos handlers de tiers
 
   const handleTitleSave = () => {

@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '@/services/api';
 import { UpdateLibraryGame } from '@/types/updateGame';
 import { libraryKeys, myLibraryQuery } from '@/features/library/queries';
+import { removeLibraryGame, updateLibraryGame } from '@/features/library/mutations';
 
 
 export function useLibrary() {
@@ -14,12 +14,11 @@ export function useLibrary() {
   }, [queryClient]);
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<UpdateLibraryGame> }) =>
-      api.put(`/user-games/${id}`, data),
+    mutationFn: updateLibraryGame,
     onSuccess: loadLibrary,
   });
   const removeMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/user-games/${id}`),
+    mutationFn: removeLibraryGame,
     onSuccess: loadLibrary,
   });
 

@@ -5,7 +5,7 @@ import Modal from '@/components/Shared/Modal/Modal';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 import { useToast } from '@/hooks/useToast';
-import { ensureGameRecord } from '@/services/gameCatalog';
+import { ensureGameRecord } from '@/features/games/mutations';
 import styles from '@/components/GameSearchModal/GameSearchModal.module.css';
 import { GameResult } from '@/types';
 import { gameSearchQuery } from '@/features/games/queries';

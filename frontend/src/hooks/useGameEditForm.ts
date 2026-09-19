@@ -1,15 +1,18 @@
 import { ChangeEvent, useState, useCallback } from 'react';
-import api from '@/services/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LibraryGame } from '@/types';
 import { UpdateLibraryGame } from '@/types/updateGame';
 import { resolveImageUrl } from '@/services/media';
 import { isValidUrl } from '@/utils/validation';
+import { saveLibraryGameEdits } from '@/features/library/mutations';
+import { libraryKeys } from '@/features/library/queries';
 
 export type EditGamePayload = Partial<UpdateLibraryGame> & {
   custom_cover_file?: File | null;
 };
 
 export function useGameEditForm(game: LibraryGame) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<UpdateLibraryGame>({
     status: game.status,
     rating: game.rating,
@@ -32,6 +35,10 @@ export function useGameEditForm(game: LibraryGame) {
   const [editReleaseYear, setEditReleaseYear] = useState(game.release_year?.toString() ?? '');
   const [editPlatforms, setEditPlatforms] = useState<string[]>(game.platforms ?? []);
   const [editGenres, setEditGenres] = useState<string[]>(game.genres ?? []);
+  const saveMutation = useMutation({
+    mutationFn: saveLibraryGameEdits,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: libraryKeys.mine() }),
+  });
 
   const canReview = form.status !== 'Quero Jogar' && form.status !== 'Na biblioteca';
 
@@ -123,26 +130,12 @@ export function useGameEditForm(game: LibraryGame) {
       throw new Error('A nota deve ser entre 0 e 10.');
     }
 
-    if (game.is_manual) {
-      const gameFormData = new FormData();
-      gameFormData.append('title', editTitle.trim());
-      if (editReleaseYear) gameFormData.append('release_year', editReleaseYear);
-      gameFormData.append('platforms', JSON.stringify(editPlatforms));
-      gameFormData.append('genres', JSON.stringify(editGenres));
-
-      await api.put(`/games/manual/${game.game_id}`, gameFormData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    }
-
-    let finalCoverUrl = form.custom_cover_url;
-    if (coverFile) {
-      const coverFormData = new FormData();
-      coverFormData.append('cover_file', coverFile);
-      const uploadRes = await api.put(`/user-games/${game.id}/cover`, coverFormData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      finalCoverUrl = uploadRes.data.custom_cover_url;
+    const manualGameData = game.is_manual ? new FormData() : undefined;
+    if (manualGameData) {
+      manualGameData.append('title', editTitle.trim());
+      if (editReleaseYear) manualGameData.append('release_year', editReleaseYear);
+      manualGameData.append('platforms', JSON.stringify(editPlatforms));
+      manualGameData.append('genres', JSON.stringify(editGenres));
     }
 
     const payload: EditGamePayload = {
@@ -154,13 +147,18 @@ export function useGameEditForm(game: LibraryGame) {
       acquired_at: form.acquired_at || null,
       platinum_at: form.platinum_at || null,
       store: form.store || null,
-      custom_cover_url: finalCoverUrl || null,
+      custom_cover_url: form.custom_cover_url || null,
       notes: canReview ? form.notes || null : null,
       hours_played: form.hours_played,
     };
 
-    await api.put(`/user-games/${game.id}`, payload);
-    return payload;
+    return saveMutation.mutateAsync({
+      userGameId: game.id,
+      manualGameId: game.is_manual ? game.game_id : undefined,
+      manualGameData,
+      coverFile,
+      data: payload,
+    }) as Promise<EditGamePayload>;
   };
 
   const displayCover =

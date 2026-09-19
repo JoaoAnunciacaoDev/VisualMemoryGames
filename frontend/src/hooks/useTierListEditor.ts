@@ -1,20 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import {
-  addTierListCategoryItem,
-  createTierListCategory,
-  deleteTierListCategory,
-  deleteTierListCategoryItem,
-  moveTierListCategoryItem,
-  reorderTierListCategoryItems,
-  type TierListEditorData,
-  type TierListEditorGameItem,
-  type TierListEditorTier,
-  updateTierListCategory,
-  updateTierListPrivacy,
-  updateTierListTitle,
+import type {
+  TierListEditorData,
+  TierListEditorGameItem,
+  TierListEditorTier,
 } from '@/services/tierlistEditor';
+import { runTierListEditorAction } from '@/features/tierlists/mutations';
 import { tierListKeys } from '@/features/tierlists/queries';
 
 import { useToast } from '@/hooks/useToast';
@@ -58,14 +50,8 @@ export function useTierListEditor(
     await onReload?.();
   }, [onReload]);
 
-  const { mutateAsync: mutateTitle } = useMutation({
-    mutationFn: ({ id, title: nextTitle }: { id: string; title: string }) =>
-      updateTierListTitle(id, nextTitle),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: tierListKeys.mine() }),
-  });
-  const { mutateAsync: mutatePrivacy } = useMutation({
-    mutationFn: ({ id, isPublic: nextIsPublic }: { id: string; isPublic: boolean }) =>
-      updateTierListPrivacy(id, nextIsPublic),
+  const { mutateAsync: mutateEditor } = useMutation({
+    mutationFn: runTierListEditorAction,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: tierListKeys.mine() }),
   });
 
@@ -73,45 +59,48 @@ export function useTierListEditor(
     if (!tierListId) return;
 
     try {
-      await mutateTitle({ id: tierListId, title: newTitle });
+      await mutateEditor({ type: 'update-title', tierListId, title: newTitle });
       setTitle(newTitle);
     } catch {
       showToast('Erro ao salvar título.', 'error');
     }
-  }, [mutateTitle, showToast, tierListId]);
+  }, [mutateEditor, showToast, tierListId]);
 
   const saveIsPublic = useCallback(async (newIsPublic: boolean) => {
     if (!tierListId) return;
 
     try {
-      await mutatePrivacy({ id: tierListId, isPublic: newIsPublic });
+      await mutateEditor({ type: 'update-privacy', tierListId, isPublic: newIsPublic });
       setIsPublic(newIsPublic);
       showToast(newIsPublic ? 'Tier list agora é pública!' : 'Tier list agora é privada!', 'success');
     } catch {
       showToast('Erro ao salvar privacidade.', 'error');
     }
-  }, [mutatePrivacy, showToast, tierListId]);
+  }, [mutateEditor, showToast, tierListId]);
 
   const addTier = useCallback(async (label: string, color: string) => {
     if (!tierListId) return;
 
     try {
-      const cat = await createTierListCategory(tierListId, {
-        name: label,
-        color,
-        order_index: tiers.length,
+      const result = await mutateEditor({
+        type: 'create-category',
+        tierListId,
+        payload: { name: label, color, order_index: tiers.length },
       });
+      if (result.type !== 'category-created') return;
+      const cat = result.category;
 
       setTiers((prev) => [...prev, { id: cat.id, label: cat.name, color: cat.color }]);
       setGames((prev) => ({ ...prev, [cat.id]: [] }));
     } catch {
       showToast('Erro ao criar tier.', 'error');
     }
-  }, [showToast, tierListId, tiers.length]);
+  }, [mutateEditor, showToast, tierListId, tiers.length]);
 
   const removeTier = useCallback(async (tierId: string) => {
     try {
-      await deleteTierListCategory(tierId);
+      if (!tierListId) return;
+      await mutateEditor({ type: 'delete-category', tierListId, categoryId: tierId });
       setGames((prev) => {
         const updated = { ...prev };
         if (updated[tierId]) {
@@ -127,25 +116,31 @@ export function useTierListEditor(
     } catch {
       showToast('Erro ao deletar tier.', 'error');
     }
-  }, [showToast]);
+  }, [mutateEditor, showToast, tierListId]);
 
   const updateTierLabel = useCallback(async (tierId: string, newLabel: string) => {
     try {
-      await updateTierListCategory(tierId, { name: newLabel });
+      if (!tierListId) return;
+      await mutateEditor({
+        type: 'update-category', tierListId, categoryId: tierId, payload: { name: newLabel },
+      });
       setTiers((prev) => prev.map((tier) => (tier.id === tierId ? { ...tier, label: newLabel } : tier)));
     } catch {
       showToast('Erro ao renomear tier.', 'error');
     }
-  }, [showToast]);
+  }, [mutateEditor, showToast, tierListId]);
 
   const updateTierColor = useCallback(async (tierId: string, newColor: string) => {
     try {
-      await updateTierListCategory(tierId, { color: newColor });
+      if (!tierListId) return;
+      await mutateEditor({
+        type: 'update-category', tierListId, categoryId: tierId, payload: { color: newColor },
+      });
       setTiers((prev) => prev.map((tier) => (tier.id === tierId ? { ...tier, color: newColor } : tier)));
     } catch {
       showToast('Erro ao mudar cor.', 'error');
     }
-  }, [showToast]);
+  }, [mutateEditor, showToast, tierListId]);
 
   const addGameToPool = useCallback(async (game: { id: string; title: string; coverUrl: string | null }) => {
     const newItem: GameItem = {
@@ -155,9 +150,11 @@ export function useTierListEditor(
     };
 
     try {
-      if (poolCategoryId) {
-        const res = await addTierListCategoryItem(poolCategoryId, game.id);
-        newItem.itemId = res.id;
+      if (poolCategoryId && tierListId) {
+        const result = await mutateEditor({
+          type: 'add-item', tierListId, categoryId: poolCategoryId, gameId: game.id,
+        });
+        if (result.type === 'item-created') newItem.itemId = result.item.id;
       }
 
       setGames((prev) => ({
@@ -168,7 +165,7 @@ export function useTierListEditor(
     } catch {
       showToast('Erro ao adicionar jogo.', 'error');
     }
-  }, [poolCategoryId, showToast]);
+  }, [mutateEditor, poolCategoryId, showToast, tierListId]);
 
   const removeGame = useCallback(async (gameId: string) => {
     const container = Object.keys(games).find((key) => games[key].some((game) => game.id === gameId));
@@ -181,7 +178,10 @@ export function useTierListEditor(
     if (!categoryId) return;
 
     try {
-      await deleteTierListCategoryItem(categoryId, game.itemId);
+      if (!tierListId) return;
+      await mutateEditor({
+        type: 'delete-item', tierListId, categoryId, itemId: game.itemId,
+      });
       setGames((prev) => ({
         ...prev,
         [container]: prev[container].filter((item) => item.id !== gameId),
@@ -190,7 +190,7 @@ export function useTierListEditor(
     } catch {
       showToast('Erro ao remover jogo.', 'error');
     }
-  }, [games, poolCategoryId, showToast]);
+  }, [games, mutateEditor, poolCategoryId, showToast, tierListId]);
 
   const moveGame = useCallback(async (
     gameId: string,
@@ -203,12 +203,22 @@ export function useTierListEditor(
     if (toContainer !== POOL_ID) {
       try {
         if (game.itemId) {
-          await moveTierListCategoryItem(fromContainer, game.itemId, toContainer);
+          if (!tierListId) return;
+          await mutateEditor({
+            type: 'move-item', tierListId, fromCategoryId: fromContainer,
+            itemId: game.itemId, targetCategoryId: toContainer,
+          });
         } else {
-          const res = await addTierListCategoryItem(toContainer, game.id);
+          if (!tierListId) return;
+          const result = await mutateEditor({
+            type: 'add-item', tierListId, categoryId: toContainer, gameId: game.id,
+          });
+          if (result.type !== 'item-created') return;
           setGames((prev) => ({
             ...prev,
-            [toContainer]: prev[toContainer].map((item) => (item.id === gameId ? { ...item, itemId: res.id } : item)),
+            [toContainer]: prev[toContainer].map((item) => (
+              item.id === gameId ? { ...item, itemId: result.item.id } : item
+            )),
           }));
         }
 
@@ -219,7 +229,11 @@ export function useTierListEditor(
               .map((item) => item.itemId!);
 
             if (itemIds.length > 0) {
-              void reorderTierListCategoryItems(toContainer, itemIds);
+              if (tierListId) {
+                void mutateEditor({
+                  type: 'reorder-items', tierListId, categoryId: toContainer, itemIds,
+                });
+              }
             }
 
             return prev;
@@ -232,32 +246,43 @@ export function useTierListEditor(
     } else {
       if (game.itemId && poolCategoryId) {
         try {
-          await moveTierListCategoryItem(fromContainer, game.itemId, poolCategoryId);
+          if (!tierListId) return;
+          await mutateEditor({
+            type: 'move-item', tierListId, fromCategoryId: fromContainer,
+            itemId: game.itemId, targetCategoryId: poolCategoryId,
+          });
         } catch {
           showToast('Erro ao mover jogo para o pool.', 'error');
           await reload();
         }
       } else if (!game.itemId && poolCategoryId) {
         try {
-          const res = await addTierListCategoryItem(poolCategoryId, game.id);
+          if (!tierListId) return;
+          const result = await mutateEditor({
+            type: 'add-item', tierListId, categoryId: poolCategoryId, gameId: game.id,
+          });
+          if (result.type !== 'item-created') return;
           setGames((prev) => ({
             ...prev,
-            [POOL_ID]: prev[POOL_ID].map((item) => (item.id === gameId ? { ...item, itemId: res.id } : item)),
+            [POOL_ID]: prev[POOL_ID].map((item) => (
+              item.id === gameId ? { ...item, itemId: result.item.id } : item
+            )),
           }));
         } catch {
           showToast('Erro ao salvar jogo no pool.', 'error');
         }
       }
     }
-  }, [games, poolCategoryId, reload, showToast]);
+  }, [games, mutateEditor, poolCategoryId, reload, showToast, tierListId]);
 
   const reorderTier = useCallback(async (tierId: string, itemIds: string[]) => {
     try {
-      await reorderTierListCategoryItems(tierId, itemIds);
+      if (!tierListId) return;
+      await mutateEditor({ type: 'reorder-items', tierListId, categoryId: tierId, itemIds });
     } catch {
       showToast('Erro ao salvar ordem.', 'error');
     }
-  }, [showToast]);
+  }, [mutateEditor, showToast, tierListId]);
 
   return {
     title,

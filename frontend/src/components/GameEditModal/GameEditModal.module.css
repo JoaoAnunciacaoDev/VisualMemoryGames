@@ -41,6 +41,15 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+
+.coverWrapper:focus-visible,
+.editableHeaderField:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .cover {

@@ -11,7 +11,7 @@ export interface DashboardGame {
   finished_at: string | null;
 }
 
-interface YearlyGames {
+export interface YearlyGames {
   year: number;
   games: DashboardGame[];
 }

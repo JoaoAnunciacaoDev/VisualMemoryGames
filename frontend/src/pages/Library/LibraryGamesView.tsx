@@ -3,6 +3,7 @@ import styles from '@/pages/Library/Library.module.css';
 import { getBestGameCover } from '@/services/media';
 import type { LibraryGame } from '@/types';
 import type { GroupMode } from '@/pages/Library/Library.types';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
   games: LibraryGame[];
@@ -81,13 +82,16 @@ export default function LibraryGamesView({
           const gameList = groupedByStatus[status] || [];
           return (
             <div key={status} className={styles.statusGroup}>
-              <h3
+              <button
+                type="button"
                 className={`${styles.statusGroupTitle} ${!isCollapsed ? styles.statusGroupTitleExpanded : ''}`}
                 onClick={() => onToggleStatusCollapse(status)}
                 title="Clique para expandir/recolher"
+                aria-expanded={!isCollapsed}
               >
-                {isCollapsed ? '▶' : '▼'} {status} ({gameList.length})
-              </h3>
+                {isCollapsed ? <ChevronRight aria-hidden="true" size={16} /> : <ChevronDown aria-hidden="true" size={16} />}
+                {status} ({gameList.length})
+              </button>
               {!isCollapsed && (
                 <div className={styles.grid}>
                   {gameList.map((game) => (
@@ -131,13 +135,16 @@ export default function LibraryGamesView({
         const gameList = groupedByStore[storeName];
         return (
           <div key={storeName} className={styles.statusGroup}>
-            <h3
+            <button
+              type="button"
               className={`${styles.statusGroupTitle} ${!isCollapsed ? styles.statusGroupTitleExpanded : ''}`}
               onClick={() => onToggleStatusCollapse(storeName)}
               title="Clique para expandir/recolher"
+              aria-expanded={!isCollapsed}
             >
-              {isCollapsed ? '▶' : '▼'} {storeName} ({gameList.length})
-            </h3>
+              {isCollapsed ? <ChevronRight aria-hidden="true" size={16} /> : <ChevronDown aria-hidden="true" size={16} />}
+              {storeName} ({gameList.length})
+            </button>
             {!isCollapsed && (
               <div className={styles.grid}>
                 {gameList.map((game) => (

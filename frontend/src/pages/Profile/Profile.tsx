@@ -1,821 +1,120 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import { useToast } from '@/hooks/useToast';
+import { LockKeyhole } from 'lucide-react';
+import { Loader } from '@/components/Shared';
+import { profileDashboardQuery, profileGamesQuery, profileKeys, toggleProfileFollow } from '@/features/profile/queries';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, PageTitle, Button, Modal, Loader } from '@/components/Shared';
-import { translateGenre } from '@/utils/genres';
-import { getBestGameCover } from '@/services/media';
-import { getStoreLabel } from '@/types/enums';
-import styles from './Profile.module.css';
+import { useToast } from '@/hooks/useToast';
 import FollowListModal from './FollowListModal';
-import { Clock3, Gamepad2, HelpCircle, LockKeyhole, RefreshCw, Star } from 'lucide-react';
-import {
-  profileDashboardQuery,
-  profileGamesQuery,
-  profileKeys,
-  toggleProfileFollow,
-} from '@/features/profile/queries';
+import { PeriodGameBoard, SimpleGameBoard } from './ProfileGameBoards';
+import ProfileGenresModal from './ProfileGenresModal';
+import ProfileHeader from './ProfileHeader';
+import ProfileOverview from './ProfileOverview';
+import { filterYearlyGames } from './profileUtils';
+import styles from './Profile.module.css';
+
+type FollowListType = 'followers' | 'following';
 
 export default function Profile() {
   const { userId } = useParams({ strict: false });
-  const { showToast } = useToast();
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const queryClient = useQueryClient();
   const dashboardQuery = useQuery(profileDashboardQuery(userId));
   const data = dashboardQuery.data ?? null;
 
-  const isOwnProfile = !userId || (currentUser && (userId.toLowerCase() === currentUser.id.toLowerCase() || userId.toLowerCase() === currentUser.username.toLowerCase()));
-  const [selectedBoardYear, setSelectedBoardYear] = useState<number>(new Date().getFullYear());
-  const [selectedBoardMonth, setSelectedBoardMonth] = useState<string>('all');
-  const [selectedPlatYear, setSelectedPlatYear] = useState<number>(new Date().getFullYear());
-  const [selectedPlatMonth, setSelectedPlatMonth] = useState<string>('all');
-  const [playingCollapsed, setPlayingCollapsed] = useState(false);
-  const [boardCollapsed, setBoardCollapsed] = useState(false);
-  const [platCollapsed, setPlatCollapsed] = useState(false);
-  const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
+  const currentYear = new Date().getFullYear();
+  const [boardPeriod, setBoardPeriod] = useState({ year: currentYear, month: 'all' });
+  const [platinumPeriod, setPlatinumPeriod] = useState({ year: currentYear, month: 'all' });
+  const [collapsed, setCollapsed] = useState({ playing: false, completed: false, platinum: false, favorites: false });
   const [showGenresModal, setShowGenresModal] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const gamesQuery = useQuery({ ...profileGamesQuery(userId), enabled: showGenresModal });
-  const userGames = gamesQuery.data ?? [];
-  const loadingGames = gamesQuery.isPending;
-  const [followModal, setFollowModal] = useState<{isOpen: boolean, type: 'followers' | 'following'}>({ isOpen: false, type: 'followers' });
+  const [followModal, setFollowModal] = useState<FollowListType | null>(null);
 
+  const gamesQuery = useQuery({ ...profileGamesQuery(userId), enabled: showGenresModal });
   const followMutation = useMutation({
     mutationFn: toggleProfileFollow,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: profileKeys.dashboard(userId) }),
   });
 
+  const isOwnProfile = !userId || !!currentUser && (
+    userId.toLowerCase() === currentUser.id.toLowerCase()
+    || userId.toLowerCase() === currentUser.username.toLowerCase()
+  );
+
+  const toggleBoard = (board: keyof typeof collapsed) => {
+    setCollapsed((current) => ({ ...current, [board]: !current[board] }));
+  };
+
   const handleFollowToggle = async () => {
     if (!data) return;
     try {
       await followMutation.mutateAsync({ username: data.username, following: !!data.is_following });
-      if (data.is_following) {
-        showToast('Deixou de seguir o usuário.', 'info');
-      } else {
-        showToast('Seguindo o usuário!', 'success');
-      }
+      showToast(data.is_following ? 'Deixou de seguir o usuário.' : 'Seguindo o usuário!', data.is_following ? 'info' : 'success');
     } catch {
       showToast('Erro ao atualizar status de seguir.', 'error');
     }
   };
 
-  const handleCloseModal = () => {
+  const closeGenresModal = () => {
     setShowGenresModal(false);
     setSelectedGenre(null);
   };
 
-  const MONTH_NAMES = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
-  const getFilteredBoardGames = () => {
-    if (!data) return [];
-    const boardYear = data.yearly_games.some((yg) => yg.year === selectedBoardYear) ? selectedBoardYear : data.yearly_games[0]?.year;
-    const yearGroup = data.yearly_games.find((yg) => yg.year === boardYear);
-    if (!yearGroup) return [];
-
-    if (selectedBoardMonth === 'all') {
-      return yearGroup.games;
-    }
-
-    const monthInt = parseInt(selectedBoardMonth, 10);
-    return yearGroup.games.filter((game) => {
-      if (!game.finished_at) return false;
-      const date = new Date(game.finished_at);
-      return date.getMonth() === monthInt;
-    });
-  };
-
-  const getFilteredPlatGames = () => {
-    if (!data) return [];
-    const platinumYear = data.yearly_platinums.some((yg) => yg.year === selectedPlatYear) ? selectedPlatYear : data.yearly_platinums[0]?.year;
-    const yearGroup = data.yearly_platinums.find((yg) => yg.year === platinumYear);
-    if (!yearGroup) return [];
-
-    if (selectedPlatMonth === 'all') {
-      return yearGroup.games;
-    }
-
-    const monthInt = parseInt(selectedPlatMonth, 10);
-    return yearGroup.games.filter((game) => {
-      if (!game.finished_at) return false;
-      const date = new Date(game.finished_at);
-      return date.getMonth() === monthInt;
-    });
-  };
-
-  const boardGames = getFilteredBoardGames();
-  const platGames = getFilteredPlatGames();
-
-  if (dashboardQuery.isPending) {
-    return <Loader message="Carregando perfil..." />;
-  }
+  if (dashboardQuery.isPending) return <Loader message="Carregando perfil..." />;
 
   if (!data) {
     return (
       <div className={styles.container}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '350px',
-          color: 'var(--text-secondary)',
-          textAlign: 'center',
-          gap: 'var(--gap-md)',
-          padding: 'var(--gap-xl)',
-          backgroundColor: 'var(--card-bg)',
-          borderRadius: 'var(--border-radius-lg)',
-          border: '1px solid var(--border-color)',
-          maxWidth: '500px',
-          margin: '4rem auto'
-        }}>
+        <section className={styles.privateProfile}>
           <LockKeyhole aria-hidden="true" size={48} />
-          <h3 style={{ color: 'var(--text-primary)', margin: '0' }}>Perfil Privado</h3>
-          <p style={{ margin: '0', fontSize: '0.95rem', lineHeight: '1.5' }}>Este perfil é privado. Você precisa seguir este usuário para visualizar suas atividades e biblioteca.</p>
-        </div>
+          <h3>Perfil Privado</h3>
+          <p>Este perfil é privado. Você precisa seguir este usuário para visualizar suas atividades e biblioteca.</p>
+        </section>
       </div>
     );
   }
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Data desconhecida';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const getStatusPercentage = (count: number) => {
-    if (data.games_count === 0) return 0;
-    return Math.round((count / data.games_count) * 100);
-  };
-
-  const statusColors: Record<string, string> = {
-    'Na biblioteca': '#64748b',
-    'Quero Jogar': 'var(--primary)',
-    'Jogando': '#3b82f6',
-    'Zerado': '#10b981',
-    'Platinado': '#f59e0b',
-    'Abandonado': '#ef4444',
-    'Em Espera': '#6b7280',
-  };
-
-  const storeColors: Record<string, string> = {
-    STEAM: '#66c0f4',
-    EPIC: '#0078f2',
-    GOG: '#a855f7',
-    ITCH: '#fa5c5c',
-    PS_STORE: '#0070d1',
-    XBOX: '#107c10',
-    NINTENDO: '#e60012',
-    EA_APP: '#ff4747',
-    UBISOFT: '#0070ff',
-    AMAZON: '#ff9900',
-    GOOGLE_PLAY: '#01875f',
-    APP_STORE: '#38bdf8',
-    PHYSICAL: '#f59e0b',
-    OTHER: '#9ca3af',
-    SEM_LOJA: 'var(--text-secondary)',
-  };
+  const boardGames = filterYearlyGames(data.yearly_games, boardPeriod.year, boardPeriod.month);
+  const platinumGames = filterYearlyGames(data.yearly_platinums, platinumPeriod.year, platinumPeriod.month);
 
   return (
     <div className={styles.container}>
-      {/* Header do Perfil */}
-      <section className={styles.profileHeader}>
-        <div className={styles.avatarLarge}>
-          {data.username.charAt(0).toUpperCase()}
-        </div>
-        <div className={styles.profileInfo}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-md)', flexWrap: 'wrap' }}>
-            <PageTitle level="h1" className={styles.usernameTitle}>{data.username}</PageTitle>
-            {!isOwnProfile && (
-              <button
-                className={`${styles.followButton} ${data.is_following ? styles.following : ''}`}
-                onClick={handleFollowToggle}
-                style={{
-                  padding: '6px 16px',
-                  borderRadius: '16px',
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  border: '1px solid var(--primary)',
-                  backgroundColor: data.is_following ? 'transparent' : 'var(--primary)',
-                  color: data.is_following ? 'var(--primary)' : '#fff',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {data.is_following ? 'Seguindo' : 'Seguir'}
-              </button>
-            )}
-          </div>
-          <p className={styles.joinedText}>
-            Membro desde {formatDate(data.created_at)}
-          </p>
-          <div className={styles.followStats}>
-            <span 
-              className={styles.followStatItem} 
-              onClick={() => setFollowModal({ isOpen: true, type: 'followers' })}
-              style={{ cursor: 'pointer' }}
-            >
-              <strong>{data.followers_count}</strong> seguidores
-            </span>
-            <span 
-              className={styles.followStatItem} 
-              onClick={() => setFollowModal({ isOpen: true, type: 'following' })}
-              style={{ cursor: 'pointer' }}
-            >
-              <strong>{data.following_count}</strong> seguindo
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {followModal.isOpen && (
-        <FollowListModal 
-          userId={userId || 'me'} 
-          type={followModal.type} 
-          onClose={() => setFollowModal({ isOpen: false, type: 'followers' })} 
-        />
-      )}
-
-      {/* Grade de Estatísticas Principais */}
-      <div className={styles.statsGrid}>
-        <Card className={styles.statCard}>
-          <span className={styles.statValue}>{data.games_count}</span>
-          <span className={styles.statLabel}>Jogos na Biblioteca</span>
-        </Card>
-        <Card className={styles.statCard}>
-          <span className={styles.statValue}>{data.lists_count}</span>
-          <span className={styles.statLabel}>Listas Criadas</span>
-        </Card>
-        <Card className={styles.statCard}>
-          <span className={styles.statValue}>{data.tierlists_count}</span>
-          <span className={styles.statLabel}>Tier Lists</span>
-        </Card>
-        <Card className={styles.statCard}>
-          <span className={styles.statValue}>{data.favorites_count}</span>
-          <span className={styles.statLabel}>Jogos Favoritos</span>
-        </Card>
-      </div>
-
-      <div className={styles.detailsSection}>
-        {/* Distribuição de Status */}
-        <Card className={styles.detailsCard}>
-          <h3 className={styles.cardTitle}>Distribuição por Status</h3>
-          <div className={styles.statusList}>
-            {Object.entries(data.status_distribution).map(([status, count]) => {
-              const pct = getStatusPercentage(count);
-              const color = statusColors[status] || 'var(--text-secondary)';
-              return (
-                <div key={status} className={styles.statusItem}>
-                  <div className={styles.statusMeta}>
-                    <span className={styles.statusName}>{status}</span>
-                    <span className={styles.statusCount}>
-                      {count} ({pct}%)
-                    </span>
-                  </div>
-                  <div className={styles.progressBarBg}>
-                    <div
-                      className={styles.progressBarFill}
-                      style={{
-                        width: `${pct}%`,
-                        backgroundColor: color,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-            {Object.keys(data.status_distribution).length === 0 && (
-              <p className={styles.emptyText}>Nenhum jogo cadastrado com status.</p>
-            )}
-          </div>
-        </Card>
-
-        {/* Distribuição por Loja */}
-        <Card className={styles.detailsCard}>
-          <h3 className={styles.cardTitle}>Distribuição por Loja</h3>
-          <div className={styles.statusList}>
-            {data.store_distribution &&
-              Object.entries(data.store_distribution)
-                .sort((a, b) => b[1] - a[1])
-                .map(([storeKey, count]) => {
-                  const pct = getStatusPercentage(count);
-                  const label = storeKey === 'SEM_LOJA' ? 'Sem Loja' : getStoreLabel(storeKey);
-                  const color = storeColors[storeKey] || 'var(--primary)';
-                  return (
-                    <div key={storeKey} className={styles.statusItem}>
-                      <div className={styles.statusMeta}>
-                        <span className={styles.statusName}>{label}</span>
-                        <span className={styles.statusCount}>
-                          {count} ({pct}%)
-                        </span>
-                      </div>
-                      <div className={styles.progressBarBg}>
-                        <div
-                          className={styles.progressBarFill}
-                          style={{
-                            width: `${pct}%`,
-                            backgroundColor: color,
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-            {(!data.store_distribution || Object.keys(data.store_distribution).length === 0) && (
-              <p className={styles.emptyText}>Nenhum jogo cadastrado com loja.</p>
-            )}
-          </div>
-        </Card>
-
-        {/* Gênero Favorito */}
-        <Card className={styles.detailsCard}>
-          <h3 className={styles.cardTitle}>Gênero Favorito</h3>
-          {data.most_played_genre ? (
-            <div className={styles.genreHighlight}>
-              <div className={styles.gamepadIcon}><Gamepad2 aria-hidden="true" /></div>
-              <span className={styles.genreName}>
-                {translateGenre(data.most_played_genre)}
-              </span>
-              <p className={styles.genreDesc}>
-                Este é o gênero mais proeminente e jogado em sua biblioteca do VisualMemory.
-              </p>
-              {data.genre_distribution && Object.keys(data.genre_distribution).length > 0 && (
-                <Button
-                  variant="ghost"
-                  className={styles.viewGenresButton}
-                  onClick={() => setShowGenresModal(true)}
-                >
-                  Ver todos os gêneros
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className={styles.genreHighlight}>
-              <div className={styles.gamepadIcon}><HelpCircle aria-hidden="true" /></div>
-              <p className={styles.emptyText}>Adicione jogos com gêneros para gerar estatísticas.</p>
-            </div>
-          )}
-
-          {data.has_pending_genres && (
-            <div className={styles.pendingGenresNotice}>
-              <span className={styles.pendingGenresIcon}><RefreshCw aria-hidden="true" /></span>
-              <span className={styles.pendingGenresText}>
-                Sincronizando gêneros e anos de lançamento da Steam em segundo plano, os dados serão atualizados gradualmente.
-              </span>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Board de Jogos em Andamento (Jogando) */}
-      <section className={styles.boardSection}>
-        <Card className={styles.boardCard}>
-          <div
-            className={styles.boardHeader}
-            onClick={() => setPlayingCollapsed(!playingCollapsed)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className={styles.boardTitleWrapper}>
-              <span className={styles.collapseIcon}>
-                {playingCollapsed ? '▶' : '▼'}
-              </span>
-              <h3 className={styles.boardTitle}>Jogos em Andamento (Jogando)</h3>
-            </div>
-            <div className={styles.boardCounterWrapper} style={{ border: 'none', padding: '0', margin: '0' }}>
-              <span className={styles.boardCountLabel} style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>
-                {data.playing_games ? data.playing_games.length : 0} {data.playing_games?.length === 1 ? 'jogo' : 'jogos'}
-              </span>
-            </div>
-          </div>
-
-          {!playingCollapsed && (
-            <div className={styles.boardContent}>
-              {data.playing_games && data.playing_games.length > 0 ? (
-                <div className={styles.boardGamesGrid}>
-                  {data.playing_games.map((game, index) => (
-                    <div key={index} className={styles.boardGameMiniCard}>
-                      {getBestGameCover(game) ? (
-                        <img
-                          src={getBestGameCover(game)}
-                          alt={game.title}
-                          className={styles.boardGameCover}
-                        />
-                      ) : (
-                        <div className={styles.boardGameCoverPlaceholder}>
-                          <span>Sem capa</span>
-                        </div>
-                      )}
-                      <div className={styles.boardGameDetails}>
-                        <span className={styles.boardGameTitle} title={game.title}>
-                          {game.title}
-                        </span>
-                        <span className={styles.boardGameMeta}>
-                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
-                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={styles.boardEmptyText}>
-                  Nenhum jogo em andamento no momento.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </section>
-
-      {/* Board de Conclusões Interativo */}
-      <section className={styles.boardSection}>
-        <Card className={styles.boardCard}>
-          <div
-            className={styles.boardHeader}
-            onClick={() => setBoardCollapsed(!boardCollapsed)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className={styles.boardTitleWrapper}>
-              <span className={styles.collapseIcon}>
-                {boardCollapsed ? '▶' : '▼'}
-              </span>
-              <h3 className={styles.boardTitle}>Painel de Conclusões (Zerados)</h3>
-            </div>
-            <div className={styles.boardFilters} onClick={(e) => e.stopPropagation()}>
-              <select
-                className={styles.boardSelect}
-                value={selectedBoardYear}
-                onChange={(e) => {
-                  setSelectedBoardYear(Number(e.target.value));
-                  setSelectedBoardMonth('all');
-                }}
-              >
-                {data.yearly_games.map((yg) => (
-                  <option key={yg.year} value={yg.year}>{yg.year}</option>
-                ))}
-                {data.yearly_games.length === 0 && (
-                  <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                )}
-              </select>
-
-              <select
-                className={styles.boardSelect}
-                value={selectedBoardMonth}
-                onChange={(e) => setSelectedBoardMonth(e.target.value)}
-              >
-                <option value="all">Todos os Meses</option>
-                {MONTH_NAMES.map((monthName, index) => (
-                  <option key={index} value={index}>{monthName}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {!boardCollapsed && (
-            <div className={styles.boardContent}>
-              <div className={styles.boardCounterWrapper}>
-                <span className={styles.boardCount}>{boardGames.length}</span>
-                <span className={styles.boardCountLabel}>
-                  {boardGames.length === 1 ? 'jogo concluído' : 'jogos concluídos'} em{' '}
-                  {selectedBoardMonth === 'all'
-                    ? `todo o ano de ${selectedBoardYear}`
-                    : `${MONTH_NAMES[Number(selectedBoardMonth)]} de ${selectedBoardYear}`}
-                </span>
-              </div>
-
-              {boardGames.length > 0 ? (
-                <div className={styles.boardGamesGrid}>
-                  {boardGames.map((game, index) => (
-                    <div key={index} className={styles.boardGameMiniCard}>
-                      {getBestGameCover(game) ? (
-                        <img
-                          src={getBestGameCover(game)}
-                          alt={game.title}
-                          className={styles.boardGameCover}
-                        />
-                      ) : (
-                        <div className={styles.boardGameCoverPlaceholder}>
-                          <span>Sem capa</span>
-                        </div>
-                      )}
-                      <div className={styles.boardGameDetails}>
-                        <span className={styles.boardGameTitle} title={game.title}>
-                          {game.title}
-                        </span>
-                        <span className={styles.boardGameMeta}>
-                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
-                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={styles.boardEmptyText}>
-                  Nenhum jogo concluído neste período.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </section>
-
-      {/* Board de Conclusões Puras (Platinados) */}
-      <section className={styles.boardSection}>
-        <Card className={styles.boardCard}>
-          <div
-            className={styles.boardHeader}
-            onClick={() => setPlatCollapsed(!platCollapsed)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className={styles.boardTitleWrapper}>
-              <span className={styles.collapseIcon}>
-                {platCollapsed ? '▶' : '▼'}
-              </span>
-              <h3 className={styles.boardTitle}>Painel de Conclusões Puras (Platinados)</h3>
-            </div>
-            <div className={styles.boardFilters} onClick={(e) => e.stopPropagation()}>
-              <select
-                className={styles.boardSelect}
-                value={selectedPlatYear}
-                onChange={(e) => {
-                  setSelectedPlatYear(Number(e.target.value));
-                  setSelectedPlatMonth('all');
-                }}
-              >
-                {data.yearly_platinums.map((yg) => (
-                  <option key={yg.year} value={yg.year}>{yg.year}</option>
-                ))}
-                {data.yearly_platinums.length === 0 && (
-                  <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
-                )}
-              </select>
-
-              <select
-                className={styles.boardSelect}
-                value={selectedPlatMonth}
-                onChange={(e) => setSelectedPlatMonth(e.target.value)}
-              >
-                <option value="all">Todos os Meses</option>
-                {MONTH_NAMES.map((monthName, index) => (
-                  <option key={index} value={index}>{monthName}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {!platCollapsed && (
-            <div className={styles.boardContent}>
-              <div className={styles.boardCounterWrapper}>
-                <span className={styles.boardCount}>{platGames.length}</span>
-                <span className={styles.boardCountLabel}>
-                  {platGames.length === 1 ? 'jogo platinado' : 'jogos platinados'} em{' '}
-                  {selectedPlatMonth === 'all'
-                    ? `todo o ano de ${selectedPlatYear}`
-                    : `${MONTH_NAMES[Number(selectedPlatMonth)]} de ${selectedPlatYear}`}
-                </span>
-              </div>
-
-              {platGames.length > 0 ? (
-                <div className={styles.boardGamesGrid}>
-                  {platGames.map((game, index) => (
-                    <div key={index} className={styles.boardGameMiniCard}>
-                      {getBestGameCover(game) ? (
-                        <img
-                          src={getBestGameCover(game)}
-                          alt={game.title}
-                          className={styles.boardGameCover}
-                        />
-                      ) : (
-                        <div className={styles.boardGameCoverPlaceholder}>
-                          <span>Sem capa</span>
-                        </div>
-                      )}
-                      <div className={styles.boardGameDetails}>
-                        <span className={styles.boardGameTitle} title={game.title}>
-                          {game.title}
-                        </span>
-                        <span className={styles.boardGameMeta}>
-                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
-                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={styles.boardEmptyText}>
-                  Nenhum jogo platinado neste período.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </section>
-
-      {/* Board de Jogos Favoritos */}
-      <section className={styles.boardSection}>
-        <Card className={styles.boardCard}>
-          <div
-            className={styles.boardHeader}
-            onClick={() => setFavoritesCollapsed(!favoritesCollapsed)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className={styles.boardTitleWrapper}>
-              <span className={styles.collapseIcon}>
-                {favoritesCollapsed ? '▶' : '▼'}
-              </span>
-              <h3 className={styles.boardTitle}>Jogos Favoritos</h3>
-            </div>
-            <div className={styles.boardCounterWrapper} style={{ border: 'none', padding: '0', margin: '0' }}>
-              <span className={styles.boardCountLabel} style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>
-                {data.favorite_games ? data.favorite_games.length : 0} {data.favorite_games?.length === 1 ? 'jogo' : 'jogos'}
-              </span>
-            </div>
-          </div>
-
-          {!favoritesCollapsed && (
-            <div className={styles.boardContent}>
-              {data.favorite_games && data.favorite_games.length > 0 ? (
-                <div className={styles.boardGamesGrid}>
-                  {data.favorite_games.map((game, index) => (
-                    <div key={index} className={styles.boardGameMiniCard}>
-                      {getBestGameCover(game) ? (
-                        <img
-                          src={getBestGameCover(game)}
-                          alt={game.title}
-                          className={styles.boardGameCover}
-                        />
-                      ) : (
-                        <div className={styles.boardGameCoverPlaceholder}>
-                          <span>Sem capa</span>
-                        </div>
-                      )}
-                      <div className={styles.boardGameDetails}>
-                        <span className={styles.boardGameTitle} title={game.title}>
-                          {game.title}
-                        </span>
-                        <span className={styles.boardGameMeta}>
-                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
-                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className={styles.boardEmptyText}>
-                  Nenhum jogo favoritado.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </section>
-
+      <ProfileHeader
+        data={data}
+        isOwnProfile={isOwnProfile}
+        isFollowingPending={followMutation.isPending}
+        onFollowToggle={handleFollowToggle}
+        onOpenFollowers={() => setFollowModal('followers')}
+        onOpenFollowing={() => setFollowModal('following')}
+      />
+      {followModal && <FollowListModal userId={userId || 'me'} type={followModal} onClose={() => setFollowModal(null)} />}
+      <ProfileOverview data={data} onOpenGenres={() => setShowGenresModal(true)} />
+      <SimpleGameBoard title="Jogos em Andamento (Jogando)" games={data.playing_games ?? []} emptyMessage="Nenhum jogo em andamento no momento." collapsed={collapsed.playing} onToggle={() => toggleBoard('playing')} />
+      <PeriodGameBoard
+        title="Painel de Conclusões (Zerados)" games={boardGames} groups={data.yearly_games}
+        selectedYear={boardPeriod.year} selectedMonth={boardPeriod.month}
+        itemLabel={['jogo concluído', 'jogos concluídos']} emptyMessage="Nenhum jogo concluído neste período."
+        collapsed={collapsed.completed} onToggle={() => toggleBoard('completed')}
+        onYearChange={(year) => setBoardPeriod({ year, month: 'all' })}
+        onMonthChange={(month) => setBoardPeriod((period) => ({ ...period, month }))}
+      />
+      <PeriodGameBoard
+        title="Painel de Conclusões Puras (Platinados)" games={platinumGames} groups={data.yearly_platinums}
+        selectedYear={platinumPeriod.year} selectedMonth={platinumPeriod.month}
+        itemLabel={['jogo platinado', 'jogos platinados']} emptyMessage="Nenhum jogo platinado neste período."
+        collapsed={collapsed.platinum} onToggle={() => toggleBoard('platinum')}
+        onYearChange={(year) => setPlatinumPeriod({ year, month: 'all' })}
+        onMonthChange={(month) => setPlatinumPeriod((period) => ({ ...period, month }))}
+      />
+      <SimpleGameBoard title="Jogos Favoritos" games={data.favorite_games ?? []} emptyMessage="Nenhum jogo favoritado." collapsed={collapsed.favorites} onToggle={() => toggleBoard('favorites')} />
       {showGenresModal && (
-        <Modal
-          open={showGenresModal}
-          onClose={handleCloseModal}
-          maxWidth="600px"
-          showCloseButton
-        >
-          <div className={styles.genresModalContainer}>
-            {!selectedGenre ? (
-              <>
-                <h3 className={styles.modalHeading}>Distribuição de Gêneros</h3>
-                <p className={styles.modalSubheading}>
-                  Frequência de gêneros presentes em seus {data.games_count} jogos. Clique em um gênero para ver os jogos.
-                </p>
-                <div className={`${styles.genresGrid} scrollbar-visualmemory`}>
-                  {Object.entries(data.genre_distribution)
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([genre, count]) => {
-                      const pct = data.games_count > 0 ? Math.round((count / data.games_count) * 100) : 0;
-                      const radius = 30;
-                      const circumference = 2 * Math.PI * radius;
-                      const strokeDashoffset = circumference - (pct / 100) * circumference;
-
-                      return (
-                        <div
-                          key={genre}
-                          className={`${styles.genreProgressCard} ${styles.clickableCard}`}
-                          onClick={() => setSelectedGenre(genre)}
-                        >
-                          <div className={styles.circularProgressWrapper}>
-                            <svg className={styles.circularSvg} width="80" height="80">
-                              <circle
-                                className={styles.circularBg}
-                                cx="40"
-                                cy="40"
-                                r={radius}
-                              />
-                              <circle
-                                className={styles.circularFill}
-                                cx="40"
-                                cy="40"
-                                r={radius}
-                                style={{
-                                  strokeDasharray: circumference,
-                                  strokeDashoffset: strokeDashoffset,
-                                }}
-                              />
-                            </svg>
-                            <span className={styles.percentageText}>{pct}%</span>
-                          </div>
-                          <div className={styles.genreProgressInfo}>
-                            <strong className={styles.genreProgressName}>
-                              {translateGenre(genre)}
-                            </strong>
-                            <span className={styles.genreProgressCount}>
-                              {count} {count === 1 ? 'jogo' : 'jogos'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </>
-            ) : (
-              <>
-                <div className={styles.genreDetailsHeader}>
-                  <button
-                    type="button"
-                    className={styles.backButton}
-                    onClick={() => setSelectedGenre(null)}
-                  >
-                    ← Voltar
-                  </button>
-                  <h3 className={styles.modalHeading}>
-                    Jogos de {translateGenre(selectedGenre)}
-                  </h3>
-                </div>
-                
-                {loadingGames ? (
-                  <Loader message="Carregando jogos..." minHeight="200px" />
-                ) : (
-                  <div className={`${styles.genreGamesList} scrollbar-visualmemory`}>
-                    {userGames
-                      .filter((ug) => {
-                        if (!ug.genres || !Array.isArray(ug.genres)) return false;
-                        return ug.genres.includes(selectedGenre);
-                      })
-                      .map((ug) => {
-                        const cover = getBestGameCover(ug);
-                        return (
-                          <div key={ug.id} className={styles.genreGameCard}>
-                            {cover ? (
-                              <img
-                                src={cover}
-                                alt={ug.title}
-                                className={styles.genreGameCover}
-                              />
-                            ) : (
-                              <div className={styles.genreGameCoverPlaceholder}>
-                                <span>Sem Capa</span>
-                              </div>
-                            )}
-                            <div className={styles.genreGameInfo}>
-                              <h4 className={styles.genreGameTitle} title={ug.title}>
-                                {ug.title}
-                              </h4>
-                              <div className={styles.genreGameMeta}>
-                                <span
-                                  className={styles.genreGameStatus}
-                                  style={{
-                                    color: statusColors[ug.status] || 'var(--text-secondary)',
-                                  }}
-                                >
-                                  {ug.status}
-                                </span>
-                                {ug.hours_played != null && ug.hours_played > 0 && (
-                                  <span className={styles.genreGameHours}>
-                                    <Clock3 aria-hidden="true" size={14} /> {ug.hours_played}h
-                                  </span>
-                                )}
-                                {ug.rating !== null && (
-                                  <span className={styles.genreGameRating}>
-                                    ⭐ {ug.rating}/10
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </Modal>
+        <ProfileGenresModal
+          gameCount={data.games_count} distribution={data.genre_distribution} selectedGenre={selectedGenre}
+          games={gamesQuery.data ?? []} loadingGames={gamesQuery.isPending}
+          onSelectGenre={setSelectedGenre} onClose={closeGenresModal}
+        />
       )}
     </div>
   );

@@ -45,6 +45,44 @@
   border: 1px solid var(--border-color);
 }
 
+.profileTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  flex-wrap: wrap;
+}
+
+.privateProfile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 350px;
+  color: var(--text-secondary);
+  text-align: center;
+  gap: var(--gap-md);
+  padding: var(--gap-xl);
+  background-color: var(--card-bg);
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color);
+  max-width: 500px;
+  margin: 4rem auto;
+}
+
+.privateProfile h3,
+.privateProfile p {
+  margin: 0;
+}
+
+.privateProfile h3 {
+  color: var(--text-primary);
+}
+
+.privateProfile p {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
 .avatarLarge {
   width: 96px;
   height: 96px;
@@ -250,6 +288,40 @@
   margin-bottom: var(--gap-md);
   flex-wrap: wrap;
   gap: var(--gap-md);
+}
+
+.followButton {
+  padding: 6px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 16px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.followButton.following {
+  background: transparent;
+  color: var(--primary);
+}
+
+.followButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.boardToggleButton {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .boardTitle {
@@ -519,6 +591,10 @@
   padding: var(--gap-md);
   border-radius: var(--border-radius-sm);
   transition: all var(--transition-fast);
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .genreProgressCard:hover {
@@ -628,6 +704,9 @@
   cursor: pointer;
   font-size: var(--font-size-sm);
   transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-xs);
 }
 
 .backButton:hover {
@@ -740,6 +819,11 @@
 .followStatItem {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 .followStatItem strong {

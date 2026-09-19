@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   addTierListCategoryItem,
@@ -11,9 +12,10 @@ import {
   type TierListEditorGameItem,
   type TierListEditorTier,
   updateTierListCategory,
+  updateTierListPrivacy,
   updateTierListTitle,
 } from '@/services/tierlistEditor';
-import api from '@/services/api';
+import { tierListKeys } from '@/features/tierlists/queries';
 
 import { useToast } from '@/hooks/useToast';
 
@@ -32,6 +34,7 @@ export function useTierListEditor(
   options?: UseTierListEditorOptions
 ) {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const onReload = options?.onReload;
 
   const [title, setTitle] = useState(initialData?.title ?? '');
@@ -55,28 +58,39 @@ export function useTierListEditor(
     await onReload?.();
   }, [onReload]);
 
+  const { mutateAsync: mutateTitle } = useMutation({
+    mutationFn: ({ id, title: nextTitle }: { id: string; title: string }) =>
+      updateTierListTitle(id, nextTitle),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tierListKeys.mine() }),
+  });
+  const { mutateAsync: mutatePrivacy } = useMutation({
+    mutationFn: ({ id, isPublic: nextIsPublic }: { id: string; isPublic: boolean }) =>
+      updateTierListPrivacy(id, nextIsPublic),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: tierListKeys.mine() }),
+  });
+
   const saveTitle = useCallback(async (newTitle: string) => {
     if (!tierListId) return;
 
     try {
-      await updateTierListTitle(tierListId, newTitle);
+      await mutateTitle({ id: tierListId, title: newTitle });
       setTitle(newTitle);
     } catch {
       showToast('Erro ao salvar título.', 'error');
     }
-  }, [showToast, tierListId]);
+  }, [mutateTitle, showToast, tierListId]);
 
   const saveIsPublic = useCallback(async (newIsPublic: boolean) => {
     if (!tierListId) return;
 
     try {
-      await api.put(`/tierlists/${tierListId}`, { is_public: newIsPublic });
+      await mutatePrivacy({ id: tierListId, isPublic: newIsPublic });
       setIsPublic(newIsPublic);
       showToast(newIsPublic ? 'Tier list agora é pública!' : 'Tier list agora é privada!', 'success');
     } catch {
       showToast('Erro ao salvar privacidade.', 'error');
     }
-  }, [showToast, tierListId]);
+  }, [mutatePrivacy, showToast, tierListId]);
 
   const addTier = useCallback(async (label: string, color: string) => {
     if (!tierListId) return;

@@ -1,11 +1,12 @@
 import { useState, FormEvent } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import { useToast } from '@/hooks/useToast';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
-import api from '@/services/api';
+import { submitFeedback } from '@/features/feedback/mutations';
 import styles from './FeedbackModal.module.css';
 
 interface Props {
@@ -18,7 +19,8 @@ export default function FeedbackModal({ onClose }: Props) {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitMutation = useMutation({ mutationFn: submitFeedback });
+  const isSubmitting = submitMutation.isPending;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -31,9 +33,8 @@ export default function FeedbackModal({ onClose }: Props) {
 
   const handleConfirmSend = async () => {
     confirmSendModal.close();
-    setIsSubmitting(true);
     try {
-      await api.post('/users/feedback', {
+      await submitMutation.mutateAsync({
         title: title.trim(),
         description: description.trim(),
       });
@@ -41,8 +42,6 @@ export default function FeedbackModal({ onClose }: Props) {
       onClose();
     } catch {
       showToast('Erro ao enviar feedback. Tente novamente mais tarde.', 'error');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

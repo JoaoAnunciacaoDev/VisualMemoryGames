@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useLocation, useParams } from '@tanstack/react-router';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent } from '@dnd-kit/core';
 
@@ -10,11 +11,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
 import { useDragHandlers } from '@/hooks/useDragHandlers';
 import {
-  loadTierListEditorData,
-  type TierListEditorData,
+  reorderTierListCategories,
   type TierListEditorInitialGame,
 } from '@/services/tierlistEditor';
-import api from '@/services/api';
+import { tierListEditorQuery } from '@/features/tierlists/queries';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 import TierListEditorHeader from '@/pages/TierListEditor/TierListEditorHeader';
@@ -28,38 +28,23 @@ interface TierListEditorLocationState {
 export default function TierListEditor() {
   const { id } = useParams({ from: '/tierlists/$id' });
   const location = useLocation();
-  const [editorData, setEditorData] = useState<TierListEditorData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const state = location.state as TierListEditorLocationState | null;
+  const {
+    data: editorData,
+    isPending: loading,
+    isError,
+    refetch: refetchEditor,
+  } = useQuery(tierListEditorQuery(id, state?.initialPool ?? []));
   const loadEditor = useCallback(async () => {
-    if (!id) {
-      setError('Tier list não encontrada.');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const state = location.state as TierListEditorLocationState | null;
-      const data = await loadTierListEditorData(id, state?.initialPool ?? []);
-      setEditorData(data);
-    } catch {
-      setError('Erro ao carregar tier list.');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, location.state]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void loadEditor();
-    }, 0);
-
-    return () => window.clearTimeout(timeout);
-  }, [loadEditor]);
+    await refetchEditor();
+  }, [refetchEditor]);
+  const { mutateAsync: reorderCategories } = useMutation({ mutationFn: ({
+    tierListId,
+    categoryIds,
+  }: {
+    tierListId: string;
+    categoryIds: string[];
+  }) => reorderTierListCategories(tierListId, categoryIds) });
 
   const { userId } = useAuth();
 
@@ -68,7 +53,7 @@ export default function TierListEditor() {
     existingGameIds, saveTitle, addTier, removeTier,
     updateTierLabel, updateTierColor, addGameToPool,
     removeGame, moveGame, reorderTier,
-  } = useTierListEditor(id, editorData, { onReload: loadEditor });
+  } = useTierListEditor(id, editorData ?? null, { onReload: loadEditor });
 
   const isOwner = editorData ? userId === ownerId : false;
 
@@ -112,12 +97,12 @@ export default function TierListEditor() {
     // Persistir no backend
     const newOrderIds = reordered.map((t) => t.id);
     try {
-      await api.put(`/tierlists/${id}/categories/reorder`, { category_ids: newOrderIds });
+      await reorderCategories({ tierListId: id, categoryIds: newOrderIds });
     } catch {
       // Em caso de erro, recarrega os dados originais
       loadEditor();
     }
-  }, [tiers, id, loadEditor, setTiers]);
+  }, [tiers, id, loadEditor, reorderCategories, setTiers]);
   // Fim dos handlers de tiers
 
   const handleTitleSave = () => {
@@ -136,11 +121,11 @@ export default function TierListEditor() {
 
   if (loading) return <Loader />;
 
-  if (error) {
+  if (isError || !editorData) {
     return (
       <div className={styles.page}>
         <div className={styles.emptyState} role="alert">
-          <p>{error}</p>
+          <p>Erro ao carregar tier list.</p>
           <Button variant="primary" onClick={loadEditor}>
             Tentar novamente
           </Button>

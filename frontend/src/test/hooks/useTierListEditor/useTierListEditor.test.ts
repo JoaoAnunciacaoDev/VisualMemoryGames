@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useTierListEditor } from '@/hooks/useTierListEditor';
 import { loadTierListEditorData } from '@/services/tierlistEditor';
+import { TestQueryProvider } from '@/test/TestRouter';
 
 const mockNavigate = vi.fn();
 const mockShowToast = vi.fn();
@@ -63,7 +64,7 @@ describe('useTierListEditor', () => {
   it('deve carregar a tier list com sucesso', async () => {
     const { result } = renderHook(() =>
       useTierListEditor('tierlist-123', mockTierListData, { onReload: vi.fn() })
-    );
+    , { wrapper: TestQueryProvider });
     await waitFor(() => {
       expect(result.current.tiers).toHaveLength(2);
     });

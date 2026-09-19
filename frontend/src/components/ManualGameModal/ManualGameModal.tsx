@@ -1,5 +1,5 @@
 import { ChangeEvent, useState } from 'react';
-import api from '@/services/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
@@ -7,6 +7,9 @@ import { isValidUrl } from '@/utils/validation';
 import { STANDARD_GENRES } from '@/utils/genres';
 import { STANDARD_PLATFORMS } from '@/utils/platforms';
 import styles from '@/components/ManualGameModal/ManualGameModal.module.css';
+import { X } from 'lucide-react';
+import { addManualGameToLibrary } from '@/features/games/mutations';
+import { libraryKeys } from '@/features/library/queries';
 
 interface Props {
   onSuccess: () => void;
@@ -14,6 +17,7 @@ interface Props {
 }
 
 export default function ManualGameModal({ onSuccess, onClose }: Props) {
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [releaseYear, setReleaseYear] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
@@ -21,8 +25,12 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
   const [coverUrl, setCoverUrl] = useState('');
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const createMutation = useMutation({
+    mutationFn: addManualGameToLibrary,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: libraryKeys.all }),
+  });
+  const isSaving = createMutation.isPending;
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,7 +77,6 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
       return;
     }
 
-    setIsSaving(true);
     setError('');
 
     try {
@@ -84,20 +91,12 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
         formData.append('cover_url', coverUrl);
       }
 
-      const gameResponse = await api.post('/games/manual', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      await api.post('/user-games/', { game_id: gameResponse.data.id });
+      await createMutation.mutateAsync(formData);
 
       onSuccess();
       onClose();
     } catch {
       setError('Erro ao salvar jogo. Tente novamente.');
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -225,7 +224,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
                       onClick={() => setSelectedPlatforms(selectedPlatforms.filter((id) => id !== platformId))}
                       disabled={isSaving}
                     >
-                      ×
+                      <X aria-hidden="true" size={12} />
                     </button>
                   </span>
                 );
@@ -311,7 +310,7 @@ export default function ManualGameModal({ onSuccess, onClose }: Props) {
                       onClick={() => setSelectedGenres(selectedGenres.filter((id) => id !== genreId))}
                       disabled={isSaving}
                     >
-                      ×
+                      <X aria-hidden="true" size={12} />
                     </button>
                   </span>
                 );

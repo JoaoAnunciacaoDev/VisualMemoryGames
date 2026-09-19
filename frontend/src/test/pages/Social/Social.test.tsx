@@ -112,8 +112,8 @@ describe('Social Page', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('‹ Anterior')).toBeInTheDocument();
-      expect(screen.getByText('Próximo ›')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Anterior' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Próximo' })).toBeInTheDocument();
       expect(screen.getByText('2')).toBeInTheDocument();
       expect(screen.getByText('3')).toBeInTheDocument();
     });

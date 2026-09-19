@@ -34,7 +34,7 @@ export interface Activity {
   commentary?: string | null;
 }
 
-interface RawgRelease {
+export interface RawgRelease {
   title: string;
   cover_url: string | null;
   release_date: string | null;

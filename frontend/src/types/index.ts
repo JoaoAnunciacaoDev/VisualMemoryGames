@@ -94,6 +94,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  is_public: boolean;
   is_admin: boolean;
   is_deleted: boolean;
   created_at?: string;

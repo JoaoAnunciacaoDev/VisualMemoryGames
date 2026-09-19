@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
 import { useToast } from '../../hooks/useToast';
 import api from '../../services/api';
 import styles from './ItchCallback.module.css';
@@ -21,7 +21,7 @@ export default function ItchCallback() {
 
     if (!accessToken) {
       showToast('Falha na autenticação com Itch.io. Token não encontrado.', 'error');
-      navigate('/profile');
+      navigate({ to: '/profile' });
       return;
     }
 
@@ -33,13 +33,13 @@ export default function ItchCallback() {
         // Notifica outros componentes se estiverem abertos
         window.dispatchEvent(new Event('itch-synced'));
         
-        navigate('/profile');
+        navigate({ to: '/profile' });
       } catch (err: unknown) {
         console.error(err);
         const errorObj = err as { response?: { data?: { detail?: string } } };
         const msg = errorObj.response?.data?.detail || 'Erro ao conectar conta Itch.io.';
         showToast(msg, 'error');
-        navigate('/profile');
+        navigate({ to: '/profile' });
       }
     };
 

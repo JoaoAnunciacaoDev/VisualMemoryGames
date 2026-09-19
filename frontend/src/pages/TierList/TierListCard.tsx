@@ -1,5 +1,6 @@
 import styles from '@/pages/TierList/TierList.module.css';
 import type { TierListSummary } from '@/types';
+import { Trash2 } from 'lucide-react';
 
 interface Props {
   tierList: TierListSummary;
@@ -42,7 +43,7 @@ export default function TierListCard({ tierList, onOpen, onDelete }: Props) {
           {tierList.title}
         </button>
         <button type="button" className={styles.deleteButton} onClick={() => onDelete(tierList.id)} title="Deletar">
-          🗑
+          <Trash2 aria-hidden="true" size={18} />
         </button>
       </div>
     </div>

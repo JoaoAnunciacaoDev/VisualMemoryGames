@@ -1,11 +1,12 @@
 import { useState, useEffect, MouseEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import Button from '@/components/Shared/Button/Button';
 import SettingsModal from '@/components/SettingsModal/SettingsModal';
 import { useAuth } from '@/hooks/useAuth';
 import styles from '@/components/Header/Header.module.css';
-import api from '@/services/api';
-import { FaBullhorn } from 'react-icons/fa';
+import { unreadPatchNotesQuery } from '@/features/patch-notes/queries';
+import { Megaphone } from 'lucide-react';
 import logoIcon from '@/assets/VisualMemoryIcon.png';
 
 export default function Header() {
@@ -15,26 +16,10 @@ export default function Header() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [hasUnread, setHasUnread] = useState(false);
-
-  useEffect(() => {
-    if (!isLoggedIn) return;
-
-    const checkUnread = async () => {
-      try {
-        const res = await api.get('/patch-notes/unread');
-        setHasUnread(res.data.unread);
-      } catch (err) {
-        console.error('Erro ao verificar patch notes não lidos:', err);
-      }
-    };
-
-    checkUnread();
-
-    const handleRead = () => setHasUnread(false);
-    window.addEventListener('patches-read', handleRead);
-    return () => window.removeEventListener('patches-read', handleRead);
-  }, [isLoggedIn]);
+  const { data: hasUnread = false } = useQuery({
+    ...unreadPatchNotesQuery(),
+    enabled: isLoggedIn,
+  });
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -62,27 +47,27 @@ export default function Header() {
   return (
     <>
       <header className={styles.header}>
-        <button type="button" className={styles.logo} onClick={() => navigate('/')}>
+        <button type="button" className={styles.logo} onClick={() => navigate({ to: '/' })}>
           <img src={logoIcon} alt="VisualMemory Logo" className={styles.logoIcon} />
           VisualMemory
         </button>
         <nav className={styles.nav}>
           {isLoggedIn && (
             <div className={styles.navLinks}>
-              <Button variant="ghost" onClick={() => navigate('/library')}>
+              <Button variant="ghost" onClick={() => navigate({ to: '/library' })}>
                 Biblioteca
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/tierlists')}>
+              <Button variant="ghost" onClick={() => navigate({ to: '/tierlists' })}>
                 TierLists
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/recommendations')}>
+              <Button variant="ghost" onClick={() => navigate({ to: '/recommendations' })}>
                 Recomendações
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/social')}>
+              <Button variant="ghost" onClick={() => navigate({ to: '/social' })}>
                 Social
               </Button>
               {user?.is_admin && (
-                <Button variant="ghost" onClick={() => navigate('/admin')}>
+                <Button variant="ghost" onClick={() => navigate({ to: '/admin' })}>
                   Admin
                 </Button>
               )}
@@ -94,10 +79,10 @@ export default function Header() {
               <button
                 type="button"
                 className={`${styles.megaphoneBtn} ${hasUnread ? styles.hasUnread : ''}`}
-                onClick={() => navigate('/patch-notes')}
+                onClick={() => navigate({ to: '/patch-notes' })}
                 title="Patch Notes"
               >
-                <FaBullhorn />
+                <Megaphone aria-hidden="true" size={18} />
               </button>
 
               <div className={styles.avatarContainer}>
@@ -115,7 +100,7 @@ export default function Header() {
                     <button
                       type="button"
                       className={styles.dropdownItem}
-                      onClick={() => navigate('/profile')}
+                      onClick={() => navigate({ to: '/profile' })}
                     >
                       Ver Perfil
                     </button>
@@ -138,7 +123,7 @@ export default function Header() {
               </div>
             </div>
           ) : (
-            <Button variant="ghost" onClick={() => navigate('/login')}>
+            <Button variant="ghost" onClick={() => navigate({ to: '/login' })}>
               Entrar
             </Button>
           )}

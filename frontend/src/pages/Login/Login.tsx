@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
 
 import AuthForm from '@/components/AuthForm/AuthForm';
 
@@ -16,7 +16,7 @@ export default function Login() {
 
   useEffect(() => {
     if (user) {
-      navigate('/library', { replace: true });
+      navigate({ to: '/library', replace: true });
     }
   }, [user, navigate]);
 
@@ -96,7 +96,7 @@ export default function Login() {
       params.append('remember_me', rememberMe.toString());
       await api.post('/login', params);
       await reloadUser();
-      navigate('/library');
+      navigate({ to: '/library' });
     } catch (err) {
       setError(parseError(err));
     }

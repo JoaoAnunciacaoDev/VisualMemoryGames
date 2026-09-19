@@ -1,4 +1,17 @@
-import type { KeyboardEvent } from 'react';
+import { createElement, type KeyboardEvent } from 'react';
+import {
+  CheckCircle2,
+  Circle,
+  FileText,
+  Gamepad2,
+  Heart,
+  Package,
+  Plug,
+  ShoppingCart,
+  Star,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
 import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/LibraryCard/LibraryCard.module.css';
 
@@ -27,18 +40,16 @@ const STATUS_CLASSES: Record<string, string> = {
   'Em Espera': styles.statusOnHold,
 };
 
-const getStoreEmoji = (storeKey: string): string => {
+const getStoreIcon = (storeKey: string): LucideIcon => {
   const lower = storeKey.toLowerCase();
-  if (lower.includes('steam')) return '🎮';
-  if (lower.includes('epic')) return '🔌';
-  if (lower.includes('gog')) return '🟣';
-  if (lower.includes('ea')) return '🟧';
-  if (lower.includes('ubisoft')) return '🌀';
-  if (lower.includes('amazon') || lower.includes('prime')) return '📦';
-  if (lower.includes('playstation') || lower.includes('ps')) return '💙';
-  if (lower.includes('xbox')) return '💚';
-  if (lower.includes('nintendo') || lower.includes('switch')) return '❤️';
-  return '🛒';
+  if (lower.includes('steam')) return Gamepad2;
+  if (lower.includes('epic')) return Plug;
+  if (lower.includes('gog')) return Circle;
+  if (lower.includes('amazon') || lower.includes('prime')) return Package;
+  if (lower.includes('playstation') || lower.includes('ps')) return Gamepad2;
+  if (lower.includes('xbox')) return Gamepad2;
+  if (lower.includes('nintendo') || lower.includes('switch')) return Heart;
+  return ShoppingCart;
 };
 
 export default function LibraryCard({
@@ -79,12 +90,12 @@ export default function LibraryCard({
         )}
         {store && (
           <div className={styles.storeTag} title={`Adquirido na ${getStoreLabel(store)}`}>
-            {getStoreEmoji(store)} {getStoreLabel(store)}
+            {createElement(getStoreIcon(store), { 'aria-hidden': true, size: 14 })} {getStoreLabel(store)}
           </div>
         )}
         {favorite && (
           <div className={styles.favoriteBadge} title="Jogo Favorito">
-            ⭐
+            <Star aria-hidden="true" fill="currentColor" size={16} />
           </div>
         )}
         <span className={`${styles.statusTag} ${STATUS_CLASSES[status] ?? styles.statusWantToPlay}`}>
@@ -95,13 +106,13 @@ export default function LibraryCard({
         <h3 className={styles.title}>{title}</h3>
         <div className={styles.meta}>
           <span className={styles.metaLeft}>
-            {rating !== null ? `📝 ${rating}/10` : ''}
+            {rating !== null && <><FileText aria-hidden="true" size={14} /> {rating}/10</>}
           </span>
           <span className={styles.metaCenter}>
-            {finishedYear ? `✅ ${finishedYear}` : ''}
+            {finishedYear && <><CheckCircle2 aria-hidden="true" size={14} /> {finishedYear}</>}
           </span>
           <span className={styles.metaRight}>
-            {platinumYear ? `🏆 ${platinumYear}` : ''}
+            {platinumYear && <><Trophy aria-hidden="true" size={14} /> {platinumYear}</>}
           </span>
         </div>
       </div>

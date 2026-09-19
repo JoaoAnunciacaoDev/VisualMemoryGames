@@ -36,6 +36,7 @@ const baseForm = {
     platinum_at: '', custom_cover_url: '', notes: 'Jogo incrível!',
   },
   coverFile: null,
+  fileError: null,
   editTitle: 'Zelda Breath of the Wild',
   setEditTitle: vi.fn(),
   editReleaseYear: '2017',

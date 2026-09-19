@@ -1,39 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import styles from './Recommendations.module.css';
-import RecommendationCarousel, { RecommendationGame } from '@/components/RecommendationCarousel/RecommendationCarousel';
-import api from '@/services/api';
-import { useToast } from '@/hooks/useToast';
+import RecommendationCarousel from '@/components/RecommendationCarousel/RecommendationCarousel';
 import { Loader } from '@/components/Shared';
-
-interface RecommendationCategory {
-  title: string;
-  games: RecommendationGame[];
-}
+import { recommendationsQuery } from '@/features/recommendations/queries';
 
 export default function Recommendations() {
-  const [categories, setCategories] = useState<RecommendationCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { showToast } = useToast();
+  const { data: categories = [], isPending, isError } = useQuery(recommendationsQuery());
 
-  useEffect(() => {
-    const fetchRecommendations = async () => {
-      try {
-        const response = await api.get('/users/me/recommendations');
-        setCategories(response.data);
-      } catch (err) {
-        showToast('Erro ao buscar recomendações.', 'error');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecommendations();
-  }, [showToast]);
-
-  if (loading) {
+  if (isPending) {
     return <Loader message="Buscando as melhores recomendações para você..." minHeight="80vh" />;
   }
+
+  if (isError) return <p className={styles.page}>Erro ao buscar recomendações.</p>;
 
   return (
     <div className={styles.page}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/Shared';
 import styles from './NotFound.module.css';
 
@@ -12,7 +12,7 @@ export default function NotFound() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          navigate('/', { replace: true });
+          navigate({ to: '/', replace: true });
           return 0;
         }
         return prev - 1;
@@ -33,7 +33,7 @@ export default function NotFound() {
         <p className={styles.countdown}>
           Redirecionando para a página inicial em <strong>{countdown}</strong> segundos...
         </p>
-        <Button variant="primary" onClick={() => navigate('/', { replace: true })} className={styles.button}>
+        <Button variant="primary" onClick={() => navigate({ to: '/', replace: true })} className={styles.button}>
           Voltar para a Home
         </Button>
       </div>

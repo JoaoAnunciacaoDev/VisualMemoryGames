@@ -1,80 +1,42 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import api from '@/services/api';
+import { Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styles from "./Social.module.css";
 import { formatDate, formatDateTime } from "@/utils/date";
 import { Loader } from "@/components/Shared";
-
-interface Game {
-  id: string;
-  external_id: number;
-  title: string;
-  cover_url: string;
-  release_year: number;
-  platforms: string[];
-  genres: string[];
-}
-
-interface UserProfile {
-  id: string;
-  username: string;
-  is_public: boolean;
-  followers_count: number;
-  following_count: number;
-  is_following: boolean | null;
-}
-
-interface Activity {
-  id: number;
-  user_id: string;
-  username: string;
-  game: Game | null;
-  action_type: string;
-  context: string | null;
-  created_at: string;
-  target_user?: UserProfile | null;
-  tierlist_id?: string | null;
-  tierlist_title?: string | null;
-  commentary?: string | null;
-}
-
-interface RawgRelease {
-  title: string;
-  cover_url: string | null;
-  release_date: string | null;
-  genres: string[];
-}
-
-interface PaginatedActivities {
-  items: Activity[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-interface FeedData {
-  activities: PaginatedActivities;
-  rawg_releases: RawgRelease[];
-}
+import {
+  myActivitiesQuery,
+  setFollowing,
+  socialFeedQuery,
+  socialKeys,
+  userSearchQuery,
+  type Activity,
+  type UserProfile,
+} from '@/features/social/queries';
 
 const Social: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"feed" | "my-activities" | "search">("feed");
-  const [feedData, setFeedData] = useState<FeedData | null>(null);
   const [feedPage, setFeedPage] = useState(1);
-  const [feedTotalPages, setFeedTotalPages] = useState(1);
-
-  const [myActivities, setMyActivities] = useState<Activity[]>([]);
   const [myPage, setMyPage] = useState(1);
-  const [myTotalPages, setMyTotalPages] = useState(1);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [submittedSearch, setSubmittedSearch] = useState('');
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const queryClient = useQueryClient();
+  const feedQuery = useQuery({ ...socialFeedQuery(selectedMonth, selectedYear, feedPage), enabled: activeTab === 'feed' });
+  const activitiesQuery = useQuery({ ...myActivitiesQuery(selectedMonth, selectedYear, myPage), enabled: activeTab === 'my-activities' });
+  const searchResultsQuery = useQuery(userSearchQuery(submittedSearch));
+  const feedData = feedQuery.data;
+  const myActivities = activitiesQuery.data?.items ?? [];
+  const searchResults = searchResultsQuery.data ?? [];
+  const loading = activeTab === 'feed'
+    ? feedQuery.isFetching
+    : activeTab === 'my-activities'
+      ? activitiesQuery.isFetching
+      : searchResultsQuery.isFetching;
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -97,53 +59,9 @@ const Social: React.FC = () => {
     { value: 12, label: 'Dezembro' }
   ];
 
-  const loadFeed = async (m: number, y: number, page: number = 1) => {
-    setLoading(true);
-    try {
-      const res = await api.get('/social/feed', {
-        params: { month: m, year: y, page }
-      });
-      setFeedData(res.data);
-      setFeedPage(res.data.activities?.page || page);
-      setFeedTotalPages(res.data.activities?.total_pages || 1);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMyActivities = async (m: number, y: number, page: number = 1) => {
-    setLoading(true);
-    try {
-      const res = await api.get('/social/activities/me', {
-        params: { month: m, year: y, page }
-      });
-      setMyActivities(res.data.items || []);
-      setMyPage(res.data.page || page);
-      setMyTotalPages(res.data.total_pages || 1);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "feed") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      loadFeed(selectedMonth, selectedYear, 1);
-    } else if (activeTab === "my-activities") {
-      loadMyActivities(selectedMonth, selectedYear, 1);
-    }
-  }, [activeTab, selectedMonth, selectedYear]);
-
   const handlePageChange = (newPage: number) => {
-    if (activeTab === "feed") {
-      loadFeed(selectedMonth, selectedYear, newPage);
-    } else if (activeTab === "my-activities") {
-      loadMyActivities(selectedMonth, selectedYear, newPage);
-    }
+    if (activeTab === "feed") setFeedPage(newPage);
+    else if (activeTab === "my-activities") setMyPage(newPage);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -195,42 +113,32 @@ const Social: React.FC = () => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    setLoading(true);
-    try {
-      const res = await api.get(`/social/users/search?q=${encodeURIComponent(searchQuery)}`);
-      setSearchResults(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    setSubmittedSearch(searchQuery.trim());
   };
 
-  const handleFollow = async (userId: string, currentlyFollowing: boolean) => {
-    try {
-      if (currentlyFollowing) {
-        await api.delete(`/social/users/${userId}/follow`);
-      } else {
-        await api.post(`/social/users/${userId}/follow`);
-      }
-      
-      setSearchResults((prev) =>
-        prev.map((u) => {
+  const followMutation = useMutation({
+    mutationFn: setFollowing,
+    onMutate: ({ userId, following }) => {
+      queryClient.setQueryData<UserProfile[]>(socialKeys.search(submittedSearch), (previous = []) =>
+        previous.map((u) => {
           if (u.id === userId) {
             return {
               ...u,
-              is_following: !currentlyFollowing,
-              followers_count: currentlyFollowing
+              is_following: !following,
+              followers_count: following
                 ? u.followers_count - 1
                 : u.followers_count + 1,
             };
           }
           return u;
-        })
+        }),
       );
-    } catch (err) {
-      console.error(err);
-    }
+    },
+    onError: () => queryClient.invalidateQueries({ queryKey: socialKeys.search(submittedSearch) }),
+  });
+
+  const handleFollow = (userId: string, currentlyFollowing: boolean) => {
+    followMutation.mutate({ userId, following: currentlyFollowing });
   };
 
   const renderActionText = (activity: Activity) => {
@@ -251,7 +159,7 @@ const Social: React.FC = () => {
   const renderActivityHeader = (act: Activity) => {
     const userLink = (
       <span className={styles.username}>
-        <Link to={`/profile/${act.username}`}>{act.username}</Link>
+        <Link to="/profile/$userId" params={{ userId: act.username }}>{act.username}</Link>
       </span>
     );
 
@@ -260,7 +168,7 @@ const Social: React.FC = () => {
         <>
           {userLink} começou a seguir{" "}
           <span className={styles.targetUsername}>
-            <Link to={`/profile/${act.target_user.username}`}>{act.target_user.username}</Link>
+            <Link to="/profile/$userId" params={{ userId: act.target_user.username }}>{act.target_user.username}</Link>
           </span>
         </>
       );
@@ -271,7 +179,7 @@ const Social: React.FC = () => {
         <>
           {userLink} criou a Tier List{" "}
           <span className={styles.tierlistLink}>
-            <Link to={`/tierlists/${act.tierlist_id}`}>{act.tierlist_title}</Link>
+            <Link to="/tierlists/$id" params={{ id: act.tierlist_id! }}>{act.tierlist_title}</Link>
           </span>
         </>
       );
@@ -282,7 +190,7 @@ const Social: React.FC = () => {
         <>
           {userLink} atualizou a Tier List{" "}
           <span className={styles.tierlistLink}>
-            <Link to={`/tierlists/${act.tierlist_id}`}>{act.tierlist_title}</Link>
+            <Link to="/tierlists/$id" params={{ id: act.tierlist_id! }}>{act.tierlist_title}</Link>
           </span>
         </>
       );
@@ -366,7 +274,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    onChange={(e) => { setSelectedMonth(Number(e.target.value)); setFeedPage(1); }}
                     disabled={loading}
                   >
                     {months.map((m) => (
@@ -376,7 +284,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    onChange={(e) => { setSelectedYear(Number(e.target.value)); setFeedPage(1); }}
                     disabled={loading}
                   >
                     {years.map((y) => (
@@ -389,7 +297,7 @@ const Social: React.FC = () => {
               {!loading && (
                 <>
                   {renderActivityList(feedData?.activities?.items || [], "Nenhuma atividade recente. Siga mais pessoas!")}
-                  {renderPagination(feedPage, feedTotalPages)}
+                  {renderPagination(feedData?.activities?.page ?? feedPage, feedData?.activities?.total_pages ?? 1)}
                 </>
               )}
             </div>
@@ -425,7 +333,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    onChange={(e) => { setSelectedMonth(Number(e.target.value)); setMyPage(1); }}
                     disabled={loading}
                   >
                     {months.map((m) => (
@@ -435,7 +343,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    onChange={(e) => { setSelectedYear(Number(e.target.value)); setMyPage(1); }}
                     disabled={loading}
                   >
                     {years.map((y) => (
@@ -448,7 +356,7 @@ const Social: React.FC = () => {
               {!loading && (
                 <>
                   {renderActivityList(myActivities, "Você ainda não tem nenhuma atividade registrada no período selecionado.")}
-                  {renderPagination(myPage, myTotalPages)}
+                  {renderPagination(activitiesQuery.data?.page ?? myPage, activitiesQuery.data?.total_pages ?? 1)}
                 </>
               )}
             </div>
@@ -478,7 +386,7 @@ const Social: React.FC = () => {
               {searchResults.map((user) => (
                 <div key={user.id} className={styles.userCard}>
                   <div className={styles.userInfo}>
-                    <Link to={`/profile/${user.username}`} className={styles.usernameLink}>
+                    <Link to="/profile/$userId" params={{ userId: user.username }} className={styles.usernameLink}>
                       {user.username}
                     </Link>
                     <span className={styles.stats}>

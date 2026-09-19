@@ -1,25 +1,18 @@
-import { useState, useEffect, SyntheticEvent, useCallback } from 'react';
+import { useEffect, useState, SyntheticEvent } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageTitle, Button, Input, Modal, ConfirmModal, Loader } from '@/components/Shared';
-import api from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { formatDateTime } from '@/utils/date';
 import styles from './PatchNotes.module.css';
-
-interface PatchNoteAuthor {
-  id: string;
-  username: string;
-}
-
-interface PatchNote {
-  id: string;
-  title: string;
-  content: string;
-  author_id: string;
-  created_at: string;
-  updated_at: string;
-  author?: PatchNoteAuthor;
-}
+import {
+  deletePatchNote,
+  markPatchNotesRead,
+  patchNoteKeys,
+  patchNotesQuery,
+  savePatchNote,
+  type PatchNote,
+} from '@/features/patch-notes/queries';
 
 function renderMarkdown(md: string): string {
   if (!md) return '';
@@ -65,9 +58,7 @@ function renderMarkdown(md: string): string {
 export default function PatchNotes() {
   const { user } = useAuth();
   const { showToast } = useToast();
-
-  const [patches, setPatches] = useState<PatchNote[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Filtros de Mês e Ano (Abre por padrão no Mês e Ano Atual, igual à aba Social)
   const now = new Date();
@@ -96,57 +87,36 @@ export default function PatchNotes() {
   const [editingPatch, setEditingPatch] = useState<PatchNote | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   // Estados do Modal de Exclusão
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteTitle, setDeleteTitle] = useState('');
 
-  // 1. Carregar notas de atualização com filtro de mês e ano
-  const fetchPatches = useCallback(async (m: number, y: number, showLoading = true) => {
-    if (showLoading) {
-      setLoading(true);
-    }
-    try {
-      const res = await api.get('/patch-notes', {
-        params: { month: m, year: y }
-      });
-      setPatches(res.data);
-    } catch (err) {
-      console.error(err);
-      showToast('Erro ao carregar notas de atualização.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [showToast]);
+  const { data: patches = [], isPending: loading } = useQuery(patchNotesQuery(selectedMonth, selectedYear));
+
+  const markReadMutation = useMutation({
+    mutationFn: markPatchNotesRead,
+    onSuccess: () => queryClient.setQueryData(patchNoteKeys.unread(), false),
+  });
 
   useEffect(() => {
-    let active = true;
+    markReadMutation.mutate();
+    // This mutation belongs to the page-open lifecycle and must run only once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    Promise.resolve().then(() => {
-      if (active) {
-        fetchPatches(selectedMonth, selectedYear);
-      }
-    });
+  const saveMutation = useMutation({
+    mutationFn: savePatchNote,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: patchNoteKeys.all }),
+  });
 
-    // Marcar as notícias como lidas ao abrir a página
-    const markAsRead = async () => {
-      try {
-        await api.post('/patch-notes/read');
-        // Avisar o header para desligar o pisca
-        window.dispatchEvent(new Event('patches-read'));
-      } catch (err) {
-        console.error('Erro ao marcar patch notes como lidos:', err);
-      }
-    };
+  const deleteMutation = useMutation({
+    mutationFn: deletePatchNote,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: patchNoteKeys.all }),
+  });
 
-    markAsRead();
-
-    return () => {
-      active = false;
-    };
-  }, [fetchPatches, selectedMonth, selectedYear]);
+  const submitting = saveMutation.isPending;
 
   // 2. Abrir formulário para criação
   const handleCreateClick = () => {
@@ -174,32 +144,23 @@ export default function PatchNotes() {
       return;
     }
 
-    setSubmitting(true);
     setError('');
 
     try {
-      if (editingPatch) {
-        // Atualizar
-        await api.put(`/patch-notes/${editingPatch.id}`, {
-          title: title.trim(),
-          content: content.trim(),
-        });
-        showToast('Nota de atualização editada com sucesso!', 'success');
-      } else {
-        // Criar
-        await api.post('/patch-notes', {
-          title: title.trim(),
-          content: content.trim(),
-        });
-        showToast('Nota de atualização publicada com sucesso!', 'success');
-      }
+      await saveMutation.mutateAsync({
+        id: editingPatch?.id,
+        input: { title: title.trim(), content: content.trim() },
+      });
+      showToast(
+        editingPatch
+          ? 'Nota de atualização editada com sucesso!'
+          : 'Nota de atualização publicada com sucesso!',
+        'success',
+      );
       setFormOpen(false);
-      fetchPatches(selectedMonth, selectedYear);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Erro ao salvar nota de atualização.';
       setError(msg);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -213,10 +174,9 @@ export default function PatchNotes() {
     if (!deleteId) return;
 
     try {
-      await api.delete(`/patch-notes/${deleteId}`);
+      await deleteMutation.mutateAsync(deleteId);
       showToast('Nota de atualização excluída com sucesso.', 'success');
       setDeleteId(null);
-      fetchPatches(selectedMonth, selectedYear);
     } catch {
       showToast('Erro ao excluir nota de atualização.', 'error');
     }

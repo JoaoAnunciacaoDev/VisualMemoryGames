@@ -6,7 +6,7 @@ import { loadTierListEditorData } from '@/services/tierlistEditor';
 const mockNavigate = vi.fn();
 const mockShowToast = vi.fn();
 
-vi.mock('react-router-dom', () => ({
+vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({ id: 'tierlist-123' }),
   useLocation: () => ({ state: null }),
@@ -35,6 +35,8 @@ vi.mock('@/hooks/useToast', () => ({
 
 const mockTierListData = {
   title: 'Minha Tier List',
+  isPublic: false,
+  ownerId: 'user-123',
   tiers: [
     { id: 'cat-s', label: 'S', color: '#ff7f7f' },
     { id: 'cat-a', label: 'A', color: '#ffbf7f' },

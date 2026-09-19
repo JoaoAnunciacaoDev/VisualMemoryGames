@@ -1,16 +1,26 @@
-# React + Vite
+# VisualMemory Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React + TypeScript servido pelo Vite e gerenciado com Bun.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- TanStack Router para navegação tipada
+- TanStack Query para cache e sincronização do estado do servidor
+- Tailwind CSS 4 para layout e estilos reutilizáveis
+- CSS Modules para animações e estilos específicos já existentes
+- Lucide React para ícones
+- Vitest e Testing Library para testes unitários
+- Playwright para testes end-to-end
 
-## React Compiler
+## Comandos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+bun install --frozen-lockfile
+bun run dev
+bun run lint
+bun run typecheck
+bun run test
+bun run build
+```
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Configure `VITE_API_URL` para apontar para o backend. Sem essa variável, o frontend usa `http://localhost:8000`.

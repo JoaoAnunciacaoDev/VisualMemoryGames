@@ -10,6 +10,7 @@ import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/CustomListTab/CustomListTab.module.css';
 import { getBestGameCover } from '@/services/media';
 import { GameInList, LibraryGame } from '@/types';
+import { ChevronDown, ChevronUp, Flag, Star, Trash2, Trophy } from 'lucide-react';
 import {
   DndContext,
   useSensor,
@@ -269,9 +270,9 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
                 <div className={styles.listInfo}>
                   {list.is_system ? (
                     <span className={styles.listName}>
-                      {list.list_type === 'favorites' && '⭐ '}
-                      {list.list_type === 'completed_year' && '🏁 '}
-                      {list.list_type === 'platinized_year' && '🏆 '}
+                      {list.list_type === 'favorites' && <Star aria-hidden="true" size={16} />}
+                      {list.list_type === 'completed_year' && <Flag aria-hidden="true" size={16} />}
+                      {list.list_type === 'platinized_year' && <Trophy aria-hidden="true" size={16} />}
                       {list.name}
                     </span>
                   ) : editingListId === list.id ? (
@@ -308,7 +309,7 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
 
                 <div className={styles.listActions}>
                   <span className={styles.expandIcon}>
-                    {expandedList === list.id ? '▲' : '▼'}
+                    {expandedList === list.id ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
                   </span>
                   {!list.is_system && (
                     <Button
@@ -320,7 +321,7 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
                         deleteListModal.open(list.id);
                       }}
                     >
-                      🗑
+                      <Trash2 aria-hidden="true" size={18} />
                     </Button>
                   )}
                 </div>

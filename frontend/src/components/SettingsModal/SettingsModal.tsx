@@ -8,6 +8,16 @@ import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime } from '@/utils/date';
 import styles from './SettingsModal.module.css';
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Clipboard,
+  FolderOpen,
+  Gamepad2,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -499,10 +509,10 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     let allGames = [];
     let nextPageToken = "";
     let page = 1;
-    console.log("🎮 Iniciando exportação da biblioteca da Epic...");
+    console.log("Iniciando exportação da biblioteca da Epic...");
     while (true) {
         const url = nextPageToken ? \`\${BASE}&nextPageToken=\${encodeURIComponent(nextPageToken)}\` : BASE;
-        console.log(\`📦 Buscando página \${page}...\`);
+        console.log(\`Buscando página \${page}...\`);
         const response = await fetch(url, {
             method: "GET",
             credentials: "include",
@@ -528,7 +538,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
     txtLink.href = URL.createObjectURL(txtBlob);
     txtLink.download = "EpicGamesLibrary.txt";
     txtLink.click();
-    console.log(\`✅ Exportação concluída! \${uniqueGames.length} jogos baixados.\`);
+    console.log(\`Exportação concluída! \${uniqueGames.length} jogos baixados.\`);
 })();`;
 
   const parseEpicContent = (rawText: string): string[] => {
@@ -895,7 +905,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                     <div className={styles.listHeader}>
                       <h4>Contas Conectadas ({steamAccounts.length})</h4>
                       <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingSteam} onClick={handleSyncSteam}>
-                        🔄 Sincronizar Tudo
+                        <RefreshCw aria-hidden="true" size={16} /> Sincronizar Tudo
                       </Button>
                     </div>
                     
@@ -911,7 +921,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                         </div>
                         <div className={styles.accountActions}>
                           <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingSteam} onClick={() => handleSyncSingleSteam(acc.id)}>
-                            🔄
+                            <RefreshCw aria-hidden="true" size={16} />
                           </Button>
                           <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectSteam(acc.id)}>
                             Desconectar
@@ -954,7 +964,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                     <div className={styles.listHeader}>
                       <h4>Contas Conectadas ({gogAccounts.length})</h4>
                       <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingGog} onClick={handleSyncGog}>
-                        🔄 Sincronizar Tudo
+                        <RefreshCw aria-hidden="true" size={16} /> Sincronizar Tudo
                       </Button>
                     </div>
                     
@@ -970,7 +980,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                         </div>
                         <div className={styles.accountActions}>
                           <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingGog} onClick={() => handleSyncSingleGog(acc.id)}>
-                            🔄
+                            <RefreshCw aria-hidden="true" size={16} />
                           </Button>
                           <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectGog(acc.id)}>
                             Desconectar
@@ -1003,7 +1013,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                     <div className={styles.listHeader}>
                       <h4>Contas Conectadas ({itchAccounts.length})</h4>
                       <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingItch} onClick={handleSyncAllItch}>
-                        🔄 Sincronizar Tudo
+                        <RefreshCw aria-hidden="true" size={16} /> Sincronizar Tudo
                       </Button>
                     </div>
                     
@@ -1019,7 +1029,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                         </div>
                         <div className={styles.accountActions}>
                           <Button variant="ghost" className={styles.syncAllButton} disabled={isFetchingItch} onClick={() => handleSyncItch(acc.id)}>
-                            🔄
+                            <RefreshCw aria-hidden="true" size={16} />
                           </Button>
                           <Button variant="ghost" className={styles.disconnectButton} onClick={() => handleDisconnectItch(acc.id)}>
                             Desconectar
@@ -1057,7 +1067,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                       disabled={isFetchingEpic}
                       onClick={handleEnrichEpic}
                     >
-                      🔄 Atualizar Metadados (Capas e Gêneros)
+                      <RefreshCw aria-hidden="true" size={16} /> Atualizar Metadados (Capas e Gêneros)
                     </Button>
                     <Button
                       type="button"
@@ -1066,7 +1076,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                       disabled={isFetchingEpic}
                       onClick={() => setShowEpicDeleteConfirm(true)}
                     >
-                      🗑️ Remover Jogos da Epic
+                      <Trash2 aria-hidden="true" size={16} /> Remover Jogos da Epic
                     </Button>
                   </div>
                 )}
@@ -1076,7 +1086,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                   className={styles.epicInstructionsToggle}
                   onClick={() => setIsEpicInstructionsOpen((prev) => !prev)}
                 >
-                  {isEpicInstructionsOpen ? '▼ Ocultar instruções de exportação' : '▶ Como exportar minha biblioteca da Epic?'}
+                  {isEpicInstructionsOpen ? <><ChevronDown aria-hidden="true" size={16} /> Ocultar instruções de exportação</> : <><ChevronRight aria-hidden="true" size={16} /> Como exportar minha biblioteca da Epic?</>}
                 </button>
 
                 {isEpicInstructionsOpen && (
@@ -1104,7 +1114,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                         className={styles.copyScriptBtn}
                         onClick={handleCopyEpicScript}
                       >
-                        {isCopiedScript ? '✅ Script Copiado!' : '📋 Copiar Script de Exportação'}
+                        {isCopiedScript ? <><Check aria-hidden="true" size={16} /> Script Copiado!</> : <><Clipboard aria-hidden="true" size={16} /> Copiar Script de Exportação</>}
                       </Button>
                     </div>
 
@@ -1146,7 +1156,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                       e.target.value = '';
                     }}
                   />
-                  <span className={styles.dropZoneIcon}>📂</span>
+                  <span className={styles.dropZoneIcon}><FolderOpen aria-hidden="true" /></span>
                   <p className={styles.dropZoneText}>
                     <strong>Clique para selecionar</strong> ou arraste seu <code>EpicGamesLibrary.txt</code> / <code>.csv</code>
                   </p>
@@ -1167,7 +1177,7 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
                   <div className={styles.epicPreviewContainer}>
                     <div className={styles.epicPreviewInfo}>
                       <p className={styles.epicPreviewTitle}>
-                        🎮 {parsedEpicTitles.length} {parsedEpicTitles.length === 1 ? 'jogo pronto para importação' : 'jogos prontos para importação'}
+                        <Gamepad2 aria-hidden="true" size={18} /> {parsedEpicTitles.length} {parsedEpicTitles.length === 1 ? 'jogo pronto para importação' : 'jogos prontos para importação'}
                       </p>
                       <p className={styles.epicPreviewSubtitle}>
                         Serão adicionados à sua biblioteca com o status &quot;Na biblioteca&quot; e loja Epic Games.

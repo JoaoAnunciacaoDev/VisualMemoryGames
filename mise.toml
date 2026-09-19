@@ -1,5 +1,5 @@
 [tools]
-node = "20"
+bun = "1.3.13"
 
 [tasks."api.back"]
 env = { PYTHONIOENCODING = "utf-8", PYTHONUTF8 = "1", PYTHONUNBUFFERED = "1" }
@@ -10,7 +10,7 @@ depends = ["setup.back", "setup.front"]
 
 [tasks."api.front"]
 dir = "frontend"
-run = "npm run dev"
+run = "bun run dev"
 
 [tasks."setup.back"]
 run = """
@@ -20,11 +20,11 @@ poetry run alembic upgrade head
 
 [tasks."setup.front"]
 dir = "frontend"
-run = "npm install"
+run = "bun install --frozen-lockfile"
 
 [tasks."front.lint"]
 dir = "frontend"
-run = "npm run lint"
+run = "bun run lint"
 
 [tasks."back.lint"]
 dir = "app"
@@ -46,7 +46,7 @@ run = "poetry run pytest"
 
 [tasks."front.test"]
 dir = "frontend"
-run = "npm run test"
+run = "bun run test"
 
 [tasks."back.e2e.setup"]
 env = { DATABASE_URL = "sqlite:///{{ config_root }}/visualmemory_test.db" }
@@ -59,10 +59,10 @@ run = [
 dir = "frontend"
 depends = ["back.e2e.setup"]
 env = { PLAYWRIGHT_BROWSERS_PATH = "0", DATABASE_URL = "sqlite:///{{ config_root }}/visualmemory_test.db" }
-run = "npm run test:e2e"
+run = "bun run test:e2e"
 
 [tasks."e2e.ui"]
 dir = "frontend"
 depends = ["back.e2e.setup"]
 env = { PLAYWRIGHT_BROWSERS_PATH = "0", DATABASE_URL = "sqlite:///{{ config_root }}/visualmemory_test.db" }
-run = "npm run test:e2e:ui"
+run = "bun run test:e2e:ui"

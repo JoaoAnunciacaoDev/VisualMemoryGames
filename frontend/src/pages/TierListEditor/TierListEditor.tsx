@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams } from '@tanstack/react-router';
 import { arrayMove } from '@dnd-kit/sortable';
 import type { DragEndEvent } from '@dnd-kit/core';
 
@@ -26,7 +26,7 @@ interface TierListEditorLocationState {
 }
 
 export default function TierListEditor() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams({ from: '/tierlists/$id' });
   const location = useLocation();
   const [editorData, setEditorData] = useState<TierListEditorData | null>(null);
   const [loading, setLoading] = useState(true);

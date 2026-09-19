@@ -1,31 +1,27 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageTitle, Button, Input, Loader } from '@/components/Shared';
-import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import { User } from '@/types';
-import { useAuth } from '@/hooks/useAuth';
 import styles from './Admin.module.css';
 import { formatDateTime, formatDate } from '@/utils/date';
-
-interface SystemStats {
-  total_users: number;
-  active_users: number;
-  inactive_users: number;
-  admin_users: number;
-}
+import {
+  adminDashboardQuery,
+  adminKeys,
+  deleteUser,
+  toggleUserActive,
+  toggleUserAdmin,
+} from '@/features/admin/queries';
 
 export default function Admin() {
-  const navigate = useNavigate();
   const { showToast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<SystemStats | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const dashboardQuery = useQuery(adminDashboardQuery(search));
+  const users = dashboardQuery.data?.users ?? [];
+  const stats = dashboardQuery.data?.stats ?? null;
 
   // Debounce do termo de busca para reduzir carga do servidor
   useEffect(() => {
@@ -39,78 +35,34 @@ export default function Admin() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteConfirmUsername, setDeleteConfirmUsername] = useState('');
 
-  // 1. Validar se o usuário está logado, é admin e carregar dados
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      navigate('/login');
-      return;
-    }
-
-    if (!user.is_admin) {
-      showToast('Acesso negado. Apenas administradores podem acessar esta página.', 'error');
-      navigate('/library');
-      return;
-    }
-
-    let active = true;
-    Promise.resolve().then(() => {
-      if (active) setLoading(true);
-    });
-
-    const usersPromise = api.get(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`);
-    const statsPromise = api.get('/admin/stats');
-
-    Promise.all([usersPromise, statsPromise])
-      .then(([usersRes, statsRes]) => {
-        if (active) {
-          setUsers(usersRes.data);
-          setStats(statsRes.data);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        if (active) showToast('Erro ao carregar dados do painel administrativo.', 'error');
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user, authLoading, search, reloadTrigger, navigate, showToast]);
+  const invalidateDashboard = () => queryClient.invalidateQueries({ queryKey: adminKeys.all });
+  const toggleActiveMutation = useMutation({ mutationFn: toggleUserActive, onSuccess: invalidateDashboard });
+  const toggleAdminMutation = useMutation({ mutationFn: toggleUserAdmin, onSuccess: invalidateDashboard });
+  const deleteMutation = useMutation({ mutationFn: deleteUser, onSuccess: invalidateDashboard });
 
   // 3. Ações rápidas
   const handleToggleActive = (user: User) => {
-    api.post(`/admin/users/${user.id}/toggle-active`)
-      .then((res) => {
+    toggleActiveMutation.mutate(user.id, {
+      onSuccess: (data) => {
         showToast(
-          `Conta de ${user.username} foi ${res.data.is_deleted ? 'desativada' : 'ativada'} com sucesso!`,
+          `Conta de ${user.username} foi ${data.is_deleted ? 'desativada' : 'ativada'} com sucesso!`,
           'success'
         );
-        setReloadTrigger((prev) => prev + 1);
-      })
-      .catch((err) => {
-        const msg = err.response?.data?.detail || 'Erro ao alterar status da conta.';
-        showToast(msg, 'error');
-      });
+      },
+      onError: () => showToast('Erro ao alterar status da conta.', 'error'),
+    });
   };
 
   const handleToggleAdmin = (user: User) => {
-    api.post(`/admin/users/${user.id}/toggle-admin`)
-      .then((res) => {
+    toggleAdminMutation.mutate(user.id, {
+      onSuccess: (data) => {
         showToast(
-          `Privilégios de admin de ${user.username} foram ${res.data.is_admin ? 'concedidos' : 'revogados'}!`,
+          `Privilégios de admin de ${user.username} foram ${data.is_admin ? 'concedidos' : 'revogados'}!`,
           'success'
         );
-        setReloadTrigger((prev) => prev + 1);
-      })
-      .catch((err) => {
-        const msg = err.response?.data?.detail || 'Erro ao alterar privilégios administrativos.';
-        showToast(msg, 'error');
-      });
+      },
+      onError: () => showToast('Erro ao alterar privilégios administrativos.', 'error'),
+    });
   };
 
   const handleDeleteClick = (user: User) => {
@@ -121,25 +73,14 @@ export default function Admin() {
   const handleConfirmDelete = () => {
     if (!deleteConfirmId) return;
 
-    api.delete(`/admin/users/${deleteConfirmId}`)
-      .then(() => {
+    deleteMutation.mutate(deleteConfirmId, {
+      onSuccess: () => {
         showToast(`Usuário ${deleteConfirmUsername} excluído permanentemente!`, 'success');
         setDeleteConfirmId(null);
-        setReloadTrigger((prev) => prev + 1);
-      })
-      .catch((err) => {
-        const msg = err.response?.data?.detail || 'Erro ao excluir usuário permanentemente.';
-        showToast(msg, 'error');
-      });
+      },
+      onError: () => showToast('Erro ao excluir usuário permanentemente.', 'error'),
+    });
   };
-
-  if (authLoading || !user) {
-    return (
-      <div className={styles.container}>
-        <p className={styles.emptyText}>Verificando credenciais de administrador...</p>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>
@@ -180,7 +121,7 @@ export default function Admin() {
 
       {/* Tabela de Usuários */}
       <div className={styles.tableContainer}>
-        {loading ? (
+        {dashboardQuery.isPending ? (
           <Loader message="Carregando lista de usuários..." />
         ) : users.length === 0 ? (
           <p className={styles.emptyText}>Nenhum usuário correspondente encontrado.</p>

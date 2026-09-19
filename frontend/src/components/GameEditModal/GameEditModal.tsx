@@ -14,6 +14,20 @@ import RatingStars from '@/components/RatingStars/RatingStars';
 import { STANDARD_GENRES } from '@/utils/genres';
 import { STANDARD_PLATFORMS } from '@/utils/platforms';
 import api from '@/services/api';
+import {
+  Ban,
+  BookOpen,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  Gamepad2,
+  Link as LinkIcon,
+  Pause,
+  Pencil,
+  Star,
+  Target,
+  Trophy,
+} from 'lucide-react';
 
 function renderMarkdown(md: string): string {
   if (!md) return '';
@@ -311,7 +325,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                 <div className={styles.coverPlaceholderSmall}>Sem capa</div>
               )}
               <div className={styles.coverHoverOverlay}>
-                <span className={styles.coverPencilIcon}>✏️</span>
+                <span className={styles.coverPencilIcon}><Pencil aria-hidden="true" /></span>
                 <span className={styles.coverHoverTooltip}>Alterar capa</span>
               </div>
             </div>
@@ -391,7 +405,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
               disabled={isBusy}
               title={form.favorite ? "Remover dos Favoritos" : "Adicionar aos Favoritos"}
             >
-              {form.favorite ? '⭐' : '☆'}
+              <Star aria-hidden="true" fill={form.favorite ? 'currentColor' : 'none'} />
             </button>
             <button
               type="button"
@@ -412,7 +426,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
           {activeEditField === 'cover' && (
             <div className={styles.coverEditBox}>
               <div className={styles.coverInputRow}>
-                <span className={styles.coverInputLabel}>🔗 CAPA POR URL</span>
+                <span className={styles.coverInputLabel}><LinkIcon aria-hidden="true" size={15} /> CAPA POR URL</span>
                 <input
                   type="url"
                   className={styles.coverUrlInput}
@@ -465,13 +479,13 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
             <span className={styles.statusSectionLabel}>Status</span>
             <div className={styles.statusButtonsGrid}>
               {[
-                { name: 'Na biblioteca', icon: '📚', class: 'inLibrary' },
-                { name: 'Quero Jogar', icon: '🎯', class: 'wantToPlay' },
-                { name: 'Jogando', icon: '🎮', class: 'playing' },
-                { name: 'Zerado', icon: '✅', class: 'completed' },
-                { name: 'Em Espera', icon: '⏸️', class: 'onHold' },
-                { name: 'Abandonado', icon: '🚫', class: 'abandoned' },
-                { name: 'Platinado', icon: '🏆', class: 'platinized' },
+                { name: 'Na biblioteca', icon: <BookOpen aria-hidden="true" />, class: 'inLibrary' },
+                { name: 'Quero Jogar', icon: <Target aria-hidden="true" />, class: 'wantToPlay' },
+                { name: 'Jogando', icon: <Gamepad2 aria-hidden="true" />, class: 'playing' },
+                { name: 'Zerado', icon: <CheckCircle2 aria-hidden="true" />, class: 'completed' },
+                { name: 'Em Espera', icon: <Pause aria-hidden="true" />, class: 'onHold' },
+                { name: 'Abandonado', icon: <Ban aria-hidden="true" />, class: 'abandoned' },
+                { name: 'Platinado', icon: <Trophy aria-hidden="true" />, class: 'platinized' },
               ].map((item) => {
                 const isSelected = (form.status || 'Na biblioteca') === item.name;
                 return (
@@ -535,7 +549,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                   className={`${styles.hoursFieldBlock} ${activeEditField === 'hours_played' ? styles.fieldBlockEditing : ''}`}
                   onClick={() => toggleEditField('hours_played')}
                 >
-                  <span className={styles.fieldBlockLabel}>⏱️ Horas jogadas</span>
+                  <span className={styles.fieldBlockLabel}><Clock3 aria-hidden="true" size={15} /> Horas jogadas</span>
                   {activeEditField === 'hours_played' ? (
                     <input
                       type="number"
@@ -567,7 +581,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
           {/* Dates Card Grid with click to edit */}
           <div className={styles.datesCardBlock}>
             <div className={styles.datesHeader}>
-              <span>📅 Datas</span>
+              <span><CalendarDays aria-hidden="true" size={16} /> Datas</span>
             </div>
             <div className={styles.datesGrid}>
               

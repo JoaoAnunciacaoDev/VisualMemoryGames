@@ -32,7 +32,7 @@
 }
 
 .title:hover::after {
-  content: ' ✎';
+  content: '';
   font-size: var(--font-size-md);
   color: var(--muted);
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useLibrary } from '@/hooks/useLibrary';
 import api from '@/services/api';
+import { TestQueryProvider } from '@/test/TestRouter';
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -36,7 +37,7 @@ describe('useLibrary', () => {
   it('deve carregar a biblioteca com sucesso', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
 
-    const { result } = renderHook(() => useLibrary('user-123'));
+    const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
     await waitFor(() => {
       expect(result.current.games).toEqual(mockGames);
@@ -47,7 +48,7 @@ describe('useLibrary', () => {
 
   it('deve carregar mesmo se o userId for vazio', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
-    const { result } = renderHook(() => useLibrary(''));
+    const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
     await waitFor(() => {
       expect(result.current.games).toEqual(mockGames);
@@ -60,7 +61,7 @@ describe('useLibrary', () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
     vi.mocked(api.put).mockResolvedValue({});
 
-    const { result } = renderHook(() => useLibrary('user-123'));
+    const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
     await waitFor(() => {
       expect(result.current.games).toEqual(mockGames);
@@ -78,7 +79,7 @@ describe('useLibrary', () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
     vi.mocked(api.delete).mockResolvedValue({});
 
-    const { result } = renderHook(() => useLibrary('user-123'));
+    const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
     await waitFor(() => {
       expect(result.current.games).toEqual(mockGames);
@@ -94,7 +95,7 @@ describe('useLibrary', () => {
 
   it('deve expor a função loadLibrary para recarga manual', async () => {
     vi.mocked(api.get).mockResolvedValueOnce({ data: mockGames });
-    const { result } = renderHook(() => useLibrary('user-123'));
+    const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
     await waitFor(() => {
       expect(result.current.games).toEqual(mockGames);
@@ -106,12 +107,12 @@ describe('useLibrary', () => {
     });
 
     expect(api.get).toHaveBeenCalledTimes(2);
-    expect(result.current.games).toEqual([mockGames[0]]);
+    await waitFor(() => expect(result.current.games).toEqual([mockGames[0]]));
   });
 
   it('deve recarregar a biblioteca ao disparar o evento epic-synced', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
-    renderHook(() => useLibrary('user-123'));
+    renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledTimes(1);

@@ -90,10 +90,10 @@ export function useGameEditForm(game: LibraryGame) {
         throw new Error('O ano das datas não pode conter mais de 4 dígitos.');
       }
     };
-    checkDateYear(form.acquired_at);
-    checkDateYear(form.started_at);
-    checkDateYear(form.finished_at);
-    checkDateYear(form.platinum_at);
+    checkDateYear(form.acquired_at ?? null);
+    checkDateYear(form.started_at ?? null);
+    checkDateYear(form.finished_at ?? null);
+    checkDateYear(form.platinum_at ?? null);
 
     // Validações de Jogo Manual
     if (game.is_manual) {
@@ -114,12 +114,12 @@ export function useGameEditForm(game: LibraryGame) {
     }
 
     // Validação de Horas Jogadas
-    if (form.hours_played !== null && (isNaN(form.hours_played) || form.hours_played < 0)) {
+    if (form.hours_played != null && (isNaN(form.hours_played) || form.hours_played < 0)) {
       throw new Error('As horas jogadas não podem ser negativas.');
     }
 
     // Validação de Nota
-    if (canReview && form.rating !== null && (isNaN(form.rating) || form.rating < 0 || form.rating > 10)) {
+    if (canReview && form.rating != null && (isNaN(form.rating) || form.rating < 0 || form.rating > 10)) {
       throw new Error('A nota deve ser entre 0 e 10.');
     }
 

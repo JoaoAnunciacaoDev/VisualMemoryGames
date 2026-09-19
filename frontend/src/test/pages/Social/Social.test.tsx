@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { TestRouter } from '@/test/TestRouter';
 import Social from '@/pages/Social/Social';
 import api from '@/services/api';
 
@@ -45,23 +45,23 @@ describe('Social Page', () => {
     vi.clearAllMocks();
   });
 
-  it('renders loading state for feed', () => {
+  it('renders loading state for feed', async () => {
     mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
     render(
-      <MemoryRouter>
+      <TestRouter>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
-    expect(screen.getByText('Carregando feed...')).toBeInTheDocument();
+    expect(await screen.findByText('Carregando feed...')).toBeInTheDocument();
   });
 
   it('renders feed activities and rawg releases', async () => {
     mockApi.get.mockResolvedValueOnce({ data: mockFeed });
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
@@ -106,9 +106,9 @@ describe('Social Page', () => {
     mockApi.get.mockResolvedValueOnce({ data: paginatedMockFeed });
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
@@ -165,13 +165,13 @@ describe('Social Page', () => {
     });
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     // Switch to search tab
-    const searchTab = screen.getByText('Encontrar Pessoas');
+    const searchTab = await screen.findByText('Encontrar Pessoas');
     fireEvent.click(searchTab);
 
     // Enter query and submit
@@ -188,4 +188,3 @@ describe('Social Page', () => {
     });
   });
 });
-

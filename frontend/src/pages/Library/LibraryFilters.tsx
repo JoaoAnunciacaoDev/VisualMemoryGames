@@ -1,5 +1,5 @@
 import { Input } from '@/components/Shared';
-import { FiSearch, FiSliders, FiLayers, FiArrowDown, FiArrowUp, FiX, FiList } from 'react-icons/fi';
+import { ArrowDown, ArrowUp, Layers, List, Search, SlidersHorizontal, X } from 'lucide-react';
 import styles from '@/pages/Library/Library.module.css';
 import type { SortBy, YearField, HoursOperator, OriginFilter, GroupMode } from '@/pages/Library/Library.types';
 
@@ -165,7 +165,7 @@ export default function LibraryFilters({
       {/* Campo de pesquisa estilo barra superior */}
       <div className={styles.searchRow}>
         <div className={styles.searchInputWrapper}>
-          <FiSearch className={styles.searchIcon} />
+          <Search aria-hidden="true" className={styles.searchIcon} />
           <Input
             className={styles.searchInput}
             type="text"
@@ -179,7 +179,7 @@ export default function LibraryFilters({
 
       {/* Seção FILTROS */}
       <div className={styles.sectionHeader}>
-        <FiSliders className={styles.sectionIcon} />
+        <SlidersHorizontal aria-hidden="true" className={styles.sectionIcon} />
         <span>FILTROS</span>
       </div>
 
@@ -336,7 +336,7 @@ export default function LibraryFilters({
         {/* Coluna Esquerda: ORDENAÇÃO */}
         <div className={styles.sortContainer}>
           <div className={styles.sectionHeader}>
-            <FiList className={styles.sectionIcon} />
+            <List aria-hidden="true" className={styles.sectionIcon} />
             <span>ORDENAÇÃO</span>
           </div>
           <div className={styles.sortControlsRow}>
@@ -364,7 +364,7 @@ export default function LibraryFilters({
               title={sortOrder === 'asc' ? 'Crescente' : 'Decrescente'}
               aria-label="Alternar ordem de classificação"
             >
-              {sortOrder === 'asc' ? <FiArrowUp /> : <FiArrowDown />}
+              {sortOrder === 'asc' ? <ArrowUp aria-hidden="true" /> : <ArrowDown aria-hidden="true" />}
             </button>
           </div>
         </div>
@@ -372,7 +372,7 @@ export default function LibraryFilters({
         {/* Coluna Direita: AGRUPAR POR */}
         <div className={styles.groupContainer}>
           <div className={styles.sectionHeader}>
-            <FiLayers className={styles.sectionIcon} />
+            <Layers aria-hidden="true" className={styles.sectionIcon} />
             <span>AGRUPAR POR</span>
           </div>
           <div className={styles.groupControlsRow}>
@@ -407,7 +407,7 @@ export default function LibraryFilters({
                 className={styles.chipRemoveBtn}
                 aria-label={`Remover filtro ${badge.label}`}
               >
-                <FiX />
+                <X aria-hidden="true" />
               </button>
             </span>
           ))}

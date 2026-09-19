@@ -1,59 +1,31 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import api from '@/services/api';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams } from '@tanstack/react-router';
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, PageTitle, Button, Modal, Loader } from '@/components/Shared';
 import { translateGenre } from '@/utils/genres';
 import { getBestGameCover } from '@/services/media';
 import { getStoreLabel } from '@/types/enums';
-import { LibraryGame } from '@/types';
 import styles from './Profile.module.css';
 import FollowListModal from './FollowListModal';
-
-interface DashboardGame {
-  title: string;
-  cover_url: string | null;
-  custom_cover_url?: string | null;
-  hours_played: number;
-  rating: number | null;
-  finished_at: string | null;
-}
-
-interface YearlyGames {
-  year: number;
-  games: DashboardGame[];
-}
-
-interface DashboardData {
-  username: string;
-  created_at: string | null;
-  games_count: number;
-  lists_count: number;
-  tierlists_count: number;
-  favorites_count: number;
-  status_distribution: Record<string, number>;
-  most_played_genre: string | null;
-  genre_distribution: Record<string, number>;
-  has_pending_genres: boolean;
-  followers_count: number;
-  following_count: number;
-  store_distribution: Record<string, number>;
-  playing_games: DashboardGame[];
-  yearly_games: YearlyGames[];
-  yearly_platinums: YearlyGames[];
-  favorite_games: DashboardGame[];
-  is_following?: boolean;
-}
+import { Clock3, Gamepad2, HelpCircle, LockKeyhole, RefreshCw, Star } from 'lucide-react';
+import {
+  profileDashboardQuery,
+  profileGamesQuery,
+  profileKeys,
+  toggleProfileFollow,
+} from '@/features/profile/queries';
 
 export default function Profile() {
-  const { userId } = useParams<{ userId?: string }>();
+  const { userId } = useParams({ strict: false });
   const { showToast } = useToast();
   const { user: currentUser } = useAuth();
-  const [data, setData] = useState<DashboardData | null>(null);
+  const queryClient = useQueryClient();
+  const dashboardQuery = useQuery(profileDashboardQuery(userId));
+  const data = dashboardQuery.data ?? null;
 
   const isOwnProfile = !userId || (currentUser && (userId.toLowerCase() === currentUser.id.toLowerCase() || userId.toLowerCase() === currentUser.username.toLowerCase()));
-  const [loading, setLoading] = useState(true);
   const [selectedBoardYear, setSelectedBoardYear] = useState<number>(new Date().getFullYear());
   const [selectedBoardMonth, setSelectedBoardMonth] = useState<string>('all');
   const [selectedPlatYear, setSelectedPlatYear] = useState<number>(new Date().getFullYear());
@@ -64,29 +36,23 @@ export default function Profile() {
   const [favoritesCollapsed, setFavoritesCollapsed] = useState(false);
   const [showGenresModal, setShowGenresModal] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-  const [userGames, setUserGames] = useState<LibraryGame[]>([]);
-  const [loadingGames, setLoadingGames] = useState(false);
+  const gamesQuery = useQuery({ ...profileGamesQuery(userId), enabled: showGenresModal });
+  const userGames = gamesQuery.data ?? [];
+  const loadingGames = gamesQuery.isPending;
   const [followModal, setFollowModal] = useState<{isOpen: boolean, type: 'followers' | 'following'}>({ isOpen: false, type: 'followers' });
+
+  const followMutation = useMutation({
+    mutationFn: toggleProfileFollow,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: profileKeys.dashboard(userId) }),
+  });
 
   const handleFollowToggle = async () => {
     if (!data) return;
     try {
-      const url = `/social/users/${data.username}/follow`;
+      await followMutation.mutateAsync({ username: data.username, following: !!data.is_following });
       if (data.is_following) {
-        await api.delete(url);
-        setData(prev => prev ? { 
-          ...prev, 
-          is_following: false,
-          followers_count: prev.followers_count - 1 
-        } : null);
         showToast('Deixou de seguir o usuário.', 'info');
       } else {
-        await api.post(url);
-        setData(prev => prev ? { 
-          ...prev, 
-          is_following: true,
-          followers_count: prev.followers_count + 1 
-        } : null);
         showToast('Seguindo o usuário!', 'success');
       }
     } catch {
@@ -99,74 +65,15 @@ export default function Profile() {
     setSelectedGenre(null);
   };
 
-  useEffect(() => {
-    if (!showGenresModal || userGames.length > 0) return;
-
-    const fetchGames = async () => {
-      setLoadingGames(true);
-      try {
-        const endpoint = userId ? `/user-games/user/${userId}` : '/user-games/me';
-        const res = await api.get(endpoint);
-        setUserGames(res.data);
-      } catch (err) {
-        console.error('Erro ao carregar jogos da biblioteca:', err);
-      } finally {
-        setLoadingGames(false);
-      }
-    };
-
-    void fetchGames();
-  }, [showGenresModal, userGames.length, userId]);
-
   const MONTH_NAMES = [
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
-  useEffect(() => {
-    let active = true;
-    const loadData = async () => {
-      await Promise.resolve();
-      if (!active) return;
-      setData(null);
-      setUserGames([]);
-      setLoading(true);
-      
-      const endpoint = userId ? `/users/${userId}/dashboard` : '/users/me/dashboard';
-      try {
-        const res = await api.get(endpoint);
-        if (!active) return;
-        const d: DashboardData = res.data;
-        setData(d);
-        if (d.yearly_games && d.yearly_games.length > 0) {
-          setSelectedBoardYear(d.yearly_games[0].year);
-        }
-        if (d.yearly_platinums && d.yearly_platinums.length > 0) {
-          setSelectedPlatYear(d.yearly_platinums[0].year);
-        }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        if (!active) return;
-        if (err.response?.status === 403) {
-          showToast('Perfil privado ou você não tem permissão.', 'error');
-        } else {
-          showToast('Erro ao carregar dados do perfil.', 'error');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-    loadData();
-    return () => {
-      active = false;
-    };
-  }, [userId, showToast]);
-
   const getFilteredBoardGames = () => {
     if (!data) return [];
-    const yearGroup = data.yearly_games.find((yg) => yg.year === selectedBoardYear);
+    const boardYear = data.yearly_games.some((yg) => yg.year === selectedBoardYear) ? selectedBoardYear : data.yearly_games[0]?.year;
+    const yearGroup = data.yearly_games.find((yg) => yg.year === boardYear);
     if (!yearGroup) return [];
 
     if (selectedBoardMonth === 'all') {
@@ -183,7 +90,8 @@ export default function Profile() {
 
   const getFilteredPlatGames = () => {
     if (!data) return [];
-    const yearGroup = data.yearly_platinums.find((yg) => yg.year === selectedPlatYear);
+    const platinumYear = data.yearly_platinums.some((yg) => yg.year === selectedPlatYear) ? selectedPlatYear : data.yearly_platinums[0]?.year;
+    const yearGroup = data.yearly_platinums.find((yg) => yg.year === platinumYear);
     if (!yearGroup) return [];
 
     if (selectedPlatMonth === 'all') {
@@ -201,7 +109,7 @@ export default function Profile() {
   const boardGames = getFilteredBoardGames();
   const platGames = getFilteredPlatGames();
 
-  if (loading) {
+  if (dashboardQuery.isPending) {
     return <Loader message="Carregando perfil..." />;
   }
 
@@ -224,7 +132,7 @@ export default function Profile() {
           maxWidth: '500px',
           margin: '4rem auto'
         }}>
-          <span style={{ fontSize: '3rem' }}>🔒</span>
+          <LockKeyhole aria-hidden="true" size={48} />
           <h3 style={{ color: 'var(--text-primary)', margin: '0' }}>Perfil Privado</h3>
           <p style={{ margin: '0', fontSize: '0.95rem', lineHeight: '1.5' }}>Este perfil é privado. Você precisa seguir este usuário para visualizar suas atividades e biblioteca.</p>
         </div>
@@ -431,7 +339,7 @@ export default function Profile() {
           <h3 className={styles.cardTitle}>Gênero Favorito</h3>
           {data.most_played_genre ? (
             <div className={styles.genreHighlight}>
-              <div className={styles.gamepadIcon}>🎮</div>
+              <div className={styles.gamepadIcon}><Gamepad2 aria-hidden="true" /></div>
               <span className={styles.genreName}>
                 {translateGenre(data.most_played_genre)}
               </span>
@@ -450,14 +358,14 @@ export default function Profile() {
             </div>
           ) : (
             <div className={styles.genreHighlight}>
-              <div className={styles.gamepadIcon}>❓</div>
+              <div className={styles.gamepadIcon}><HelpCircle aria-hidden="true" /></div>
               <p className={styles.emptyText}>Adicione jogos com gêneros para gerar estatísticas.</p>
             </div>
           )}
 
           {data.has_pending_genres && (
             <div className={styles.pendingGenresNotice}>
-              <span className={styles.pendingGenresIcon}>🔄</span>
+              <span className={styles.pendingGenresIcon}><RefreshCw aria-hidden="true" /></span>
               <span className={styles.pendingGenresText}>
                 Sincronizando gêneros e anos de lançamento da Steam em segundo plano, os dados serão atualizados gradualmente.
               </span>
@@ -509,7 +417,8 @@ export default function Profile() {
                           {game.title}
                         </span>
                         <span className={styles.boardGameMeta}>
-                          🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
+                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
                         </span>
                       </div>
                     </div>
@@ -601,7 +510,8 @@ export default function Profile() {
                           {game.title}
                         </span>
                         <span className={styles.boardGameMeta}>
-                          🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
+                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
                         </span>
                       </div>
                     </div>
@@ -693,7 +603,8 @@ export default function Profile() {
                           {game.title}
                         </span>
                         <span className={styles.boardGameMeta}>
-                          🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
+                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
                         </span>
                       </div>
                     </div>
@@ -752,7 +663,8 @@ export default function Profile() {
                           {game.title}
                         </span>
                         <span className={styles.boardGameMeta}>
-                          🕒 {game.hours_played}h {game.rating !== null && ` | ⭐ ${game.rating}/10`}
+                          <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
+                          {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
                         </span>
                       </div>
                     </div>
@@ -885,7 +797,7 @@ export default function Profile() {
                                 </span>
                                 {ug.hours_played != null && ug.hours_played > 0 && (
                                   <span className={styles.genreGameHours}>
-                                    🕒 {ug.hours_played}h
+                                    <Clock3 aria-hidden="true" size={14} /> {ug.hours_played}h
                                   </span>
                                 )}
                                 {ug.rating !== null && (

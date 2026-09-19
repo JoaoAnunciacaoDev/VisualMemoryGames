@@ -93,7 +93,7 @@ O projeto utiliza:
 
 - [Mise](https://mise.jdx.dev/) (gerenciador de dependências globais e runtime)
 - Poetry (para dependências Python)
-- Node.js & npm (para o frontend)
+- Bun 1.3 (runtime e gerenciador de pacotes do frontend)
 
 ---
 

@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { TestRouter } from '@/test/TestRouter';
 import FollowListModal from '@/pages/Profile/FollowListModal';
 import api from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,23 +38,23 @@ describe('FollowListModal', () => {
     mockUseAuth.mockReturnValue({ userId: 'me-id' });
   });
 
-  it('renders loading state initially', () => {
+  it('renders loading state initially', async () => {
     mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
     render(
-      <MemoryRouter>
+      <TestRouter>
         <FollowListModal userId="me-id" type="followers" onClose={mockOnClose} />
-      </MemoryRouter>
+      </TestRouter>
     );
-    expect(screen.getByText('Carregando...')).toBeInTheDocument();
+    expect(await screen.findByText('Carregando...')).toBeInTheDocument();
   });
 
   it('renders list of followers after fetch', async () => {
     mockApi.get.mockResolvedValueOnce({ data: mockUsers });
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <FollowListModal userId="me-id" type="followers" onClose={mockOnClose} />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
@@ -69,9 +69,9 @@ describe('FollowListModal', () => {
     mockApi.get.mockResolvedValueOnce({ data: [] });
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <FollowListModal userId="me-id" type="following" onClose={mockOnClose} />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
@@ -85,9 +85,9 @@ describe('FollowListModal', () => {
     mockApi.delete.mockResolvedValueOnce({});
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <FollowListModal userId="me-id" type="followers" onClose={mockOnClose} />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     // Wait for list to load
@@ -121,12 +121,12 @@ describe('FollowListModal', () => {
     mockApi.get.mockResolvedValueOnce({ data: [] });
 
     render(
-      <MemoryRouter>
+      <TestRouter>
         <FollowListModal userId="me-id" type="followers" onClose={mockOnClose} />
-      </MemoryRouter>
+      </TestRouter>
     );
 
-    const closeBtn = screen.getByText('×');
+    const closeBtn = await screen.findByText('×');
     fireEvent.click(closeBtn);
     expect(mockOnClose).toHaveBeenCalled();
   });

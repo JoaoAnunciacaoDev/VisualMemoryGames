@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, SyntheticEvent } from 'react';
+import { useState, SyntheticEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '@/services/api';
 import { useToast } from '@/hooks/useToast';
 import Modal from '@/components/Shared/Modal/Modal';
@@ -18,6 +19,12 @@ import {
   RefreshCw,
   Trash2,
 } from 'lucide-react';
+import {
+  gogAccountsQuery,
+  itchAccountsQuery,
+  steamAccountsQuery,
+} from '@/features/integrations/queries';
+import { myLibraryQuery } from '@/features/library/queries';
 
 interface Props {
   onClose: () => void;
@@ -122,42 +129,17 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   };
 
   // States para Steam
-  interface SteamAccount {
-    id: string;
-    steam_id: string;
-    persona_name: string | null;
-    avatar_url: string | null;
-    last_sync_at: string | null;
-  }
-  const [steamAccounts, setSteamAccounts] = useState<SteamAccount[]>([]);
   const [steamUrl, setSteamUrl] = useState('');
   const [isFetchingSteam, setIsFetchingSteam] = useState(false);
 
   // States para GOG
-  interface GogAccount {
-    id: string;
-    username: string;
-    persona_name: string | null;
-    avatar_url: string | null;
-    last_sync_at: string | null;
-  }
-  const [gogAccounts, setGogAccounts] = useState<GogAccount[]>([]);
   const [gogUrl, setGogUrl] = useState('');
   const [isFetchingGog, setIsFetchingGog] = useState(false);
 
   // States para Itch.io
-  interface ItchAccount {
-    id: string;
-    itch_id: string;
-    username: string;
-    avatar_url: string | null;
-    last_sync_at: string | null;
-  }
-  const [itchAccounts, setItchAccounts] = useState<ItchAccount[]>([]);
   const [isFetchingItch, setIsFetchingItch] = useState(false);
 
   // States para Epic Games Store
-  const [epicGamesCount, setEpicGamesCount] = useState<number | null>(null);
   const [isEpicInstructionsOpen, setIsEpicInstructionsOpen] = useState(false);
   const [isCopiedScript, setIsCopiedScript] = useState(false);
   const [epicPastedText, setEpicPastedText] = useState('');
@@ -167,86 +149,23 @@ export default function SettingsModal({ onClose, onLogout }: Props) {
   const [isEpicDragging, setIsEpicDragging] = useState(false);
   const [showEpicDeleteConfirm, setShowEpicDeleteConfirm] = useState(false);
 
-  const fetchSteamAccounts = useCallback(async () => {
-    try {
-      const res = await api.get('/users/me/steam/accounts');
-      setSteamAccounts(res.data);
-    } catch (err) {
-      console.error('Erro ao buscar contas Steam:', err);
-    }
-  }, []);
+  const integrationsEnabled = activeTab === 'integrations';
+  const steamQuery = useQuery({ ...steamAccountsQuery(), enabled: integrationsEnabled });
+  const gogQuery = useQuery({ ...gogAccountsQuery(), enabled: integrationsEnabled });
+  const itchQuery = useQuery({ ...itchAccountsQuery(), enabled: integrationsEnabled });
+  const libraryQuery = useQuery({ ...myLibraryQuery(), enabled: integrationsEnabled });
 
-  const fetchGogAccounts = useCallback(async () => {
-    try {
-      const res = await api.get('/users/me/gog/accounts');
-      setGogAccounts(res.data);
-    } catch (err) {
-      console.error('Erro ao buscar contas GOG:', err);
-    }
-  }, []);
+  const steamAccounts = steamQuery.data ?? [];
+  const gogAccounts = gogQuery.data ?? [];
+  const itchAccounts = itchQuery.data ?? [];
+  const epicGamesCount = libraryQuery.data
+    ? libraryQuery.data.filter((game) => game.store === 'EPIC').length
+    : null;
 
-  const fetchItchAccounts = useCallback(async () => {
-    try {
-      const res = await api.get('/users/me/itch/accounts');
-      setItchAccounts(res.data);
-    } catch (err) {
-      console.error('Erro ao buscar contas Itch.io:', err);
-    }
-  }, []);
-
-  const fetchEpicGamesCount = useCallback(async () => {
-    try {
-      const res = await api.get('/user-games/me');
-      const count = (res.data as Array<{ store?: string }>).filter((g) => g.store === 'EPIC').length;
-      setEpicGamesCount(count);
-    } catch (err) {
-      console.error('Erro ao buscar jogos da Epic:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (activeTab !== 'integrations') return;
-
-    let active = true;
-    api.get('/users/me/steam/accounts')
-      .then((res) => {
-        if (active) setSteamAccounts(res.data);
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar contas Steam:', err);
-      });
-
-    api.get('/users/me/gog/accounts')
-      .then((res) => {
-        if (active) setGogAccounts(res.data);
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar contas GOG:', err);
-      });
-      
-    api.get('/users/me/itch/accounts')
-      .then((res) => {
-        if (active) setItchAccounts(res.data);
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar contas Itch.io:', err);
-      });
-
-    api.get('/user-games/me')
-      .then((res) => {
-        if (active) {
-          const count = (res.data as Array<{ store?: string }>).filter((g) => g.store === 'EPIC').length;
-          setEpicGamesCount(count);
-        }
-      })
-      .catch((err) => {
-        console.error('Erro ao buscar jogos da Epic:', err);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [activeTab]);
+  const fetchSteamAccounts = () => steamQuery.refetch().then(() => undefined);
+  const fetchGogAccounts = () => gogQuery.refetch().then(() => undefined);
+  const fetchItchAccounts = () => itchQuery.refetch().then(() => undefined);
+  const fetchEpicGamesCount = () => libraryQuery.refetch().then(() => undefined);
 
   const handleConnectSteam = async (e: SyntheticEvent) => {
     e.preventDefault();

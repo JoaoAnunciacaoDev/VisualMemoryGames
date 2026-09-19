@@ -1,31 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import styles from './RecommendationCarousel.module.css';
-import api from '@/services/api';
 import Button from '@/components/Shared/Button/Button';
-
-export interface RecommendationGame {
-  id: number;
-  external_id: number;
-  title: string;
-  cover_url: string;
-  release_year: number | null;
-  rating?: number;
-  source: string;
-}
-
-interface Store {
-  id: number;
-  name: string;
-  url: string;
-}
-
-interface GameDetails {
-  synopsis: string;
-  genres: string[];
-  trailer_url?: string;
-  stores?: Store[];
-  rating?: number;
-}
+import { Star, X } from 'lucide-react';
+import {
+  recommendationDetailsQuery,
+  type RecommendationGame,
+} from '@/features/recommendations/queries';
 
 interface Props {
   title: string;
@@ -34,30 +15,15 @@ interface Props {
 
 export default function RecommendationCarousel({ title, games }: Props) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [details, setDetails] = useState<Record<number, GameDetails>>({});
-  const [loadingDetails, setLoadingDetails] = useState<Record<number, boolean>>({});
-  
   const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
-
-  const fetchDetails = async (gameId: number, externalId: number) => {
-    if (details[gameId] || loadingDetails[gameId]) return;
-    setLoadingDetails((prev) => ({ ...prev, [gameId]: true }));
-    try {
-      const res = await api.get(`/users/me/recommendations/game-details/${externalId}`);
-      setDetails((prev) => ({ ...prev, [gameId]: res.data }));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingDetails((prev) => ({ ...prev, [gameId]: false }));
-    }
-  };
+  const expandedGame = games.find((game) => game.id === expandedId);
+  const detailsQuery = useQuery(recommendationDetailsQuery(expandedGame?.external_id ?? null));
 
   const toggleExpand = (game: RecommendationGame) => {
     if (expandedId === game.id) {
       setExpandedId(null);
     } else {
       setExpandedId(game.id);
-      fetchDetails(game.id, game.external_id);
     }
   };
   
@@ -76,8 +42,8 @@ export default function RecommendationCarousel({ title, games }: Props) {
         <div className={`${styles.carouselTrack} scrollbar-visualmemory`}>
           {games.map((game) => {
             const isExpanded = expandedId === game.id;
-            const isLoading = loadingDetails[game.id];
-            const gameDetails = details[game.id];
+            const isLoading = isExpanded && detailsQuery.isFetching;
+            const gameDetails = isExpanded ? detailsQuery.data : undefined;
 
             return (
               <div
@@ -111,7 +77,7 @@ export default function RecommendationCarousel({ title, games }: Props) {
                       }}
                       aria-label="Fechar"
                     >
-                      X
+                      <X aria-hidden="true" size={18} />
                     </button>
                   )}
                 </div>
@@ -128,7 +94,8 @@ export default function RecommendationCarousel({ title, games }: Props) {
                         <>
                           {gameDetails?.rating && (
                             <div className={styles.rating}>
-                              ⭐ {Math.round(gameDetails.rating * 2 * 10) / 10} / 10
+                              <Star aria-hidden="true" size={16} />{' '}
+                              {Math.round(gameDetails.rating * 2 * 10) / 10} / 10
                             </div>
                           )}
                           <div className={styles.genres}>

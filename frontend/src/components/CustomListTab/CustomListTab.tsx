@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/useToast';
 import { useConfirmAction } from '@/hooks/useConfirmAction';
-import api from '@/services/api';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
 import Input from '@/components/Shared/Input/Input';
@@ -28,14 +28,17 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-interface CustomList {
-  id: string;
-  name: string;
-  games: GameInList[];
-  is_system: boolean;
-  list_type: string | null;
-}
+import {
+  addGamesToCustomList,
+  createCustomList,
+  customListKeys,
+  customListsQuery,
+  deleteCustomList,
+  removeGameFromCustomList,
+  renameCustomList,
+  reorderCustomList,
+  type CustomList,
+} from '@/features/custom-lists/queries';
 
 interface Props {
   libraryGames: LibraryGame[];
@@ -43,7 +46,8 @@ interface Props {
 }
 
 export default function CustomListsTab({ libraryGames, onLibraryChange }: Props) {
-  const [lists, setLists] = useState<CustomList[]>([]);
+  const queryClient = useQueryClient();
+  const { data: lists = [] } = useQuery(customListsQuery());
   const [newListName, setNewListName] = useState('');
   const [expandedList, setExpandedList] = useState<string | null>(null);
   const [selectingForList, setSelectingForList] = useState<string | null>(null);
@@ -56,59 +60,19 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
 
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
-  const loadLists = useCallback(async () => {
-    try {
-      const response = await api.get('/lists/me');
-      const priority: Record<string, number> = {
-        'favorites': 1,
-        'completed_year': 2,
-        'platinized_year': 3,
-      };
-      const sorted = response.data.sort((a: CustomList, b: CustomList) => {
-        const aPriority = a.list_type ? (priority[a.list_type] ?? 4) : 4;
-        const bPriority = b.list_type ? (priority[b.list_type] ?? 4) : 4;
-        if (aPriority !== bPriority) return aPriority - bPriority;
-        return a.name.localeCompare(b.name);
-      });
-      setLists(sorted);
-    } catch {
-      showToast('Erro ao carregar listas.', 'error');
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    let active = true;
-    api.get('/lists/me')
-      .then((response) => {
-        if (!active) return;
-        const priority: Record<string, number> = {
-          'favorites': 1,
-          'completed_year': 2,
-          'platinized_year': 3,
-        };
-        const sorted = response.data.sort((a: CustomList, b: CustomList) => {
-          const aPriority = a.list_type ? (priority[a.list_type] ?? 4) : 4;
-          const bPriority = b.list_type ? (priority[b.list_type] ?? 4) : 4;
-          if (aPriority !== bPriority) return aPriority - bPriority;
-          return a.name.localeCompare(b.name);
-        });
-        setLists(sorted);
-      })
-      .catch(() => {
-        if (active) showToast('Erro ao carregar listas.', 'error');
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [showToast]);
+  const refreshLists = () => queryClient.invalidateQueries({ queryKey: customListKeys.mine() });
+  const createMutation = useMutation({ mutationFn: createCustomList, onSuccess: refreshLists });
+  const deleteMutation = useMutation({ mutationFn: deleteCustomList, onSuccess: refreshLists });
+  const renameMutation = useMutation({ mutationFn: renameCustomList, onSuccess: refreshLists });
+  const addGamesMutation = useMutation({ mutationFn: addGamesToCustomList, onSuccess: refreshLists });
+  const removeGameMutation = useMutation({ mutationFn: removeGameFromCustomList, onSuccess: refreshLists });
+  const reorderMutation = useMutation({ mutationFn: reorderCustomList });
 
   const handleCreateList = async () => {
     if (!newListName.trim()) return;
     try {
-      await api.post('/lists/', { name: newListName.trim() });
+      await createMutation.mutateAsync(newListName.trim());
       setNewListName('');
-      await loadLists();
       showToast('Lista criada!', 'success');
     } catch {
       showToast('Erro ao criar lista.', 'error');
@@ -118,9 +82,8 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
   const handleDeleteList = async () => {
     if (!deleteListModal.target) return;
     try {
-      await api.delete(`/lists/${deleteListModal.target}`);
+      await deleteMutation.mutateAsync(deleteListModal.target);
       if (expandedList === deleteListModal.target) setExpandedList(null);
-      await loadLists();
       showToast('Lista removida.', 'info');
     } catch {
       showToast('Erro ao remover lista.', 'error');
@@ -132,8 +95,7 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
   const handleRenameList = async (listId: string) => {
     if (!editingListName.trim()) return;
     try {
-      await api.put(`/lists/${listId}`, { name: editingListName.trim() });
-      await loadLists();
+      await renameMutation.mutateAsync({ id: listId, name: editingListName.trim() });
       showToast('Lista renomeada!', 'success');
     } catch {
       showToast('Erro ao renomear lista.', 'error');
@@ -145,10 +107,7 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
 
   const handleAddGames = async (listId: string, gameIds: string[]) => {
     try {
-      await Promise.all(
-        gameIds.map((gameId) => api.post(`/lists/${listId}/games/${gameId}`, {}))
-      );
-      await loadLists();
+      await addGamesMutation.mutateAsync({ listId, gameIds });
       setSelectingForList(null);
       showToast(`${gameIds.length} jogo(s) adicionado(s) à lista!`, 'success');
     } catch {
@@ -159,10 +118,7 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
   const handleRemoveGame = async () => {
     if (!removeGameModal.target) return;
     try {
-      await api.delete(
-        `/lists/${removeGameModal.target.listId}/games/${removeGameModal.target.gameId}`
-      );
-      await loadLists();
+      await removeGameMutation.mutateAsync(removeGameModal.target);
       onLibraryChange();
       showToast('Jogo removido da lista.', 'info');
     } catch {
@@ -205,17 +161,18 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
     const [movedGame] = reorderedGames.splice(oldIndex, 1);
     reorderedGames.splice(newIndex, 0, movedGame);
 
-    setLists((prev) =>
-      prev.map((l) => (l.id === listId ? { ...l, games: reorderedGames } : l))
+    const previousLists = queryClient.getQueryData<CustomList[]>(customListKeys.mine());
+    queryClient.setQueryData<CustomList[]>(customListKeys.mine(), (current = []) =>
+      current.map((list) => (list.id === listId ? { ...list, games: reorderedGames } : list)),
     );
 
     try {
       const gameIds = reorderedGames.map((g) => g.id);
-      await api.put(`/lists/${listId}/reorder`, { game_ids: gameIds });
+      await reorderMutation.mutateAsync({ listId, gameIds });
       showToast('Ordem da lista salva!', 'success');
     } catch {
       showToast('Erro ao salvar a ordem da lista.', 'error');
-      await loadLists();
+      queryClient.setQueryData(customListKeys.mine(), previousLists);
     }
   };
 

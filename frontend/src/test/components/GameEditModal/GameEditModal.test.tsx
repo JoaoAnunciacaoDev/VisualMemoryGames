@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import GameEditModal from '@/components/GameEditModal/GameEditModal';
 import { useGameEditForm } from '@/hooks/useGameEditForm';
 import type { LibraryGame } from '@/types';
+import { TestQueryProvider } from '@/test/TestRouter';
 
 vi.mock('@/hooks/useGameEditForm');
 vi.mock('@/hooks/useConfirmAction', () => ({
@@ -66,7 +67,11 @@ describe('GameEditModal', () => {
   });
 
   function renderModal(game: LibraryGame = mockGame) {
-    return render(<GameEditModal game={game} onSave={onSave} onRemove={onRemove} onClose={onClose} />);
+    return render(
+      <TestQueryProvider>
+        <GameEditModal game={game} onSave={onSave} onRemove={onRemove} onClose={onClose} />
+      </TestQueryProvider>,
+    );
   }
 
   it('deve esconder campos de review quando status é Quero Jogar', () => {

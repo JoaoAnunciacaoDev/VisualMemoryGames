@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
@@ -13,7 +14,12 @@ import { EditGamePayload } from '@/hooks/useGameEditForm';
 import RatingStars from '@/components/RatingStars/RatingStars';
 import { STANDARD_GENRES } from '@/utils/genres';
 import { STANDARD_PLATFORMS } from '@/utils/platforms';
-import api from '@/services/api';
+import {
+  deleteGameReview,
+  reviewKeys,
+  saveGameReview,
+  userGameReviewsQuery,
+} from '@/features/reviews/queries';
 import {
   Ban,
   BookOpen,
@@ -27,6 +33,7 @@ import {
   Star,
   Target,
   Trophy,
+  X,
 } from 'lucide-react';
 
 function renderMarkdown(md: string): string {
@@ -72,6 +79,7 @@ function renderMarkdown(md: string): string {
 
 export default function GameEditModal({ game, onSave, onRemove, onClose }: { game: LibraryGame; onSave: (data: EditGamePayload) => Promise<void>; onRemove: () => Promise<void>; onClose: () => void; }) {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const {
     form,
     coverFile,
@@ -100,46 +108,31 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
   };
 
   // Multiple Reviews state
-  const [reviews, setReviews] = useState<UserGameReview[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const reviewsQuery = useQuery(userGameReviewsQuery(game.id));
+  const reviews = reviewsQuery.data ?? [];
+  const reviewsLoading = reviewsQuery.isPending;
   const [showHistory, setShowHistory] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   // Review form states
   const [reviewNotes, setReviewNotes] = useState('');
-  const [isReviewSaving, setIsReviewSaving] = useState(false);
-
-  const fetchReviews = useCallback(async () => {
-    try {
-      setReviewsLoading(true);
-      const res = await api.get(`/user-games/${game.id}/reviews`);
-      const reviewsList = res.data;
-      setReviews(reviewsList);
-
-      // Sincronizar form principal com a avaliação mais recente
-      const latest = reviewsList[0];
-      if (latest) {
-        updateField('rating', latest.rating);
-        updateField('notes', latest.notes);
-      }
-      return reviewsList;
-    } catch (err) {
-      console.error('Erro ao carregar avaliações:', err);
-      return [];
-    } finally {
-      setReviewsLoading(false);
-    }
-  }, [game.id, updateField]);
+  const saveReviewMutation = useMutation({
+    mutationFn: saveGameReview,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: reviewKeys.forGame(game.id) }),
+  });
+  const deleteReviewMutation = useMutation({
+    mutationFn: deleteGameReview,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: reviewKeys.forGame(game.id) }),
+  });
+  const isReviewSaving = saveReviewMutation.isPending || deleteReviewMutation.isPending;
 
   useEffect(() => {
-    if (game.id) {
-      Promise.resolve().then(() => {
-        fetchReviews();
-        setEditingReviewId(null);
-        setReviewNotes('');
-      });
+    const latest = reviewsQuery.data?.[0];
+    if (latest) {
+      updateField('rating', latest.rating);
+      updateField('notes', latest.notes);
     }
-  }, [game.id, fetchReviews]);
+  }, [reviewsQuery.data, updateField]);
 
   const handleSaveReview = async () => {
     if (form.rating === null && !reviewNotes.trim()) {
@@ -147,28 +140,23 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
       return;
     }
 
-    setIsReviewSaving(true);
     try {
-      if (editingReviewId) {
-        await api.put(`/user-games/${game.id}/reviews/${editingReviewId}`, {
-          rating: form.rating,
+      await saveReviewMutation.mutateAsync({
+        userGameId: game.id,
+        reviewId: editingReviewId ?? undefined,
+        input: {
+          rating: form.rating ?? null,
           notes: reviewNotes.trim() || null,
-        });
-        showToast('Avaliação atualizada com sucesso!', 'success');
-      } else {
-        await api.post(`/user-games/${game.id}/reviews`, {
-          rating: form.rating,
-          notes: reviewNotes.trim() || null,
-        });
-        showToast('Avaliação adicionada com sucesso!', 'success');
-      }
+        },
+      });
+      showToast(
+        editingReviewId ? 'Avaliação atualizada com sucesso!' : 'Avaliação adicionada com sucesso!',
+        'success',
+      );
       setReviewNotes('');
       setEditingReviewId(null);
-      await fetchReviews();
     } catch {
       showToast('Erro ao salvar avaliação.', 'error');
-    } finally {
-      setIsReviewSaving(false);
     }
   };
 
@@ -183,23 +171,20 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
   };
 
   const handleDeleteReview = async (reviewId: string) => {
-    setIsReviewSaving(true);
     try {
-      await api.delete(`/user-games/${game.id}/reviews/${reviewId}`);
+      await deleteReviewMutation.mutateAsync({ userGameId: game.id, reviewId });
       showToast('Avaliação excluída com sucesso!', 'success');
       if (editingReviewId === reviewId) {
         setEditingReviewId(null);
         setReviewNotes('');
       }
-      const updated = await fetchReviews();
+      const updated = await queryClient.fetchQuery(userGameReviewsQuery(game.id));
       if (!updated || updated.length === 0) {
         updateField('rating', null);
         updateField('notes', null);
       }
     } catch {
       showToast('Erro ao excluir avaliação.', 'error');
-    } finally {
-      setIsReviewSaving(false);
     }
   };
 
@@ -415,7 +400,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
               title="Fechar"
               autoFocus
             >
-              X
+              <X aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -760,7 +745,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                           }}
                           disabled={isBusy}
                         >
-                          ×
+                          <X aria-hidden="true" size={12} />
                         </button>
                       )}
                     </span>
@@ -869,7 +854,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                           }}
                           disabled={isBusy}
                         >
-                          ×
+                          <X aria-hidden="true" size={12} />
                         </button>
                       )}
                     </span>
@@ -963,7 +948,12 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                 </h4>
                 
                 <div className={styles.reviewFormRatingReadOnly}>
-                  Nota vinculada: <strong className={styles.ratingHighlight}>{form.rating !== null && form.rating !== undefined ? `⭐ ${form.rating.toFixed(1)}/10` : 'Sem nota'}</strong>
+                  Nota vinculada:{' '}
+                  <strong className={styles.ratingHighlight}>
+                    {form.rating !== null && form.rating !== undefined ? (
+                      <><Star aria-hidden="true" size={14} /> {form.rating.toFixed(1)}/10</>
+                    ) : 'Sem nota'}
+                  </strong>
                 </div>
 
                 <textarea
@@ -1042,7 +1032,9 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: { gam
                             <div className={styles.timelineCard}>
                               <div className={styles.timelineCardHeader}>
                                 <div className={styles.timelineRatingBadge}>
-                                  {rev.rating !== null ? `⭐ ${rev.rating.toFixed(1)}/10` : 'Sem nota'}
+                                  {rev.rating !== null ? (
+                                    <><Star aria-hidden="true" size={14} /> {rev.rating.toFixed(1)}/10</>
+                                  ) : 'Sem nota'}
                                 </div>
                                 <div className={styles.timelineDate}>
                                   Avaliado em {formattedCreatedDate}

@@ -7,6 +7,12 @@ import {
 import type { QueryClient } from '@tanstack/react-query';
 import { queryClient } from '@/app/query-client';
 import { currentUserQuery } from '@/features/auth/queries';
+import {
+  validateAdminSearch,
+  validateLibrarySearch,
+  validatePatchNotesSearch,
+  validateSocialSearch,
+} from '@/app/search';
 import { RootLayout } from '@/app/RootLayout';
 import {
   Admin,
@@ -37,7 +43,7 @@ const requireAuth = async ({ context }: { context: RouterContext }) => {
 
 const requireAdmin = async ({ context }: { context: RouterContext }) => {
   const user = await requireAuth({ context });
-  if (!user.is_admin) throw redirect({ to: '/library' });
+  if (!user.is_admin) throw redirect({ to: '/library', search: validateLibrarySearch({}) });
   return user;
 };
 
@@ -49,7 +55,7 @@ const redirectIfAuthenticated = async ({ context }: { context: RouterContext }) 
   } catch {
     // Guests may access the login route.
   }
-  if (authenticated) throw redirect({ to: '/library' });
+  if (authenticated) throw redirect({ to: '/library', search: validateLibrarySearch({}) });
 };
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -65,11 +71,23 @@ const routes = [
     beforeLoad: redirectIfAuthenticated,
     component: Login,
   }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/library', beforeLoad: requireAuth, component: Library }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/library',
+    beforeLoad: requireAuth,
+    validateSearch: validateLibrarySearch,
+    component: Library,
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: '/tierlists', beforeLoad: requireAuth, component: TierList }),
   createRoute({ getParentRoute: () => rootRoute, path: '/tierlists/$id', beforeLoad: requireAuth, component: TierListEditor }),
   createRoute({ getParentRoute: () => rootRoute, path: '/recommendations', beforeLoad: requireAuth, component: Recommendations }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/social', beforeLoad: requireAuth, component: Social }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/social',
+    beforeLoad: requireAuth,
+    validateSearch: validateSocialSearch,
+    component: Social,
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireAuth, component: Profile }),
   createRoute({ getParentRoute: () => rootRoute, path: '/profile/$userId', component: Profile }),
   createRoute({
@@ -78,8 +96,20 @@ const routes = [
     beforeLoad: requireAuth,
     component: ItchCallback,
   }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/admin', beforeLoad: requireAdmin, component: Admin }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/patch-notes', beforeLoad: requireAuth, component: PatchNotes }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/admin',
+    beforeLoad: requireAdmin,
+    validateSearch: validateAdminSearch,
+    component: Admin,
+  }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/patch-notes',
+    beforeLoad: requireAuth,
+    validateSearch: validatePatchNotesSearch,
+    component: PatchNotes,
+  }),
 ];
 
 const routeTree = rootRoute.addChildren(routes);

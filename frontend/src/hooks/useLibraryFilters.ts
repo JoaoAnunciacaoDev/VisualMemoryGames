@@ -1,23 +1,42 @@
 import { useState, useMemo, useCallback } from 'react';
 import { LibraryGame } from '@/types';
 import { isStoreMatch } from '@/types/enums';
-import type { SortBy, YearField, HoursOperator, OriginFilter } from '@/pages/Library/Library.types';
+import type { LibraryFilterState } from '@/pages/Library/Library.types';
 
-export function useLibraryFilters(games: LibraryGame[]) {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-  const [storeFilter, setStoreFilter] = useState('Todas');
-  const [originFilter, setOriginFilter] = useState<OriginFilter>('all');
+export const defaultLibraryFilters: LibraryFilterState = {
+  search: '',
+  statusFilter: 'Todos',
+  storeFilter: 'Todas',
+  originFilter: 'all',
+  sortBy: null,
+  sortOrder: 'desc',
+  yearField: '',
+  yearValue: '',
+  hoursOperator: '',
+  hoursValue: '',
+  hoursValueMax: '',
+};
 
-  const [sortBy, setSortBy] = useState<SortBy>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+export function useLibraryFilters(
+  games: LibraryGame[],
+  controlledFilters?: LibraryFilterState,
+  onFiltersChange?: (updater: (filters: LibraryFilterState) => LibraryFilterState) => void,
+) {
+  const [localFilters, setLocalFilters] = useState(defaultLibraryFilters);
+  const filters = controlledFilters ?? localFilters;
+  const {
+    search, statusFilter, storeFilter, originFilter, sortBy, sortOrder,
+    yearField, yearValue, hoursOperator, hoursValue, hoursValueMax,
+  } = filters;
 
-  const [yearField, setYearField] = useState<YearField | ''>('');
-  const [yearValue, setYearValue] = useState<number | ''>('');
-
-  const [hoursOperator, setHoursOperator] = useState<HoursOperator>('');
-  const [hoursValue, setHoursValue] = useState<number | ''>('');
-  const [hoursValueMax, setHoursValueMax] = useState<number | ''>('');
+  const setFilter = useCallback(<K extends keyof LibraryFilterState>(
+    key: K,
+    value: LibraryFilterState[K],
+  ) => {
+    const updater = (current: LibraryFilterState) => ({ ...current, [key]: value });
+    if (controlledFilters && onFiltersChange) onFiltersChange(updater);
+    else setLocalFilters(updater);
+  }, [controlledFilters, onFiltersChange]);
 
   const filtered = useMemo(() => {
     let result = games;
@@ -121,43 +140,34 @@ export function useLibraryFilters(games: LibraryGame[]) {
   ]);
 
   const clearAllFilters = useCallback(() => {
-    setSearch('');
-    setStatusFilter('Todos');
-    setStoreFilter('Todas');
-    setOriginFilter('all');
-    setSortBy(null);
-    setSortOrder('desc');
-    setYearField('');
-    setYearValue('');
-    setHoursOperator('');
-    setHoursValue('');
-    setHoursValueMax('');
-  }, []);
+    if (controlledFilters && onFiltersChange) onFiltersChange(() => defaultLibraryFilters);
+    else setLocalFilters(defaultLibraryFilters);
+  }, [controlledFilters, onFiltersChange]);
 
   return {
     filtered,
     search,
-    setSearch,
+    setSearch: (value: LibraryFilterState['search']) => setFilter('search', value),
     statusFilter,
-    setStatusFilter,
+    setStatusFilter: (value: LibraryFilterState['statusFilter']) => setFilter('statusFilter', value),
     storeFilter,
-    setStoreFilter,
+    setStoreFilter: (value: LibraryFilterState['storeFilter']) => setFilter('storeFilter', value),
     originFilter,
-    setOriginFilter,
+    setOriginFilter: (value: LibraryFilterState['originFilter']) => setFilter('originFilter', value),
     sortBy,
-    setSortBy,
+    setSortBy: (value: LibraryFilterState['sortBy']) => setFilter('sortBy', value),
     sortOrder,
-    setSortOrder,
+    setSortOrder: (value: LibraryFilterState['sortOrder']) => setFilter('sortOrder', value),
     yearField,
-    setYearField,
+    setYearField: (value: LibraryFilterState['yearField']) => setFilter('yearField', value),
     yearValue,
-    setYearValue,
+    setYearValue: (value: LibraryFilterState['yearValue']) => setFilter('yearValue', value),
     hoursOperator,
-    setHoursOperator,
+    setHoursOperator: (value: LibraryFilterState['hoursOperator']) => setFilter('hoursOperator', value),
     hoursValue,
-    setHoursValue,
+    setHoursValue: (value: LibraryFilterState['hoursValue']) => setFilter('hoursValue', value),
     hoursValueMax,
-    setHoursValueMax,
+    setHoursValueMax: (value: LibraryFilterState['hoursValueMax']) => setFilter('hoursValueMax', value),
     clearAllFilters,
   };
 }

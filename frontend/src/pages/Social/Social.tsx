@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "@tanstack/react-router";
+import React, { useEffect } from "react";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styles from "./Social.module.css";
 import { formatDate, formatDateTime } from "@/utils/date";
@@ -13,18 +13,24 @@ import {
   type Activity,
   type UserProfile,
 } from '@/features/social/queries';
+import { validateSocialSearch, type SocialSearch, type SocialTab } from '@/app/search';
 
 const Social: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"feed" | "my-activities" | "search">("feed");
-  const [feedPage, setFeedPage] = useState(1);
-  const [myPage, setMyPage] = useState(1);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [submittedSearch, setSubmittedSearch] = useState('');
-
+  const navigate = useNavigate();
+  const routeSearch = validateSocialSearch(useSearch({ strict: false }) as Record<string, unknown>);
+  const {
+    tab: activeTab,
+    feedPage,
+    myPage,
+    month: selectedMonth,
+    year: selectedYear,
+    q: submittedSearch,
+  } = routeSearch;
+  const updateSearch = (updates: Partial<SocialSearch>) => navigate({
+    to: '/social',
+    search: (previous) => ({ ...validateSocialSearch(previous), ...updates }),
+  });
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const queryClient = useQueryClient();
   const feedQuery = useQuery({ ...socialFeedQuery(selectedMonth, selectedYear, feedPage), enabled: activeTab === 'feed' });
   const activitiesQuery = useQuery({ ...myActivitiesQuery(selectedMonth, selectedYear, myPage), enabled: activeTab === 'my-activities' });
@@ -60,8 +66,8 @@ const Social: React.FC = () => {
   ];
 
   const handlePageChange = (newPage: number) => {
-    if (activeTab === "feed") setFeedPage(newPage);
-    else if (activeTab === "my-activities") setMyPage(newPage);
+    if (activeTab === "feed") void updateSearch({ feedPage: newPage });
+    else if (activeTab === "my-activities") void updateSearch({ myPage: newPage });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -109,12 +115,15 @@ const Social: React.FC = () => {
     );
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    setSubmittedSearch(searchQuery.trim());
+    const form = new FormData(e.currentTarget);
+    const query = String(form.get('q') ?? '').trim();
+    if (!query) return;
+    void updateSearch({ q: query });
   };
+
+  const selectTab = (tab: SocialTab) => void updateSearch({ tab });
 
   const followMutation = useMutation({
     mutationFn: setFollowing,
@@ -246,19 +255,19 @@ const Social: React.FC = () => {
       <div className={styles.tabs}>
         <button
           className={`${styles.tabBtn} ${activeTab === "feed" ? styles.active : ""}`}
-          onClick={() => setActiveTab("feed")}
+          onClick={() => selectTab("feed")}
         >
           Feed de Notícias
         </button>
         <button
           className={`${styles.tabBtn} ${activeTab === "my-activities" ? styles.active : ""}`}
-          onClick={() => setActiveTab("my-activities")}
+          onClick={() => selectTab("my-activities")}
         >
           Minhas Atividades
         </button>
         <button
           className={`${styles.tabBtn} ${activeTab === "search" ? styles.active : ""}`}
-          onClick={() => setActiveTab("search")}
+          onClick={() => selectTab("search")}
         >
           Encontrar Pessoas
         </button>
@@ -274,7 +283,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedMonth}
-                    onChange={(e) => { setSelectedMonth(Number(e.target.value)); setFeedPage(1); }}
+                    onChange={(e) => void updateSearch({ month: Number(e.target.value), feedPage: 1 })}
                     disabled={loading}
                   >
                     {months.map((m) => (
@@ -284,7 +293,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedYear}
-                    onChange={(e) => { setSelectedYear(Number(e.target.value)); setFeedPage(1); }}
+                    onChange={(e) => void updateSearch({ year: Number(e.target.value), feedPage: 1 })}
                     disabled={loading}
                   >
                     {years.map((y) => (
@@ -333,7 +342,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedMonth}
-                    onChange={(e) => { setSelectedMonth(Number(e.target.value)); setMyPage(1); }}
+                    onChange={(e) => void updateSearch({ month: Number(e.target.value), myPage: 1 })}
                     disabled={loading}
                   >
                     {months.map((m) => (
@@ -343,7 +352,7 @@ const Social: React.FC = () => {
                   <select
                     className={styles.filterSelect}
                     value={selectedYear}
-                    onChange={(e) => { setSelectedYear(Number(e.target.value)); setMyPage(1); }}
+                    onChange={(e) => void updateSearch({ year: Number(e.target.value), myPage: 1 })}
                     disabled={loading}
                   >
                     {years.map((y) => (
@@ -368,9 +377,10 @@ const Social: React.FC = () => {
             <form onSubmit={handleSearch} className={styles.searchForm}>
               <input
                 type="text"
+                name="q"
                 placeholder="Pesquisar por nome de usuário..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                key={submittedSearch}
+                defaultValue={submittedSearch}
                 className={styles.searchInput}
               />
               <button type="submit" className={styles.searchBtn} disabled={loading}>
@@ -380,7 +390,7 @@ const Social: React.FC = () => {
 
             <div className={styles.userList}>
               {loading && <p>Pesquisando...</p>}
-              {!loading && searchResults.length === 0 && searchQuery && (
+              {!loading && searchResults.length === 0 && submittedSearch && (
                 <p className={styles.empty}>Nenhum usuário encontrado.</p>
               )}
               {searchResults.map((user) => (

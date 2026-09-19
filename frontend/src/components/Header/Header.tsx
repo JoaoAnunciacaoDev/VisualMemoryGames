@@ -8,6 +8,12 @@ import styles from '@/components/Header/Header.module.css';
 import { unreadPatchNotesQuery } from '@/features/patch-notes/queries';
 import { Megaphone } from 'lucide-react';
 import logoIcon from '@/assets/VisualMemoryIcon.png';
+import {
+  validateAdminSearch,
+  validateLibrarySearch,
+  validatePatchNotesSearch,
+  validateSocialSearch,
+} from '@/app/search';
 
 export default function Header() {
   const navigate = useNavigate();
@@ -54,7 +60,9 @@ export default function Header() {
         <nav className={styles.nav}>
           {isLoggedIn && (
             <div className={styles.navLinks}>
-              <Button variant="ghost" onClick={() => navigate({ to: '/library' })}>
+              <Button variant="ghost" onClick={() => navigate({
+                to: '/library', search: validateLibrarySearch({}),
+              })}>
                 Biblioteca
               </Button>
               <Button variant="ghost" onClick={() => navigate({ to: '/tierlists' })}>
@@ -63,11 +71,15 @@ export default function Header() {
               <Button variant="ghost" onClick={() => navigate({ to: '/recommendations' })}>
                 Recomendações
               </Button>
-              <Button variant="ghost" onClick={() => navigate({ to: '/social' })}>
+              <Button variant="ghost" onClick={() => navigate({
+                to: '/social', search: validateSocialSearch({}),
+              })}>
                 Social
               </Button>
               {user?.is_admin && (
-                <Button variant="ghost" onClick={() => navigate({ to: '/admin' })}>
+                <Button variant="ghost" onClick={() => navigate({
+                  to: '/admin', search: validateAdminSearch({}),
+                })}>
                   Admin
                 </Button>
               )}
@@ -79,7 +91,9 @@ export default function Header() {
               <button
                 type="button"
                 className={`${styles.megaphoneBtn} ${hasUnread ? styles.hasUnread : ''}`}
-                onClick={() => navigate({ to: '/patch-notes' })}
+                onClick={() => navigate({
+                  to: '/patch-notes', search: validatePatchNotesSearch({}),
+                })}
                 title="Patch Notes"
               >
                 <Megaphone aria-hidden="true" size={18} />

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useDeferredValue, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { PageTitle, Button, Input, Loader } from '@/components/Shared';
 import { useToast } from '@/hooks/useToast';
 import { User } from '@/types';
@@ -12,24 +13,18 @@ import {
   toggleUserActive,
   toggleUserAdmin,
 } from '@/features/admin/queries';
+import { validateAdminSearch } from '@/app/search';
 
 export default function Admin() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { q: searchTerm } = validateAdminSearch(useSearch({ strict: false }) as Record<string, unknown>);
+  const search = useDeferredValue(searchTerm);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [search, setSearch] = useState('');
   const dashboardQuery = useQuery(adminDashboardQuery(search));
   const users = dashboardQuery.data?.users ?? [];
   const stats = dashboardQuery.data?.stats ?? null;
-
-  // Debounce do termo de busca para reduzir carga do servidor
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   // Modal de confirmação para exclusão permanente
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -114,7 +109,11 @@ export default function Admin() {
           <Input
             placeholder="Buscar por nome ou e-mail..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => void navigate({
+              to: '/admin',
+              replace: true,
+              search: { q: e.target.value },
+            })}
           />
         </div>
       </div>

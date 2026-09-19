@@ -48,7 +48,7 @@ describe('Social Page', () => {
   it('renders loading state for feed', async () => {
     mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
     render(
-      <TestRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
       </TestRouter>
     );
@@ -59,7 +59,7 @@ describe('Social Page', () => {
     mockApi.get.mockResolvedValueOnce({ data: mockFeed });
 
     render(
-      <TestRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
       </TestRouter>
     );
@@ -106,7 +106,7 @@ describe('Social Page', () => {
     mockApi.get.mockResolvedValueOnce({ data: paginatedMockFeed });
 
     render(
-      <TestRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
       </TestRouter>
     );
@@ -165,7 +165,7 @@ describe('Social Page', () => {
     });
 
     render(
-      <TestRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
       </TestRouter>
     );
@@ -175,7 +175,7 @@ describe('Social Page', () => {
     fireEvent.click(searchTab);
 
     // Enter query and submit
-    const searchInput = screen.getByPlaceholderText('Pesquisar por nome de usuário...');
+    const searchInput = await screen.findByPlaceholderText('Pesquisar por nome de usuário...');
     fireEvent.change(searchInput, { target: { value: 'searcheduser' } });
 
     // Submit the form directly instead of clicking the button to bypass JSDOM submit issues

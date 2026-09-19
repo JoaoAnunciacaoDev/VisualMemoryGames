@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 
 import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,7 +22,8 @@ import LibraryTabs from '@/pages/Library/LibraryTabs';
 import LibraryFilters from '@/pages/Library/LibraryFilters';
 import LibraryGamesView from '@/pages/Library/LibraryGamesView';
 import LibrarySearchView from '@/pages/Library/LibrarySearchView';
-import type { LibraryTab, GroupMode } from '@/pages/Library/Library.types';
+import type { LibraryFilterState, LibraryTab, GroupMode } from '@/pages/Library/Library.types';
+import { validateLibrarySearch } from '@/app/search';
 
 import styles from '@/pages/Library/Library.module.css';
 
@@ -32,6 +34,28 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Library() {
+  const navigate = useNavigate();
+  const routeSearch = validateLibrarySearch(useSearch({ strict: false }) as Record<string, unknown>);
+  const { tab: activeTab, groupMode } = routeSearch;
+  const updateLibrarySearch = useCallback((updates: Partial<typeof routeSearch>, replace = true) => {
+    void navigate({
+      to: '/library',
+      replace,
+      search: (previous) => ({ ...validateLibrarySearch(previous), ...updates }),
+    });
+  }, [navigate]);
+  const handleFiltersChange = useCallback((
+    updater: (filters: LibraryFilterState) => LibraryFilterState,
+  ) => {
+    void navigate({
+      to: '/library',
+      replace: true,
+      search: (previous) => {
+        const current = validateLibrarySearch(previous);
+        return { ...current, ...updater(current) };
+      },
+    });
+  }, [navigate]);
   const { loading: authLoading } = useAuth();
   const { games, loadLibrary, removeGame, loading: libraryLoading, error: libraryError } = useLibrary();
   const {
@@ -42,8 +66,7 @@ export default function Library() {
     sortBy, setSortBy, sortOrder, setSortOrder,
     yearField, setYearField, yearValue, setYearValue,
     hoursOperator, setHoursOperator, hoursValue, setHoursValue, hoursValueMax, setHoursValueMax,
-    clearAllFilters,
-  } = useLibraryFilters(games);
+  } = useLibraryFilters(games, routeSearch, handleFiltersChange);
   const {
     searchResults,
     isSearching,
@@ -56,7 +79,6 @@ export default function Library() {
   } = useGameSearch();
   const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<LibraryTab>('library');
   const [selectedLibraryGame, setSelectedLibraryGame] = useState<LibraryGame | null>(null);
   const [selectedSearchGame, setSelectedSearchGame] = useState<GameResult | null>(null);
   const [showManualModal, setShowManualModal] = useState(false);
@@ -64,7 +86,8 @@ export default function Library() {
   const removeConfirm = useConfirmAction<GameResult>();
 
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
-  const [groupMode, setGroupMode] = useState<GroupMode>('status');
+  const setActiveTab = (tab: LibraryTab) => updateLibrarySearch({ tab }, false);
+  const setGroupMode = (mode: GroupMode) => updateLibrarySearch({ groupMode: mode });
 
   const toggleStatusCollapse = (groupName: string) => {
     setCollapsedStatuses((prev) => {
@@ -139,8 +162,7 @@ export default function Library() {
       showToast('Jogo adicionado à biblioteca!', 'success');
 
       // Navega para a biblioteca, descolapsa "Quero Jogar" e foca na busca
-      setActiveTab('library');
-      setSearch(game.title);
+      updateLibrarySearch({ tab: 'library', search: game.title }, false);
       setCollapsedStatuses((prev) => {
         const next = new Set(prev);
         next.delete('Na biblioteca');
@@ -167,8 +189,20 @@ export default function Library() {
   };
 
   const handleClearAll = () => {
-    clearAllFilters();
-    setGroupMode('none');
+    updateLibrarySearch({
+      search: '',
+      statusFilter: 'Todos',
+      storeFilter: 'Todas',
+      originFilter: 'all',
+      sortBy: null,
+      sortOrder: 'desc',
+      yearField: '',
+      yearValue: '',
+      hoursOperator: '',
+      hoursValue: '',
+      hoursValueMax: '',
+      groupMode: 'none',
+    });
   };
 
   if (authLoading || (libraryLoading && games.length === 0)) {

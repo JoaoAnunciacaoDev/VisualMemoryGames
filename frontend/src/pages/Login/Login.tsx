@@ -14,6 +14,7 @@ import {
   initiateRegistration,
   loginUser,
 } from '@/features/auth/mutations';
+import { validateLibrarySearch } from '@/app/search';
 
 export default function Login() {
   const [error, setError] = useState('');
@@ -98,7 +99,7 @@ export default function Login() {
     try {
       await loginMutation.mutateAsync({ username, password, rememberMe });
       await reloadUser();
-      navigate({ to: '/library' });
+      navigate({ to: '/library', search: validateLibrarySearch({}) });
     } catch (err) {
       setError(parseError(err));
     }

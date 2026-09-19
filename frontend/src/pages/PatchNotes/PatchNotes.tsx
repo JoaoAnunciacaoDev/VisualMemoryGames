@@ -1,5 +1,6 @@
 import { useEffect, useState, SyntheticEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { PageTitle, Button, Input, Modal, ConfirmModal, Loader } from '@/components/Shared';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -13,6 +14,7 @@ import {
   savePatchNote,
   type PatchNote,
 } from '@/features/patch-notes/queries';
+import { validatePatchNotesSearch } from '@/app/search';
 
 function renderMarkdown(md: string): string {
   if (!md) return '';
@@ -59,12 +61,13 @@ export default function PatchNotes() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { month: selectedMonth, year: selectedYear } = validatePatchNotesSearch(
+    useSearch({ strict: false }) as Record<string, unknown>,
+  );
 
   // Filtros de Mês e Ano (Abre por padrão no Mês e Ano Atual, igual à aba Social)
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
-
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
   const months = [
@@ -199,7 +202,10 @@ export default function PatchNotes() {
             <select
               className={styles.filterSelect}
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              onChange={(e) => void navigate({
+                to: '/patch-notes',
+                search: { month: Number(e.target.value), year: selectedYear },
+              })}
               disabled={loading}
               aria-label="Filtrar por mês"
             >
@@ -210,7 +216,10 @@ export default function PatchNotes() {
             <select
               className={styles.filterSelect}
               value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              onChange={(e) => void navigate({
+                to: '/patch-notes',
+                search: { month: selectedMonth, year: Number(e.target.value) },
+              })}
               disabled={loading}
               aria-label="Filtrar por ano"
             >

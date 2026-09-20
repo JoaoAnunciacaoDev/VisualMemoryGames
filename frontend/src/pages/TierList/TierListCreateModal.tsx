@@ -2,25 +2,35 @@ import { useForm } from '@tanstack/react-form';
 import { Modal, Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierList/TierList.module.css';
 import type { CustomList } from '@/types';
-import { tierListCreateSchema, type TierListCreateValues } from '@/features/tierlists/types';
+import {
+  tierListCreateSchema,
+  type TierListCreateValues,
+  type TierListGameSource,
+} from '@/features/tierlists/types';
 
 export type { TierListCreateValues } from '@/features/tierlists/types';
 
 interface Props {
   open: boolean;
   isCreating: boolean;
+  isSourceLoading: boolean;
+  sourceError: string | null;
   customLists: CustomList[];
   statusOptions: string[];
   onClose: () => void;
+  onGameSourceChange: (source: TierListGameSource) => void;
   onCreate: (values: TierListCreateValues) => void;
 }
 
 export default function TierListCreateModal({
   open,
   isCreating,
+  isSourceLoading,
+  sourceError,
   customLists,
   statusOptions,
   onClose,
+  onGameSourceChange,
   onCreate,
 }: Props) {
   const form = useForm({
@@ -41,6 +51,7 @@ export default function TierListCreateModal({
   });
 
   const handleClose = () => {
+    onGameSourceChange('empty');
     onClose();
     form.reset();
   };
@@ -80,7 +91,11 @@ export default function TierListCreateModal({
               <select
                 value={field.state.value}
                 onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value as TierListCreateValues['gameSource'])}
+                onChange={(event) => {
+                  const source = event.target.value as TierListGameSource;
+                  field.handleChange(source);
+                  onGameSourceChange(source);
+                }}
                 className={styles.select}
               >
                 <option value="empty">Vazia (adicionar manualmente)</option>
@@ -91,6 +106,13 @@ export default function TierListCreateModal({
             </label>
           )}
         </form.Field>
+
+        {isSourceLoading && (
+          <p className={styles.sourceStatus} aria-live="polite">
+            Carregando jogos para a tier list…
+          </p>
+        )}
+        {sourceError && <p className={styles.sourceError} role="alert">{sourceError}</p>}
 
         <form.Subscribe selector={(state) => state.values.gameSource}>
           {(gameSource) => (
@@ -154,12 +176,15 @@ export default function TierListCreateModal({
 
         <form.Subscribe selector={(state) => state.values}>
           {(values) => {
-            const canCreate = !isCreating && tierListCreateSchema.safeParse(values).success;
+            const canCreate = !isCreating
+              && !isSourceLoading
+              && !sourceError
+              && tierListCreateSchema.safeParse(values).success;
             return (
               <div className={styles.modalActions}>
                 <Button type="button" variant="ghost" onClick={handleClose}>Cancelar</Button>
                 <Button type="submit" variant="primary" disabled={!canCreate}>
-                  {isCreating ? 'Criando...' : 'Criar'}
+                  {isCreating ? 'Criando...' : isSourceLoading ? 'Carregando...' : 'Criar'}
                 </Button>
               </div>
             );

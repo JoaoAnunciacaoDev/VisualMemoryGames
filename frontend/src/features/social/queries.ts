@@ -57,13 +57,25 @@ export interface FeedData {
 export const socialKeys = {
   all: ['social'] as const,
   feed: (month: number, year: number, page: number) => [...socialKeys.all, 'feed', month, year, page] as const,
+  weeklyReleases: () => [...socialKeys.all, 'weekly-releases'] as const,
   mine: (month: number, year: number, page: number) => [...socialKeys.all, 'mine', month, year, page] as const,
   search: (query: string) => [...socialKeys.all, 'search', query] as const,
 };
 
 export const socialFeedQuery = (month: number, year: number, page: number) => queryOptions({
   queryKey: socialKeys.feed(month, year, page),
-  queryFn: async () => (await api.get<FeedData>('/social/feed', { params: { month, year, page } })).data,
+  queryFn: async () => (
+    await api.get<FeedData>('/social/feed', {
+      params: { month, year, page, include_releases: false },
+    })
+  ).data,
+});
+
+export const weeklyReleasesQuery = () => queryOptions({
+  queryKey: socialKeys.weeklyReleases(),
+  queryFn: async () => (await api.get<RawgRelease[]>('/social/releases/weekly')).data,
+  staleTime: 6 * 60 * 60 * 1000,
+  gcTime: 6 * 60 * 60 * 1000,
 });
 
 export const myActivitiesQuery = (month: number, year: number, page: number) => queryOptions({

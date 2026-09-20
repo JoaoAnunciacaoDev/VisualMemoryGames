@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.social import (
     FeedResponse,
     PaginatedActivities,
+    RawgRelease,
     UserPublicProfile,
 )
 from app.security import get_current_user
@@ -22,13 +23,29 @@ def get_my_feed(
     month: Optional[int] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
+    include_releases: bool = Query(True),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Retorna as atividades dos usuários seguidos e lançamentos da semana."""
     return social_service.get_feed(
-        current_user, db, year=year, month=month, page=page, page_size=page_size
+        current_user,
+        db,
+        year=year,
+        month=month,
+        page=page,
+        page_size=page_size,
+        include_releases=include_releases,
     )
+
+
+@router.get("/releases/weekly", response_model=List[RawgRelease])
+def get_weekly_releases(
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user),
+):
+    """Retorna lançamentos da semana sem acoplá-los à paginação do feed."""
+    return social_service.get_weekly_releases(db)
 
 
 @router.get("/activities/me", response_model=PaginatedActivities)

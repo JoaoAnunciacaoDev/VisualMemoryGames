@@ -1,13 +1,40 @@
-import { useCallback } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UpdateLibraryGame } from '@/types/updateGame';
-import { libraryKeys, myLibraryQuery } from '@/features/library/queries';
+import { libraryKeys, myLibraryPagesQuery } from '@/features/library/queries';
 import { removeLibraryGame, updateLibraryGame } from '@/features/library/mutations';
 
 
-export function useLibrary() {
+export function useLibrary(userId = 'current-user', enabled = true) {
   const queryClient = useQueryClient();
-  const libraryQuery = useQuery(myLibraryQuery());
+  const libraryQuery = useInfiniteQuery({
+    ...myLibraryPagesQuery(userId),
+    enabled: Boolean(userId) && enabled,
+  });
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isError,
+    isFetching,
+    isFetchingNextPage,
+    isPending,
+  } = libraryQuery;
+  const games = useMemo(
+    () => data?.pages.flat() ?? [],
+    [data?.pages],
+  );
+
+  useEffect(() => {
+    if (hasNextPage && !isFetching) {
+      void fetchNextPage();
+    }
+  }, [
+    data?.pages.length,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+  ]);
 
   const loadLibrary = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: libraryKeys.mine() });
@@ -27,9 +54,11 @@ export function useLibrary() {
   const removeGame = (id: string) => removeMutation.mutateAsync(id).then(() => undefined);
 
   return {
-    games: libraryQuery.data ?? [],
-    loading: libraryQuery.isPending,
-    error: libraryQuery.isError ? 'Erro ao carregar biblioteca.' : null,
+    games,
+    loading: isPending,
+    loadingMore: isFetchingNextPage,
+    hasMore: Boolean(hasNextPage),
+    error: isError ? 'Erro ao carregar biblioteca.' : null,
     loadLibrary,
     updateGame,
     removeGame,

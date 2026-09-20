@@ -70,7 +70,14 @@ describe('Social Page', () => {
   });
 
   it('renders feed activities and rawg releases', async () => {
-    mockApi.get.mockResolvedValueOnce({ data: mockFeed });
+    mockApi.get.mockImplementation((url) => {
+      if (url === '/social/releases/weekly') {
+        return Promise.resolve({ data: mockFeed.rawg_releases });
+      }
+      return Promise.resolve({
+        data: { ...mockFeed, rawg_releases: [] },
+      });
+    });
 
     render(
       <TestRouter initialEntries={['/social']}>
@@ -89,7 +96,10 @@ describe('Social Page', () => {
       expect(screen.getByText('New Released Game')).toBeInTheDocument();
     });
 
-    expect(mockApi.get).toHaveBeenCalledWith('/social/feed', expect.any(Object));
+    expect(mockApi.get).toHaveBeenCalledWith('/social/feed', {
+      params: expect.objectContaining({ include_releases: false }),
+    });
+    expect(mockApi.get).toHaveBeenCalledWith('/social/releases/weekly');
   });
 
   it('renders pagination controls when total_pages > 1 and navigates', async () => {
@@ -117,7 +127,12 @@ describe('Social Page', () => {
       rawg_releases: []
     };
 
-    mockApi.get.mockResolvedValueOnce({ data: paginatedMockFeed });
+    mockApi.get.mockImplementation((url) => {
+      if (url === '/social/releases/weekly') {
+        return Promise.resolve({ data: [] });
+      }
+      return Promise.resolve({ data: paginatedMockFeed });
+    });
 
     render(
       <TestRouter initialEntries={['/social']}>
@@ -148,6 +163,10 @@ describe('Social Page', () => {
         expect.objectContaining({ params: expect.objectContaining({ page: 2 }) })
       );
     });
+    expect(mockApi.get).toHaveBeenCalledWith('/social/releases/weekly');
+    expect(
+      mockApi.get.mock.calls.filter(([url]) => url === '/social/releases/weekly'),
+    ).toHaveLength(1);
   });
 
   it('searches for users correctly', async () => {
@@ -160,6 +179,9 @@ describe('Social Page', () => {
             rawg_releases: []
           }
         });
+      }
+      if (url === '/social/releases/weekly') {
+        return Promise.resolve({ data: [] });
       }
       if (url.startsWith('/social/users/search')) {
         return Promise.resolve({

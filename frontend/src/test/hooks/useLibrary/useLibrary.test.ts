@@ -43,7 +43,9 @@ describe('useLibrary', () => {
       expect(result.current.games).toEqual(mockGames);
     });
 
-    expect(api.get).toHaveBeenCalledWith('/user-games/me');
+    expect(api.get).toHaveBeenCalledWith('/user-games/me', {
+      params: { offset: 0, limit: 100 },
+    });
   });
 
   it('deve carregar mesmo se o userId for vazio', async () => {
@@ -54,7 +56,9 @@ describe('useLibrary', () => {
       expect(result.current.games).toEqual(mockGames);
     });
 
-    expect(api.get).toHaveBeenCalledWith('/user-games/me');
+    expect(api.get).toHaveBeenCalledWith('/user-games/me', {
+      params: { offset: 0, limit: 100 },
+    });
   });
 
   it('updateGame deve atualizar um jogo e recarregar a biblioteca', async () => {
@@ -108,6 +112,38 @@ describe('useLibrary', () => {
 
     expect(api.get).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(result.current.games).toEqual([mockGames[0]]));
+  });
+
+  it('exibe a primeira página enquanto carrega a próxima', async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      ...mockGames[0],
+      id: `ug-${index}`,
+    }));
+    let resolveSecondPage: ((value: { data: typeof mockGames }) => void) | undefined;
+    const secondPage = new Promise<{ data: typeof mockGames }>((resolve) => {
+      resolveSecondPage = resolve;
+    });
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: firstPage })
+      .mockReturnValueOnce(secondPage);
+
+    const { result } = renderHook(() => useLibrary('user-123'), {
+      wrapper: TestQueryProvider,
+    });
+
+    await waitFor(() => expect(result.current.games).toHaveLength(100));
+    expect(result.current.loading).toBe(false);
+    await waitFor(() => expect(result.current.loadingMore).toBe(true));
+
+    await act(async () => {
+      resolveSecondPage?.({ data: mockGames });
+      await secondPage;
+    });
+
+    await waitFor(() => expect(result.current.games).toHaveLength(102));
+    expect(api.get).toHaveBeenNthCalledWith(2, '/user-games/me', {
+      params: { offset: 100, limit: 100 },
+    });
   });
 
 });

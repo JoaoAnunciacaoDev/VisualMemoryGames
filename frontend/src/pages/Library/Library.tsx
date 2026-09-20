@@ -18,6 +18,11 @@ export default function Library() {
         </div>
       )}
       <header className={styles.header}><h2 className={styles.heading}>Minha Biblioteca</h2></header>
+      {controller.loadingMore && (
+        <p className={styles.progressiveLoading} aria-live="polite">
+          Carregando o restante da biblioteca…
+        </p>
+      )}
       <LibraryTabs activeTab={controller.activeTab} onChange={controller.setActiveTab} />
       <LibraryTabContent controller={controller} />
       <LibraryDialogs controller={controller} />

@@ -340,6 +340,7 @@ def get_feed(
     month: Optional[int] = None,
     page: int = 1,
     page_size: int = 10,
+    include_releases: bool = True,
 ) -> FeedResponse:
     """Busca as atividades dos usuários que eu sigo (paginadas) + lançamentos da semana."""
 
@@ -398,8 +399,11 @@ def get_feed(
         total_pages=total_pages,
     )
 
-    # 3. Buscar lançamentos da semana (IGDB / RAWG / Local DB)
-    rawg_games = get_weekly_releases_rawg(db=db)
-    rawg_releases = [RawgRelease(**g) for g in rawg_games]
+    rawg_releases = get_weekly_releases(db) if include_releases else []
 
     return FeedResponse(activities=paginated_activities, rawg_releases=rawg_releases)
+
+
+def get_weekly_releases(db: Session) -> list[RawgRelease]:
+    """Retorna os lançamentos semanais compartilhados, já protegidos pelo cache externo."""
+    return [RawgRelease(**game) for game in get_weekly_releases_rawg(db=db)]

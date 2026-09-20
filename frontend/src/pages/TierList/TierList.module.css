@@ -155,6 +155,20 @@
   color: var(--text);
 }
 
+.sourceStatus,
+.sourceError {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.sourceStatus {
+  color: var(--muted);
+}
+
+.sourceError {
+  color: var(--danger, #ef4444);
+}
+
 .label {
   display: flex;
   flex-direction: column;

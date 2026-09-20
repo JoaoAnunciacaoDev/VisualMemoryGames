@@ -20,9 +20,16 @@ const STATUS_OPTIONS = [
 export function useLibraryPageController() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { loading: authLoading } = useAuth();
+  const { loading: authLoading, userId } = useAuth();
   const routeSearch = validateLibrarySearch(useSearch({ strict: false }) as Record<string, unknown>);
-  const { games, loadLibrary, removeGame, loading: libraryLoading, error: libraryError } = useLibrary();
+  const {
+    games,
+    loadLibrary,
+    removeGame,
+    loading: libraryLoading,
+    loadingMore: libraryLoadingMore,
+    error: libraryError,
+  } = useLibrary(userId);
   const updateSearch = useCallback((updates: Partial<typeof routeSearch>, replace = true) => {
     void navigate({
       to: '/library',
@@ -115,6 +122,7 @@ export function useLibraryPageController() {
     activeTab: routeSearch.tab, setActiveTab: (tab: LibraryTab) => updateSearch({ tab }, false),
     games, filteredGames: filters.filtered, filterProps, libraryError, loadLibrary,
     loading: authLoading || (libraryLoading && games.length === 0),
+    loadingMore: libraryLoadingMore,
     collapsedGroups, toggleGroup,
     selectedLibraryGame, setSelectedLibraryGame, selectedSearchGame, setSelectedSearchGame,
     showManualModal, setShowManualModal, removeConfirm,

@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import api from '@/services/api';
 import { fetchAllPages } from '@/services/pagination';
-import type { CustomList, LibraryGame, TierListSummary } from '@/types';
+import type { TierListSummary } from '@/types';
 import {
   loadTierListEditorData,
   type TierListEditorInitialGame,
@@ -16,18 +16,7 @@ export const tierListKeys = {
 
 export const tierListOverviewQuery = () => queryOptions({
   queryKey: tierListKeys.mine(),
-  queryFn: async () => {
-    const [tierLists, customLists, libraryGames] = await Promise.all([
-      fetchAllPages<TierListSummary>('/tierlists/me'),
-      fetchAllPages<CustomList>('/lists/me'),
-      fetchAllPages<LibraryGame>('/user-games/me'),
-    ]);
-    return {
-      tierLists,
-      customLists,
-      libraryGames,
-    };
-  },
+  queryFn: () => fetchAllPages<TierListSummary>('/tierlists/me'),
 });
 
 export const tierListEditorQuery = (

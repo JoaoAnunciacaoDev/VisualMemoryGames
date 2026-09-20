@@ -19,7 +19,7 @@ export default function TierLists() {
 
       <Button
         variant="primary"
-        onClick={() => controller.setShowCreateModal(true)}
+        onClick={controller.openCreate}
         className={styles.createButton}
       >
         <Plus aria-hidden="true" size={18} /> Nova Tier List
@@ -28,9 +28,12 @@ export default function TierLists() {
       <TierListCreateModal
         open={controller.showCreateModal}
         isCreating={controller.isCreating}
+        isSourceLoading={controller.sourceLoading}
+        sourceError={controller.sourceError}
         customLists={controller.customLists}
         statusOptions={TIER_LIST_STATUS_OPTIONS}
-        onClose={() => controller.setShowCreateModal(false)}
+        onClose={controller.closeCreate}
+        onGameSourceChange={controller.setCreateSource}
         onCreate={controller.create}
       />
 

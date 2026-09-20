@@ -138,6 +138,16 @@ def test_get_feed_and_activity_creation(client: TestClient, db_session, auth_hea
     # Releases do RAWG devem estar presentes (depende do mock se estiver mockado)
     assert "rawg_releases" in data
 
+    activities_only = client.get(
+        "/social/feed?include_releases=false", headers=auth_headers
+    )
+    assert activities_only.status_code == 200
+    assert activities_only.json()["rawg_releases"] == []
+
+    releases = client.get("/social/releases/weekly", headers=auth_headers)
+    assert releases.status_code == 200
+    assert isinstance(releases.json(), list)
+
 
 def test_get_followers_and_following(client: TestClient, db_session, auth_headers):
     tester = db_session.query(User).filter_by(username="tester").first()

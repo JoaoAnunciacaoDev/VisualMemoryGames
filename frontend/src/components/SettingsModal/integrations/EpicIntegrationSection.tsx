@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Clipboard, FolderOpen, Gamepad2, RefreshCw, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Clipboard, ExternalLink, FolderOpen, Gamepad2, RefreshCw, Trash2 } from 'lucide-react';
 import Button from '@/components/Shared/Button/Button';
 import styles from '../SettingsModal.module.css';
 
@@ -57,7 +57,18 @@ export default function EpicIntegrationSection(props: Props) {
       {props.instructionsOpen && (
         <div className={styles.epicInstructionsBox}>
           <ol className={styles.epicStepList}>
-            <li>Acesse sua <a href="https://accounts.epicgames.com/account/transactions/purchases?productName=egs" target="_blank" rel="noopener noreferrer">Página de Transações da Epic Games ↗</a> no navegador.</li>
+            <li>
+              Acesse sua{' '}
+              <a
+                href="https://accounts.epicgames.com/account/transactions/purchases?productName=egs"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Página de Transações da Epic Games
+                <ExternalLink aria-hidden="true" size={14} />
+              </a>{' '}
+              no navegador.
+            </li>
             <li>Abra as Ferramentas do Desenvolvedor pressionando <strong>F12</strong> e clique na aba <strong>Console</strong>.</li>
             <li>Clique no botão abaixo para copiar o script de exportação:</li>
           </ol>

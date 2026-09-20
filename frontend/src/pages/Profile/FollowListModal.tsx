@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -51,10 +52,23 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ userId, type, onClose
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.modalContent}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="follow-list-title"
+      >
         <div className={styles.modalHeader}>
-          <h3>{title}</h3>
-          <button className={styles.closeButton} onClick={onClose}>&times;</button>
+          <h3 id="follow-list-title">{title}</h3>
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Fechar lista"
+          >
+            <X aria-hidden="true" size={20} />
+          </button>
         </div>
         
         <div className={styles.modalBody}>
@@ -68,7 +82,12 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ userId, type, onClose
             <div className={styles.userList}>
               {users.map(u => (
                 <div key={u.id} className={styles.userCard}>
-                  <div className={styles.userInfo} onClick={() => handleUserClick(u.username)}>
+                  <button
+                    type="button"
+                    className={styles.userInfo}
+                    onClick={() => handleUserClick(u.username)}
+                    aria-label={`Abrir perfil de ${u.username}`}
+                  >
                     <div className={styles.userAvatar}>
                       {u.username.charAt(0).toUpperCase()}
                     </div>
@@ -78,7 +97,7 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ userId, type, onClose
                         {u.followers_count} seguidores • {u.following_count} seguindo
                       </span>
                     </div>
-                  </div>
+                  </button>
                   {myId && myId !== u.id && (
                     <button
                       className={`${styles.followButton} ${u.is_following ? styles.following : ''}`}

@@ -1,5 +1,5 @@
 import { useMemo, useState, type KeyboardEvent } from 'react';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import styles from './ManualGameModal.module.css';
 
 interface Option { id: string; label: string }
@@ -77,7 +77,8 @@ export default function SearchableTagSelector({
             {filtered.map((option) => <button key={option.id} type="button" className={styles.dropdownItem} onMouseDown={() => add(option.id)}>{option.label}</button>)}
             {showCustom && (
               <button type="button" className={`${styles.dropdownItem} ${styles.customItem}`} onMouseDown={() => add(customValue)}>
-                + Adicionar &quot;{customValue}&quot; como {singular} personalizada
+                <Plus aria-hidden="true" size={14} /> Adicionar &quot;{customValue}&quot; como{' '}
+                {singular} personalizada
               </button>
             )}
           </div>

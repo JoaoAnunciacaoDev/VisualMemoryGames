@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { Plus } from 'lucide-react';
 import { Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 
@@ -69,7 +70,7 @@ export default function TierListEditorHeader({
             className={styles.addGameButton}
             onClick={onAddGame}
           >
-            + Adicionar Jogo
+            <Plus aria-hidden="true" size={16} /> Adicionar Jogo
           </Button>
         </div>
       )}

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import Button from '@/components/Shared/Button/Button';
 import ConfirmModal from '@/components/Shared/ConfirmModal/ConfirmModal';
 import Modal from '@/components/Shared/Modal/Modal';
@@ -7,6 +6,7 @@ import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { type EditGamePayload, useGameEditForm } from '@/hooks/useGameEditForm';
 import { useToast } from '@/hooks/useToast';
 import type { LibraryGame } from '@/types';
+import { getApiErrorMessage } from '@/utils/apiError';
 import styles from './GameEditModal.module.css';
 import CoverEditor from './CoverEditor';
 import GameDateFields from './GameDateFields';
@@ -78,17 +78,7 @@ export default function GameEditModal({ game, onSave, onRemove, onClose }: Props
     try {
       await onSave(await handleSave());
     } catch (error) {
-      let message = 'Erro ao salvar alterações.';
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail;
-        if (typeof detail === 'string') message = detail;
-        else if (Array.isArray(detail)) message = detail.map((item: { msg?: string }) => item.msg || '').join('\n');
-        else if (error.response?.data?.message) message = error.response.data.message;
-        else if (error.message) message = error.message;
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
-      showToast(message, 'error');
+      showToast(getApiErrorMessage(error, 'Erro ao salvar alterações.'), 'error');
     } finally {
       setIsSaving(false);
     }

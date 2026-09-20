@@ -2,16 +2,12 @@ import { useState } from 'react';
 import { Modal, Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierList/TierList.module.css';
 import type { CustomList } from '@/types';
+import type {
+  TierListCreateValues,
+  TierListGameSource,
+} from '@/features/tierlists/types';
 
-export type GameSource = 'empty' | 'all' | 'status' | 'list';
-
-export interface TierListCreateValues {
-  title: string;
-  gameSource: GameSource;
-  selectedStatus: string;
-  selectedListId: string;
-  isPublic: boolean;
-}
+export type { TierListCreateValues } from '@/features/tierlists/types';
 
 interface Props {
   open: boolean;
@@ -31,7 +27,7 @@ export default function TierListCreateModal({
   onCreate,
 }: Props) {
   const [title, setTitle] = useState('');
-  const [gameSource, setGameSource] = useState<GameSource>('empty');
+  const [gameSource, setGameSource] = useState<TierListGameSource>('empty');
   const [selectedStatus, setSelectedStatus] = useState('Zerado');
   const [selectedListId, setSelectedListId] = useState('');
   const [isPublic, setIsPublic] = useState(true);
@@ -81,7 +77,7 @@ export default function TierListCreateModal({
           Fonte dos jogos
           <select
             value={gameSource}
-            onChange={(e) => setGameSource(e.target.value as GameSource)}
+            onChange={(e) => setGameSource(e.target.value as TierListGameSource)}
             className={styles.select}
           >
             <option value="empty">Vazia (adicionar manualmente)</option>

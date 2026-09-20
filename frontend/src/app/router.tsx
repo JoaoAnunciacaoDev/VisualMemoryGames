@@ -14,6 +14,7 @@ import {
   validateSocialSearch,
 } from '@/app/search';
 import { RootLayout } from '@/app/RootLayout';
+import { RouteErrorFallback } from '@/app/RouteErrorFallback';
 import {
   Admin,
   Home,
@@ -60,6 +61,7 @@ const redirectIfAuthenticated = async ({ context }: { context: RouterContext }) 
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
+  errorComponent: RouteErrorFallback,
   notFoundComponent: NotFound,
 });
 

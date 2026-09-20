@@ -2,6 +2,7 @@ import { CSSProperties, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { useSortable, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Trash2 } from 'lucide-react';
 import type { GameItem } from '@/hooks/useTierListEditor';
 
 import SortableGame from '@/components/TierListMaker/SortableGame';
@@ -84,7 +85,7 @@ export default function TierRow({
                 onClick={onDelete}
                 title="Deletar tier"
               >
-                X
+                <Trash2 aria-hidden="true" size={16} />
               </button>
             )}
           </div>

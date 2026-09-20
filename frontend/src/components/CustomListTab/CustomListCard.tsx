@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react';
-import { ChevronDown, ChevronUp, Flag, Star, Trash2, Trophy } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flag, Plus, Star, Trash2, Trophy } from 'lucide-react';
 import { closestCenter, DndContext, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { rectSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { Button, Card } from '@/components/Shared';
@@ -84,7 +84,16 @@ export default function CustomListCard({
               </div>
             </SortableContext>
           </DndContext>
-          {!list.is_system && <Button type="button" variant="primary" className={styles.addGameButton} onClick={onAddGames}>+ Adicionar Jogo</Button>}
+          {!list.is_system && (
+            <Button
+              type="button"
+              variant="primary"
+              className={styles.addGameButton}
+              onClick={onAddGames}
+            >
+              <Plus aria-hidden="true" size={16} /> Adicionar Jogo
+            </Button>
+          )}
         </div>
       )}
     </Card>

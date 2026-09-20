@@ -126,7 +126,7 @@ describe('FollowListModal', () => {
       </TestRouter>
     );
 
-    const closeBtn = await screen.findByText('×');
+    const closeBtn = await screen.findByRole('button', { name: 'Fechar lista' });
     fireEvent.click(closeBtn);
     expect(mockOnClose).toHaveBeenCalled();
   });

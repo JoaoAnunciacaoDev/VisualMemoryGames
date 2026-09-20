@@ -22,7 +22,7 @@ describe('CustomListsTab', () => {
     mockApi.post.mockResolvedValue({});
     render(<TestQueryProvider><CustomListsTab libraryGames={[]} onLibraryChange={vi.fn()} /></TestQueryProvider>);
     fireEvent.change(screen.getByPlaceholderText('Nome da nova lista...'), { target: { value: 'Favoritos locais' } });
-    fireEvent.click(screen.getByRole('button', { name: '+ Criar Lista' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Criar Lista' }));
     await waitFor(() => expect(mockApi.post).toHaveBeenCalledWith('/lists/', { name: 'Favoritos locais' }));
   });
 });

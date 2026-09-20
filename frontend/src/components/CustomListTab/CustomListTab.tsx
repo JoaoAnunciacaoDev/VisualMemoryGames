@@ -1,4 +1,5 @@
 import { Button, ConfirmModal, Input } from '@/components/Shared';
+import { Plus } from 'lucide-react';
 import SelectGamesModal from '@/components/SelectGamesModal/SelectGamesModal';
 import type { LibraryGame } from '@/types';
 import CustomListCard from './CustomListCard';
@@ -24,7 +25,9 @@ export default function CustomListsTab({ libraryGames, onLibraryChange }: Props)
           onChange={(event) => controller.setNewListName(event.target.value)}
           onKeyDown={(event) => event.key === 'Enter' && controller.createList()}
         />
-        <Button variant="primary" onClick={controller.createList}>+ Criar Lista</Button>
+        <Button variant="primary" onClick={controller.createList}>
+          <Plus aria-hidden="true" size={16} /> Criar Lista
+        </Button>
       </div>
 
       {controller.lists.length === 0 ? (

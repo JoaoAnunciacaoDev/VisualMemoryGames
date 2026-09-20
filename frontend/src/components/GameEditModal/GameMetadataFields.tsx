@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react';
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { STANDARD_GENRES } from '@/utils/genres';
 import { STANDARD_PLATFORMS } from '@/utils/platforms';
 import styles from './GameEditModal.module.css';
@@ -80,7 +80,7 @@ function TagSelector({ field, title, singularLabel, values, options, editable, e
             )}
           </span>
         ))}
-        {editable && <button type="button" className={styles.addTagButton} onClick={(event) => { event.stopPropagation(); onToggle(field); }}>+ Adicionar</button>}
+        {editable && <button type="button" className={styles.addTagButton} onClick={(event) => { event.stopPropagation(); onToggle(field); }}><Plus aria-hidden="true" size={14} /> Adicionar</button>}
       </div>
 
       {editing && editable && (
@@ -115,7 +115,7 @@ function TagSelector({ field, title, singularLabel, values, options, editable, e
                 <button key={option.id} type="button" className={styles.dropdownItem} onMouseDown={() => addValue(option.id)}>{option.label}</button>
               ))}
               {showCustomOption && (
-                <button type="button" className={`${styles.dropdownItem} ${styles.customItem}`} onMouseDown={() => addValue(search)}>+ Adicionar &quot;{search.trim()}&quot;</button>
+                <button type="button" className={`${styles.dropdownItem} ${styles.customItem}`} onMouseDown={() => addValue(search)}><Plus aria-hidden="true" size={14} /> Adicionar &quot;{search.trim()}&quot;</button>
               )}
             </div>
           )}

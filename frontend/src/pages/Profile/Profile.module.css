@@ -463,8 +463,27 @@
 }
 
 .boardGameMeta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.boardGameMetaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.boardGameMetaItem svg {
+  flex: 0 0 auto;
+}
+
+.boardGameMetaDivider {
+  color: var(--border-color);
 }
 
 .boardEmptyText {

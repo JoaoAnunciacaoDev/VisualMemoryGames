@@ -22,8 +22,19 @@ function GameGrid({ games, emptyMessage }: { games: DashboardGame[]; emptyMessag
             <div className={styles.boardGameDetails}>
               <span className={styles.boardGameTitle} title={game.title}>{game.title}</span>
               <span className={styles.boardGameMeta}>
-                <Clock3 aria-hidden="true" size={14} /> {game.hours_played}h
-                {game.rating !== null && <><span> | </span><Star aria-hidden="true" size={14} /> {game.rating}/10</>}
+                <span className={styles.boardGameMetaItem}>
+                  <Clock3 aria-hidden="true" size={14} />
+                  <span>{game.hours_played}h</span>
+                </span>
+                {game.rating !== null && (
+                  <>
+                    <span className={styles.boardGameMetaDivider} aria-hidden="true">|</span>
+                    <span className={styles.boardGameMetaItem}>
+                      <Star aria-hidden="true" size={14} />
+                      <span>{game.rating}/10</span>
+                    </span>
+                  </>
+                )}
               </span>
             </div>
           </div>

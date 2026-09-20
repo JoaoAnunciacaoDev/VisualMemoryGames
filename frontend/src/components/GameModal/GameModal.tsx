@@ -2,6 +2,7 @@ import Modal from '@/components/Shared/Modal/Modal';
 import Button from '@/components/Shared/Button/Button';
 import type { GameDisplay } from '@/types';
 import styles from '@/components/GameModal/GameModal.module.css';
+import { CalendarDays, Gamepad2, Monitor } from 'lucide-react';
 
 interface Props {
   game: GameDisplay | null;
@@ -22,9 +23,9 @@ export default function GameModal({ game, isAdded, onClose, onAdd, onRemove }: P
 
       <div className={styles.content}>
         <h2 className={styles.title}>{game.title}</h2>
-        {game.releaseYear && <p className={styles.meta}>📅 {game.releaseYear}</p>}
-        {game.genres.length > 0 && <p className={styles.meta}>🎮 {game.genres.join(', ')}</p>}
-        {game.platforms.length > 0 && <p className={styles.meta}>🖥️ {game.platforms.join(', ')}</p>}
+        {game.releaseYear && <p className={styles.meta}><CalendarDays aria-hidden="true" size={16} /> {game.releaseYear}</p>}
+        {game.genres.length > 0 && <p className={styles.meta}><Gamepad2 aria-hidden="true" size={16} /> {game.genres.join(', ')}</p>}
+        {game.platforms.length > 0 && <p className={styles.meta}><Monitor aria-hidden="true" size={16} /> {game.platforms.join(', ')}</p>}
 
         <div className={styles.actions}>
           {isAdded && onRemove ? (

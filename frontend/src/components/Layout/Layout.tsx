@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
-import styles from '@/components/Layout/Layout.module.css';
 
 interface Props {
   children: ReactNode;
@@ -9,9 +8,9 @@ interface Props {
 
 export default function Layout({ children }: Props) {
   return (
-    <div className={styles.wrapper}>
+    <div className="flex min-h-screen flex-col bg-[var(--bg)]">
       <Header />
-      <main className={styles.main}>
+      <main className="flex-1">
         {children}
       </main>
       <Footer />

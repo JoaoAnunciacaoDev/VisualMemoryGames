@@ -27,26 +27,35 @@
   width: 100%;
 }
 
-/* Variants */
 .primary {
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: var(--text);
   box-shadow: var(--shadow-button);
 }
+
 .primary:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: var(--shadow-button-hover);
 }
+
 .primary:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.secondary {
+  background: var(--secondary);
+  color: var(--surface);
+}
+
+.secondary:hover:not(:disabled),
+.danger:hover:not(:disabled),
+.success:hover:not(:disabled) {
+  opacity: 0.85;
 }
 
 .danger {
   background: var(--danger);
   color: var(--surface);
-}
-.danger:hover:not(:disabled) {
-  opacity: 0.85;
 }
 
 .ghost {
@@ -54,6 +63,7 @@
   border: 1px solid var(--border);
   color: var(--text);
 }
+
 .ghost:hover:not(:disabled) {
   background: rgba(255, 234, 204, 0.08);
 }
@@ -61,9 +71,6 @@
 .success {
   background: var(--success);
   color: var(--surface);
-}
-.success:hover:not(:disabled) {
-  opacity: 0.85;
 }
 
 @media (max-width: 600px) {

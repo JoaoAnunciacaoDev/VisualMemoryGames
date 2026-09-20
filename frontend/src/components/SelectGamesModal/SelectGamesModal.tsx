@@ -5,6 +5,7 @@ import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 import styles from '@/components/SelectGamesModal/SelectGamesModal.module.css';
 import type { LibraryGame } from '@/types';
+import { Check } from 'lucide-react';
 
 interface Props {
   games: LibraryGame[];
@@ -80,7 +81,7 @@ export default function SelectGamesModal({ games, alreadyInList, onConfirm, onCl
                 )}
                 <span className={styles.title}>{game.title}</span>
                 <div className={`${styles.checkbox} ${isSelected ? styles.checked : ''}`}>
-                  {isSelected && '✓'}
+                  {isSelected && <Check aria-hidden="true" size={16} />}
                 </div>
               </button>
             );

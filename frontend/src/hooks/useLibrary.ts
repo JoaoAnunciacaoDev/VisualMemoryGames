@@ -1,76 +1,37 @@
-import { useState, useCallback, useEffect } from 'react';
-import api from '@/services/api';
-import { LibraryGame } from '@/types';
+import { useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { UpdateLibraryGame } from '@/types/updateGame';
+import { libraryKeys, myLibraryQuery } from '@/features/library/queries';
+import { removeLibraryGame, updateLibraryGame } from '@/features/library/mutations';
 
 
 export function useLibrary() {
-  const [games, setGames] = useState<LibraryGame[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const libraryQuery = useQuery(myLibraryQuery());
 
   const loadLibrary = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.get('/user-games/me');
-      setGames(response.data);
-    } catch {
-      setError('Erro ao carregar biblioteca.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await queryClient.invalidateQueries({ queryKey: libraryKeys.mine() });
+  }, [queryClient]);
 
-  useEffect(() => {
-    let active = true;
-    api.get('/user-games/me')
-      .then((response) => {
-        if (active) {
-          setGames(response.data);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setError('Erro ao carregar biblioteca.');
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+  const updateMutation = useMutation({
+    mutationFn: updateLibraryGame,
+    onSuccess: loadLibrary,
+  });
+  const removeMutation = useMutation({
+    mutationFn: removeLibraryGame,
+    onSuccess: loadLibrary,
+  });
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  const updateGame = (id: string, data: Partial<UpdateLibraryGame>) =>
+    updateMutation.mutateAsync({ id, data }).then(() => undefined);
+  const removeGame = (id: string) => removeMutation.mutateAsync(id).then(() => undefined);
 
-  useEffect(() => {
-    window.addEventListener('steam-synced', loadLibrary);
-    window.addEventListener('gog-synced', loadLibrary);
-    window.addEventListener('itch-synced', loadLibrary);
-    window.addEventListener('epic-synced', loadLibrary);
-    return () => {
-      window.removeEventListener('steam-synced', loadLibrary);
-      window.removeEventListener('gog-synced', loadLibrary);
-      window.removeEventListener('itch-synced', loadLibrary);
-      window.removeEventListener('epic-synced', loadLibrary);
-    };
-  }, [loadLibrary]);
-
-  const updateGame = async (
-      id: string,
-      data: Partial<UpdateLibraryGame>
-  ) => {
-    await api.put(`/user-games/${id}`, data);
-    await loadLibrary();
+  return {
+    games: libraryQuery.data ?? [],
+    loading: libraryQuery.isPending,
+    error: libraryQuery.isError ? 'Erro ao carregar biblioteca.' : null,
+    loadLibrary,
+    updateGame,
+    removeGame,
   };
-
-  const removeGame = async (id: string) => {
-    await api.delete(`/user-games/${id}`);
-    await loadLibrary();
-  };
-
-  return { games, loading, error, loadLibrary, updateGame, removeGame };
 }

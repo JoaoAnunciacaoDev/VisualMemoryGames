@@ -1,17 +1,10 @@
-import { useState } from 'react';
+import { useForm } from '@tanstack/react-form';
 import { Modal, Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierList/TierList.module.css';
 import type { CustomList } from '@/types';
+import { tierListCreateSchema, type TierListCreateValues } from '@/features/tierlists/types';
 
-export type GameSource = 'empty' | 'all' | 'status' | 'list';
-
-export interface TierListCreateValues {
-  title: string;
-  gameSource: GameSource;
-  selectedStatus: string;
-  selectedListId: string;
-  isPublic: boolean;
-}
+export type { TierListCreateValues } from '@/features/tierlists/types';
 
 interface Props {
   open: boolean;
@@ -30,121 +23,149 @@ export default function TierListCreateModal({
   onClose,
   onCreate,
 }: Props) {
-  const [title, setTitle] = useState('');
-  const [gameSource, setGameSource] = useState<GameSource>('empty');
-  const [selectedStatus, setSelectedStatus] = useState('Zerado');
-  const [selectedListId, setSelectedListId] = useState('');
-  const [isPublic, setIsPublic] = useState(true);
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      gameSource: 'empty',
+      selectedStatus: 'Zerado',
+      selectedListId: '',
+      isPublic: true,
+    } as TierListCreateValues,
+    onSubmit: ({ value }) => {
+      const parsed = tierListCreateSchema.safeParse(value);
+      if (!parsed.success) return;
+      onCreate(parsed.data);
+      onClose();
+      form.reset();
+    },
+  });
 
   const handleClose = () => {
     onClose();
-    setTitle('');
-    setGameSource('empty');
-    setSelectedStatus('Zerado');
-    setSelectedListId('');
-    setIsPublic(true);
+    form.reset();
   };
-
-  const handleCreate = () => {
-    if (!title.trim()) return;
-
-    onCreate({
-      title: title.trim(),
-      gameSource,
-      selectedStatus,
-      selectedListId,
-      isPublic,
-    });
-
-    handleClose();
-  };
-
-  const canCreate = !isCreating && title.trim().length > 0 && !(gameSource === 'list' && !selectedListId);
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="460px" showCloseButton>
-      <div className={styles.modalContent}>
+      <form
+        className={styles.modalContent}
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void form.handleSubmit();
+        }}
+      >
         <h3 className={styles.modalTitle}>Nova Tier List</h3>
 
-        <label className={styles.label}>
-          Nome
-          <Input
-            type="text"
-            placeholder="Ex: Meus Jogos de 2024"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            autoFocus
-          />
-        </label>
+        <form.Field name="title">
+          {(field) => (
+            <label className={styles.label}>
+              Nome
+              <Input
+                type="text"
+                placeholder="Ex: Meus Jogos de 2024"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                autoFocus
+              />
+            </label>
+          )}
+        </form.Field>
 
-        <label className={styles.label}>
-          Fonte dos jogos
-          <select
-            value={gameSource}
-            onChange={(e) => setGameSource(e.target.value as GameSource)}
-            className={styles.select}
-          >
-            <option value="empty">Vazia (adicionar manualmente)</option>
-            <option value="all">Toda a biblioteca</option>
-            <option value="status">Por status</option>
-            <option value="list">Lista personalizada</option>
-          </select>
-        </label>
+        <form.Field name="gameSource">
+          {(field) => (
+            <label className={styles.label}>
+              Fonte dos jogos
+              <select
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value as TierListCreateValues['gameSource'])}
+                className={styles.select}
+              >
+                <option value="empty">Vazia (adicionar manualmente)</option>
+                <option value="all">Toda a biblioteca</option>
+                <option value="status">Por status</option>
+                <option value="list">Lista personalizada</option>
+              </select>
+            </label>
+          )}
+        </form.Field>
 
-        {gameSource === 'status' && (
-          <label className={styles.label}>
-            Status
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className={styles.select}
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <form.Subscribe selector={(state) => state.values.gameSource}>
+          {(gameSource) => (
+            <>
+              {gameSource === 'status' && (
+                <form.Field name="selectedStatus">
+                  {(field) => (
+                    <label className={styles.label}>
+                      Status
+                      <select
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        className={styles.select}
+                      >
+                        {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
+                      </select>
+                    </label>
+                  )}
+                </form.Field>
+              )}
 
-        {gameSource === 'list' && (
-          <label className={styles.label}>
-            Lista
-            <select
-              value={selectedListId}
-              onChange={(e) => setSelectedListId(e.target.value)}
-              className={styles.select}
-            >
-              <option value="">Selecione uma lista...</option>
-              {customLists.map((list) => (
-                <option key={list.id} value={list.id}>
-                  {list.name} ({list.games.length} jogos)
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+              {gameSource === 'list' && (
+                <form.Field name="selectedListId">
+                  {(field) => (
+                    <label className={styles.label}>
+                      Lista
+                      <select
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        className={styles.select}
+                      >
+                        <option value="">Selecione uma lista...</option>
+                        {customLists.map((list) => (
+                          <option key={list.id} value={list.id}>{list.name} ({list.games.length} jogos)</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </form.Field>
+              )}
+            </>
+          )}
+        </form.Subscribe>
 
-        <label className={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(e) => setIsPublic(e.target.checked)}
-            className={styles.checkbox}
-          />
-          <span>Tornar esta Tier List pública</span>
-        </label>
+        <form.Field name="isPublic">
+          {(field) => (
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.checked)}
+                className={styles.checkbox}
+              />
+              <span>Tornar esta Tier List pública</span>
+            </label>
+          )}
+        </form.Field>
 
-        <div className={styles.modalActions}>
-          <Button type="button" variant="ghost" onClick={handleClose}>
-            Cancelar
-          </Button>
-          <Button type="button" variant="primary" onClick={handleCreate} disabled={!canCreate}>
-            {isCreating ? 'Criando...' : 'Criar'}
-          </Button>
-        </div>
-      </div>
+        <form.Subscribe selector={(state) => state.values}>
+          {(values) => {
+            const canCreate = !isCreating && tierListCreateSchema.safeParse(values).success;
+            return (
+              <div className={styles.modalActions}>
+                <Button type="button" variant="ghost" onClick={handleClose}>Cancelar</Button>
+                <Button type="submit" variant="primary" disabled={!canCreate}>
+                  {isCreating ? 'Criando...' : 'Criar'}
+                </Button>
+              </div>
+            );
+          }}
+        </form.Subscribe>
+      </form>
     </Modal>
   );
 }

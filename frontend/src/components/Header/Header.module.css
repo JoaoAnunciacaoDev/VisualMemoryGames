@@ -41,26 +41,24 @@
   align-items: center;
 }
 
-/* ===== Mobile ===== */
-@media (max-width: 860px) {
-  .header {
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: var(--gap-md) var(--gap-md);
-    gap: var(--gap-md);
-  }
+.navigationContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
-  .logo {
-    font-size: var(--font-size-xl);
-    text-align: center;
-  }
-
-  .nav {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--gap-sm);
-  }
+.mobileMenuButton {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
 }
 
 .navLinks {
@@ -196,5 +194,69 @@
   100% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.85));
+  }
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 860px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--gap-sm) var(--gap-md);
+    gap: var(--gap-sm);
+  }
+
+  .logo {
+    font-size: var(--font-size-md);
+    text-align: left;
+  }
+
+  .logoIcon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .nav {
+    margin-left: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: var(--gap-sm);
+  }
+
+  .mobileMenuButton {
+    display: inline-flex;
+  }
+
+  .navLinks {
+    display: none;
+    position: absolute;
+    top: calc(100% + var(--gap-sm));
+    right: 0;
+    z-index: 1000;
+    width: min(260px, calc(100vw - (2 * var(--gap-md))));
+    margin: 0;
+    padding: var(--gap-sm);
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: var(--gap-xs);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .navLinksOpen {
+    display: flex;
+  }
+
+  .navLinks button {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .navActions {
+    gap: var(--gap-xs);
   }
 }

@@ -1,17 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { addGameToLibrary } from '@/hooks/useAddGame';
 import api from '@/services/api';
-import { ensureGameRecord } from '@/services/gameCatalog';
 import type { GameResult } from '@/types';
 
 vi.mock('@/services/api', () => ({
   default: {
     post: vi.fn(),
   },
-}));
-
-vi.mock('@/services/gameCatalog', () => ({
-  ensureGameRecord: vi.fn(),
 }));
 
 const mockGame: GameResult = {
@@ -30,20 +25,21 @@ describe('addGameToLibrary', () => {
 
   it('deve registar o jogo no catálogo e adicionar à biblioteca', async () => {
     const mockGameId = 'game-id-123';
-    vi.mocked(ensureGameRecord).mockResolvedValue(mockGameId);
-    vi.mocked(api.post).mockResolvedValue({});
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({ data: { id: mockGameId } })
+      .mockResolvedValueOnce({});
 
     await addGameToLibrary(mockGame);
 
-    expect(ensureGameRecord).toHaveBeenCalledWith(mockGame);
+    expect(api.post).toHaveBeenNthCalledWith(1, '/games/', mockGame);
     expect(api.post).toHaveBeenCalledWith('/user-games/', { game_id: mockGameId });
   });
 
-  it('deve propagar o erro se ensureGameRecord falhar', async () => {
+  it('deve propagar o erro se o registro no catálogo falhar', async () => {
     const error = new Error('Erro ao registar jogo');
-    vi.mocked(ensureGameRecord).mockRejectedValue(error);
+    vi.mocked(api.post).mockRejectedValue(error);
 
     await expect(addGameToLibrary(mockGame)).rejects.toThrow('Erro ao registar jogo');
-    expect(api.post).not.toHaveBeenCalled();
+    expect(api.post).toHaveBeenCalledTimes(1);
   });
 });

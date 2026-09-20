@@ -3,9 +3,11 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthProvider } from '@/providers/AuthProvider';
 import api from '@/services/api';
+import { TestQueryProvider } from '@/test/TestRouter';
+import { createElement, type ReactNode } from 'react';
 
 const mockNavigate = vi.fn();
-vi.mock('react-router-dom', () => ({
+vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
 }));
 
@@ -17,26 +19,28 @@ vi.mock('@/services/api', () => ({
 }));
 
 describe('useAuth', () => {
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(TestQueryProvider, null, createElement(AuthProvider, null, children));
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('deve redirecionar para /login se a chamada /users/me falhar (usuário não autenticado)', async () => {
+  it('deve expor usuário vazio se a chamada /users/me falhar', async () => {
     vi.mocked(api.get).mockRejectedValue(new Error('Unauthorized'));
 
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
+    expect(mockNavigate).not.toHaveBeenCalled();
     expect(result.current.userId).toBe('');
   });
 
   it('deve carregar o utilizador quando /users/me retorna com sucesso', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { id: 'user-123' } });
 
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/users/me');
@@ -52,7 +56,7 @@ describe('useAuth', () => {
     vi.mocked(api.get).mockResolvedValue({ data: { id: 'user-123' } });
     vi.mocked(api.post).mockResolvedValue({ data: { message: 'Desconectado com sucesso' } });
 
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -63,6 +67,6 @@ describe('useAuth', () => {
     });
 
     expect(api.post).toHaveBeenCalledWith('/logout');
-    expect(mockNavigate).toHaveBeenCalledWith('/login');
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/login' });
   });
 });

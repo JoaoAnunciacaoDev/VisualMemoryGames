@@ -1,6 +1,7 @@
 .gameCard {
   display: flex;
   flex-direction: column;
+  height: 100%;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
 }
 

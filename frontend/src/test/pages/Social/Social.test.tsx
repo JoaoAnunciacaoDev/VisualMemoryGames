@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { TestRouter } from '@/test/TestRouter';
 import Social from '@/pages/Social/Social';
 import api from '@/services/api';
 
@@ -45,23 +45,37 @@ describe('Social Page', () => {
     vi.clearAllMocks();
   });
 
-  it('renders loading state for feed', () => {
+  it('renders loading state for feed', async () => {
     mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
     render(
-      <MemoryRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
-    expect(screen.getByText('Carregando feed...')).toBeInTheDocument();
+    expect(await screen.findByText('Carregando feed...')).toBeInTheDocument();
+  });
+
+  it('does not treat the scroll result as an effect cleanup', async () => {
+    vi.mocked(window.scrollTo).mockReturnValue('non-standard scroll result' as never);
+    mockApi.get.mockImplementation(() => new Promise(() => {}));
+
+    const view = render(
+      <TestRouter initialEntries={['/social']}>
+        <Social />
+      </TestRouter>
+    );
+
+    expect(await screen.findByText('Carregando feed...')).toBeInTheDocument();
+    expect(() => view.unmount()).not.toThrow();
   });
 
   it('renders feed activities and rawg releases', async () => {
     mockApi.get.mockResolvedValueOnce({ data: mockFeed });
 
     render(
-      <MemoryRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
@@ -106,14 +120,14 @@ describe('Social Page', () => {
     mockApi.get.mockResolvedValueOnce({ data: paginatedMockFeed });
 
     render(
-      <MemoryRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     await waitFor(() => {
-      expect(screen.getByText('‹ Anterior')).toBeInTheDocument();
-      expect(screen.getByText('Próximo ›')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Anterior' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Próximo' })).toBeInTheDocument();
       expect(screen.getByText('2')).toBeInTheDocument();
       expect(screen.getByText('3')).toBeInTheDocument();
     });
@@ -165,17 +179,17 @@ describe('Social Page', () => {
     });
 
     render(
-      <MemoryRouter>
+      <TestRouter initialEntries={['/social']}>
         <Social />
-      </MemoryRouter>
+      </TestRouter>
     );
 
     // Switch to search tab
-    const searchTab = screen.getByText('Encontrar Pessoas');
+    const searchTab = await screen.findByText('Encontrar Pessoas');
     fireEvent.click(searchTab);
 
     // Enter query and submit
-    const searchInput = screen.getByPlaceholderText('Pesquisar por nome de usuário...');
+    const searchInput = await screen.findByPlaceholderText('Pesquisar por nome de usuário...');
     fireEvent.change(searchInput, { target: { value: 'searcheduser' } });
 
     // Submit the form directly instead of clicking the button to bypass JSDOM submit issues
@@ -188,4 +202,3 @@ describe('Social Page', () => {
     });
   });
 });
-

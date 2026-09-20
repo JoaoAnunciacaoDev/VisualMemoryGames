@@ -1,8 +1,29 @@
-import type { KeyboardEvent } from 'react';
+import { createElement, type KeyboardEvent } from 'react';
+import {
+  CheckCircle2,
+  Disc3,
+  FileText,
+  ShoppingCart,
+  Star,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
+import type { IconType } from 'react-icons';
+import {
+  FaAmazon,
+  FaAppStoreIos,
+  FaGooglePlay,
+  FaItchIo,
+  FaPlaystation,
+  FaSteam,
+  FaXbox,
+} from 'react-icons/fa6';
+import { SiEa, SiEpicgames, SiGogdotcom, SiUbisoft } from 'react-icons/si';
+import { TbDeviceNintendo } from 'react-icons/tb';
 import Card from '@/components/Shared/Card/Card';
 import styles from '@/components/LibraryCard/LibraryCard.module.css';
 
-import { getStoreLabel } from '@/types/enums';
+import { getStoreLabel, normalizeStoreKey } from '@/types/enums';
 
 interface Props {
   title: string;
@@ -27,19 +48,24 @@ const STATUS_CLASSES: Record<string, string> = {
   'Em Espera': styles.statusOnHold,
 };
 
-const getStoreEmoji = (storeKey: string): string => {
-  const lower = storeKey.toLowerCase();
-  if (lower.includes('steam')) return '🎮';
-  if (lower.includes('epic')) return '🔌';
-  if (lower.includes('gog')) return '🟣';
-  if (lower.includes('ea')) return '🟧';
-  if (lower.includes('ubisoft')) return '🌀';
-  if (lower.includes('amazon') || lower.includes('prime')) return '📦';
-  if (lower.includes('playstation') || lower.includes('ps')) return '💙';
-  if (lower.includes('xbox')) return '💚';
-  if (lower.includes('nintendo') || lower.includes('switch')) return '❤️';
-  return '🛒';
+const STORE_ICONS: Record<string, IconType | LucideIcon> = {
+  STEAM: FaSteam,
+  EPIC: SiEpicgames,
+  GOG: SiGogdotcom,
+  ITCH: FaItchIo,
+  PS_STORE: FaPlaystation,
+  XBOX: FaXbox,
+  NINTENDO: TbDeviceNintendo,
+  EA_APP: SiEa,
+  UBISOFT: SiUbisoft,
+  AMAZON: FaAmazon,
+  GOOGLE_PLAY: FaGooglePlay,
+  APP_STORE: FaAppStoreIos,
+  PHYSICAL: Disc3,
 };
+
+const getStoreIcon = (storeKey: string): IconType | LucideIcon =>
+  STORE_ICONS[normalizeStoreKey(storeKey)] ?? ShoppingCart;
 
 export default function LibraryCard({
   title,
@@ -79,12 +105,12 @@ export default function LibraryCard({
         )}
         {store && (
           <div className={styles.storeTag} title={`Adquirido na ${getStoreLabel(store)}`}>
-            {getStoreEmoji(store)} {getStoreLabel(store)}
+            {createElement(getStoreIcon(store), { 'aria-hidden': true, size: 14 })} {getStoreLabel(store)}
           </div>
         )}
         {favorite && (
           <div className={styles.favoriteBadge} title="Jogo Favorito">
-            ⭐
+            <Star aria-hidden="true" fill="currentColor" size={16} />
           </div>
         )}
         <span className={`${styles.statusTag} ${STATUS_CLASSES[status] ?? styles.statusWantToPlay}`}>
@@ -95,13 +121,13 @@ export default function LibraryCard({
         <h3 className={styles.title}>{title}</h3>
         <div className={styles.meta}>
           <span className={styles.metaLeft}>
-            {rating !== null ? `📝 ${rating}/10` : ''}
+            {rating !== null && <><FileText aria-hidden="true" size={14} /> {rating}/10</>}
           </span>
           <span className={styles.metaCenter}>
-            {finishedYear ? `✅ ${finishedYear}` : ''}
+            {finishedYear && <><CheckCircle2 aria-hidden="true" size={14} /> {finishedYear}</>}
           </span>
           <span className={styles.metaRight}>
-            {platinumYear ? `🏆 ${platinumYear}` : ''}
+            {platinumYear && <><Trophy aria-hidden="true" size={14} /> {platinumYear}</>}
           </span>
         </div>
       </div>

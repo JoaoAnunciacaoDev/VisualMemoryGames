@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useGameSearch } from '@/hooks/useGameSearch';
 import api from '@/services/api';
 import type { GameResult } from '@/types';
+import { TestQueryProvider } from '@/test/TestRouter';
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -20,13 +21,15 @@ const mockGame: GameResult = {
   genres: ['Metroidvania', 'Action'],
 };
 
+const renderGameSearch = () => renderHook(() => useGameSearch(), { wrapper: TestQueryProvider });
+
 describe('useGameSearch', () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
 
   it('deve iniciar com estados padrão', () => {
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
     expect(result.current.searchResults).toEqual([]);
     expect(result.current.isSearching).toBe(false);
     expect(result.current.hasSearched).toBe(false);
@@ -37,14 +40,14 @@ describe('useGameSearch', () => {
     const mockResponse = { data: { results: [mockGame] } };
     vi.mocked(api.get).mockResolvedValue(mockResponse);
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.searchGames('hollow');
     });
 
     expect(api.get).toHaveBeenCalledWith('/games/search', { params: { q: 'hollow', page: 1 } });
-    expect(result.current.searchResults).toEqual([mockGame]);
+    await waitFor(() => expect(result.current.searchResults).toEqual([mockGame]));
     expect(result.current.hasSearched).toBe(true);
     expect(result.current.isSearching).toBe(false);
   });
@@ -53,14 +56,14 @@ describe('useGameSearch', () => {
     const mockResponse = { data: [mockGame] };
     vi.mocked(api.get).mockResolvedValue(mockResponse);
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.searchGames('hollow');
     });
 
     expect(api.get).toHaveBeenCalledWith('/games/search', { params: { q: 'hollow', page: 1 } });
-    expect(result.current.searchResults).toEqual([mockGame]);
+    await waitFor(() => expect(result.current.searchResults).toEqual([mockGame]));
   });
 
   it('loadMore deve paginar e acumular novos resultados', async () => {
@@ -83,24 +86,24 @@ describe('useGameSearch', () => {
       .mockResolvedValueOnce({ data: { results: firstPageItems } })
       .mockResolvedValueOnce({ data: { results: [mockGame2] } });
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.searchGames('hollow');
     });
 
-    expect(result.current.searchResults).toEqual(firstPageItems);
+    await waitFor(() => expect(result.current.searchResults).toEqual(firstPageItems));
 
     await act(async () => {
       await result.current.loadMore();
     });
 
     expect(api.get).toHaveBeenLastCalledWith('/games/search', { params: { q: 'hollow', page: 2 } });
-    expect(result.current.searchResults).toEqual([...firstPageItems, mockGame2]);
+    await waitFor(() => expect(result.current.searchResults).toEqual([...firstPageItems, mockGame2]));
   });
 
   it('searchGames não deve pesquisar se o query tiver menos de 3 caracteres', async () => {
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.searchGames('ab');
@@ -113,19 +116,19 @@ describe('useGameSearch', () => {
   it('searchGames deve limpar resultados em caso de erro', async () => {
     vi.mocked(api.get).mockRejectedValue(new Error('Network Error'));
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.searchGames('hollow');
     });
 
+    await waitFor(() => expect(result.current.isSearching).toBe(false));
     expect(result.current.searchResults).toEqual([]);
     expect(result.current.hasSearched).toBe(true);
-    expect(result.current.isSearching).toBe(false);
   });
 
   it('clearResults deve limpar searchResults e hasSearched', () => {
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     act(() => {
       result.current.clearResults();
@@ -141,7 +144,7 @@ describe('useGameSearch', () => {
       .mockResolvedValueOnce({ data: { id: mockGameId } })
       .mockResolvedValueOnce({});
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.addGameToLibrary(mockGame);
@@ -168,7 +171,7 @@ describe('useGameSearch', () => {
     vi.mocked(api.post)
       .mockResolvedValueOnce({});
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await act(async () => {
       await result.current.addGameToLibrary(mockGame);
@@ -181,7 +184,7 @@ describe('useGameSearch', () => {
   it('addGameToLibrary deve propagar erro desconhecido', async () => {
     vi.mocked(api.post).mockRejectedValue(new Error('Fatal error'));
 
-    const { result } = renderHook(() => useGameSearch());
+    const { result } = renderGameSearch();
 
     await expect(
       act(async () => {

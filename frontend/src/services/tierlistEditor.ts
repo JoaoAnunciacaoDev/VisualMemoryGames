@@ -169,6 +169,10 @@ export async function updateTierListTitle(tierListId: string, title: string) {
   await api.put(`/tierlists/${tierListId}`, { title });
 }
 
+export async function updateTierListPrivacy(tierListId: string, isPublic: boolean) {
+  await api.put(`/tierlists/${tierListId}`, { is_public: isPublic });
+}
+
 export async function createTierListCategory(
   tierListId: string,
   payload: { name: string; color: string; order_index: number }
@@ -209,4 +213,8 @@ export async function moveTierListCategoryItem(
 
 export async function reorderTierListCategoryItems(categoryId: string, itemIds: string[]) {
   await api.put(`/tierlists/category/${categoryId}/reorder`, { item_ids: itemIds });
+}
+
+export async function reorderTierListCategories(tierListId: string, categoryIds: string[]) {
+  await api.put(`/tierlists/${tierListId}/categories/reorder`, { category_ids: categoryIds });
 }

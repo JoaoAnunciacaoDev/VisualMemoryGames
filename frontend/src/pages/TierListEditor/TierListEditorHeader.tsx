@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
+import { Plus } from 'lucide-react';
 import { Button, Input } from '@/components/Shared';
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 
@@ -49,7 +50,7 @@ export default function TierListEditorHeader({
           <h2 className={styles.title}>{title}</h2>
           {ownerUsername && (
             <span className={styles.ownerText}>
-              Criada por <Link to={`/profile/${ownerUsername}`}>@{ownerUsername}</Link>
+              Criada por <Link to="/profile/$userId" params={{ userId: ownerUsername }}>@{ownerUsername}</Link>
             </span>
           )}
         </div>
@@ -69,7 +70,7 @@ export default function TierListEditorHeader({
             className={styles.addGameButton}
             onClick={onAddGame}
           >
-            + Adicionar Jogo
+            <Plus aria-hidden="true" size={16} /> Adicionar Jogo
           </Button>
         </div>
       )}

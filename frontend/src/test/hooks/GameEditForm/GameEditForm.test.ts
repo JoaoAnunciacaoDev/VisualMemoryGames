@@ -4,6 +4,7 @@ import { useGameEditForm } from '@/hooks/useGameEditForm';
 import api from '@/services/api';
 import type { LibraryGame } from '@/types';
 import { ChangeEvent } from 'react';
+import { TestQueryProvider } from '@/test/TestRouter';
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -42,13 +43,18 @@ const mockManualGame: LibraryGame = {
   game_id: 'manual-game-1',
 };
 
+const renderGameEditForm = (game: LibraryGame) => renderHook(
+  () => useGameEditForm(game),
+  { wrapper: TestQueryProvider },
+);
+
 describe('useGameEditForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('deve inicializar o estado com os valores do jogo', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
 
     expect(result.current.form.status).toBe('Jogando');
     expect(result.current.form.rating).toBe(8);
@@ -62,7 +68,7 @@ describe('useGameEditForm', () => {
   });
 
   it('updateField deve atualizar um campo do formulário', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
 
     act(() => {
       result.current.updateField('rating', 9);
@@ -72,7 +78,7 @@ describe('useGameEditForm', () => {
   });
 
   it('handleStatusChange para "Quero Jogar" deve limpar campos', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
 
     act(() => {
       result.current.handleStatusChange('Quero Jogar');
@@ -87,7 +93,7 @@ describe('useGameEditForm', () => {
   });
 
   it('handleStatusChange para "Na biblioteca" deve limpar campos', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
 
     act(() => {
       result.current.handleStatusChange('Na biblioteca');
@@ -102,7 +108,7 @@ describe('useGameEditForm', () => {
   });
 
   it('handleFileChange deve actualizar coverFile e coverPreview', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
@@ -117,7 +123,7 @@ describe('useGameEditForm', () => {
   });
 
   it('handleUrlChange deve actualizar custom_cover_url e limpar coverFile', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
 
     act(() => {
       result.current.handleUrlChange({ target: { value: 'https://new-cover.jpg' } } as ChangeEvent<HTMLInputElement>);
@@ -128,7 +134,7 @@ describe('useGameEditForm', () => {
   });
 
   it('clearCoverFile deve limpar coverFile e coverPreview', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
@@ -145,7 +151,7 @@ describe('useGameEditForm', () => {
   });
 
   it('displayCover deve dar prioridade ao coverPreview', () => {
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },
@@ -161,7 +167,7 @@ describe('useGameEditForm', () => {
   it('handleSave deve actualizar o jogo e devolver o payload', async () => {
     vi.mocked(api.put).mockResolvedValue({});
 
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
 
     let payload;
     await act(async () => {
@@ -179,7 +185,7 @@ describe('useGameEditForm', () => {
   it('handleSave deve actualizar jogo manual antes do user-game', async () => {
     vi.mocked(api.put).mockResolvedValue({});
 
-    const { result } = renderHook(() => useGameEditForm(mockManualGame));
+    const { result } = renderGameEditForm(mockManualGame);
 
     await act(async () => {
       await result.current.handleSave();
@@ -194,7 +200,7 @@ describe('useGameEditForm', () => {
       .mockResolvedValueOnce({ data: { custom_cover_url: '/uploads/covers/new-cover.jpg' } })
       .mockResolvedValueOnce({});
 
-    const { result } = renderHook(() => useGameEditForm(mockGame));
+    const { result } = renderGameEditForm(mockGame);
     const file = new File([''], 'test.png', { type: 'image/png' });
     const event = {
       target: { files: [file] },

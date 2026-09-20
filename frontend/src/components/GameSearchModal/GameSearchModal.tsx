@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import api from '@/services/api';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { getBestGameCover } from '@/services/media';
 import Modal from '@/components/Shared/Modal/Modal';
 import Input from '@/components/Shared/Input/Input';
 import Button from '@/components/Shared/Button/Button';
 import { useToast } from '@/hooks/useToast';
-import { ensureGameRecord } from '@/services/gameCatalog';
+import { ensureGameRecord } from '@/features/games/mutations';
 import styles from '@/components/GameSearchModal/GameSearchModal.module.css';
 import { GameResult } from '@/types';
+import { gameSearchQuery } from '@/features/games/queries';
 
 interface Props {
   onSelect: (game: { id: string; title: string; coverUrl: string | null }) => void;
@@ -17,41 +18,37 @@ interface Props {
 
 export default function GameSearchModal({ onSelect, onClose, existingGameIds }: Props) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<GameResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const { showToast } = useToast();
+  const searchQuery = useQuery(gameSearchQuery(submittedQuery));
+  const selectMutation = useMutation({
+    mutationFn: (game: GameResult) => ensureGameRecord({ ...game, release_year: null }),
+  });
 
-  const handleSearch = async () => {
-    if (query.trim().length < 3) return;
-    setIsSearching(true);
-    setError(null);
-    try {
-      const response = await api.get('/games/search', { params: { q: query } });
-      setResults(response.data);
-    } catch (err: unknown) {
-      setResults([]);
-      const backendErr = err as { response?: { data?: { detail?: string } } };
-      const detail = backendErr.response?.data?.detail;
-      const errorMsg = typeof detail === 'string' ? detail : 'Erro ao buscar jogos no servidor.';
-      setError(errorMsg);
-      showToast(errorMsg, 'error');
-    } finally {
-      setIsSearching(false);
+  const handleSearch = () => {
+    const normalizedQuery = query.trim();
+    if (normalizedQuery.length < 3) return;
+    if (normalizedQuery === submittedQuery) {
+      searchQuery.refetch();
+    } else {
+      setSubmittedQuery(normalizedQuery);
     }
   };
 
   const handleSelect = async (game: GameResult) => {
     try {
-      const gameId = await ensureGameRecord({
-        ...game,
-        release_year: null,
-      });
+      const gameId = await selectMutation.mutateAsync(game);
       onSelect({ id: gameId, title: game.title, coverUrl: game.cover_url });
     } catch {
       showToast('Erro ao adicionar jogo.', 'error');
     }
   };
+
+  const results = searchQuery.data ?? [];
+  const backendError = searchQuery.error as { response?: { data?: { detail?: string } } } | null;
+  const error = searchQuery.isError
+    ? backendError?.response?.data?.detail || 'Erro ao buscar jogos no servidor.'
+    : null;
 
   return (
     <Modal open onClose={onClose} maxWidth="500px" showCloseButton>
@@ -72,10 +69,10 @@ export default function GameSearchModal({ onSelect, onClose, existingGameIds }: 
         <Button
           variant="primary"
           onClick={handleSearch}
-          disabled={isSearching || query.trim().length < 3}
+          disabled={searchQuery.isFetching || query.trim().length < 3}
           className={styles.searchButton}
         >
-          {isSearching ? '...' : 'Buscar'}
+          {searchQuery.isFetching ? '...' : 'Buscar'}
         </Button>
       </div>
 

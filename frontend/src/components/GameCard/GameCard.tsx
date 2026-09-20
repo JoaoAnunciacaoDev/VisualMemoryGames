@@ -2,6 +2,7 @@ import { useState, type MouseEvent, type KeyboardEvent } from 'react';
 import Card from '@/components/Shared/Card/Card';
 import Button from '@/components/Shared/Button/Button';
 import styles from '@/components/GameCard/GameCard.module.css';
+import { Check, X } from 'lucide-react';
 
 interface Props {
   title: string;
@@ -39,12 +40,6 @@ export default function GameCard({
       : 'success'
     : 'primary';
 
-  const buttonText = isAdded
-    ? isHoveringButton
-      ? '✕ Remover da Biblioteca'
-      : '✓ Adicionado'
-    : 'Adicionar à Biblioteca';
-
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -78,7 +73,8 @@ export default function GameCard({
           onMouseEnter={() => setIsHoveringButton(true)}
           onMouseLeave={() => setIsHoveringButton(false)}
         >
-          {buttonText}
+          {isAdded && (isHoveringButton ? <X aria-hidden="true" size={16} /> : <Check aria-hidden="true" size={16} />)}
+          {isAdded ? (isHoveringButton ? ' Remover da Biblioteca' : ' Adicionado') : 'Adicionar à Biblioteca'}
         </Button>
       </div>
     </Card>

@@ -209,6 +209,7 @@
   .modalActions {
     flex-direction: column;
   }
+
   .modalActions button {
     width: 100%;
   }

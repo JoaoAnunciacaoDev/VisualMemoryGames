@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
-import { arrayMove } from '@dnd-kit/sortable';
-import type { DragEndEvent } from '@dnd-kit/core';
+import { useCallback, useState } from 'react';
+import { useLocation, useParams } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 
 import { Button, Loader } from '@/components/Shared';
 
@@ -9,12 +8,9 @@ import { useConfirmAction } from '@/hooks/useConfirmAction';
 import { useAuth } from '@/hooks/useAuth';
 import { useTierListEditor, POOL_ID } from '@/hooks/useTierListEditor';
 import { useDragHandlers } from '@/hooks/useDragHandlers';
-import {
-  loadTierListEditorData,
-  type TierListEditorData,
-  type TierListEditorInitialGame,
-} from '@/services/tierlistEditor';
-import api from '@/services/api';
+import { useTierReorder } from '@/hooks/tierListEditor/useTierReorder';
+import type { TierListEditorInitialGame } from '@/services/tierlistEditor';
+import { tierListEditorQuery } from '@/features/tierlists/queries';
 
 import styles from '@/pages/TierListEditor/TierListEditor.module.css';
 import TierListEditorHeader from '@/pages/TierListEditor/TierListEditorHeader';
@@ -26,41 +22,18 @@ interface TierListEditorLocationState {
 }
 
 export default function TierListEditor() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams({ from: '/tierlists/$id' });
   const location = useLocation();
-  const [editorData, setEditorData] = useState<TierListEditorData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const state = location.state as TierListEditorLocationState | null;
+  const {
+    data: editorData,
+    isPending: loading,
+    isError,
+    refetch: refetchEditor,
+  } = useQuery(tierListEditorQuery(id, state?.initialPool ?? []));
   const loadEditor = useCallback(async () => {
-    if (!id) {
-      setError('Tier list não encontrada.');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const state = location.state as TierListEditorLocationState | null;
-      const data = await loadTierListEditorData(id, state?.initialPool ?? []);
-      setEditorData(data);
-    } catch {
-      setError('Erro ao carregar tier list.');
-    } finally {
-      setLoading(false);
-    }
-  }, [id, location.state]);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      void loadEditor();
-    }, 0);
-
-    return () => window.clearTimeout(timeout);
-  }, [loadEditor]);
-
+    await refetchEditor();
+  }, [refetchEditor]);
   const { userId } = useAuth();
 
   const {
@@ -68,7 +41,7 @@ export default function TierListEditor() {
     existingGameIds, saveTitle, addTier, removeTier,
     updateTierLabel, updateTierColor, addGameToPool,
     removeGame, moveGame, reorderTier,
-  } = useTierListEditor(id, editorData, { onReload: loadEditor });
+  } = useTierListEditor(id, editorData ?? null, { onReload: loadEditor });
 
   const isOwner = editorData ? userId === ownerId : false;
 
@@ -86,39 +59,12 @@ export default function TierListEditor() {
   const removeTierConfirm = useConfirmAction<string>();
   const privacyConfirm = useConfirmAction<boolean>();
 
-  // --- Handlers de arrasto de tiers ---
-  const handleTierDragStart = useCallback(() => {
-    // Pode ser usado para feedback visual futuro
-  }, []);
-
-  const handleTierDragOver = useCallback(() => {
-    // A animação visual é gerida automaticamente pelo SortableContext
-  }, []);
-
-  const handleTierDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = tiers.findIndex((t) => t.id === active.id);
-    const newIndex = tiers.findIndex((t) => t.id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    // Atualização otimista da UI
-    const reordered = arrayMove(tiers, oldIndex, newIndex);
-    setTiers(reordered);
-
-    // Persistir no backend
-    const newOrderIds = reordered.map((t) => t.id);
-    try {
-      await api.put(`/tierlists/${id}/categories/reorder`, { category_ids: newOrderIds });
-    } catch {
-      // Em caso de erro, recarrega os dados originais
-      loadEditor();
-    }
-  }, [tiers, id, loadEditor, setTiers]);
-  // Fim dos handlers de tiers
+  const handleTierDragEnd = useTierReorder({
+    tierListId: id,
+    tiers,
+    setTiers,
+    reload: loadEditor,
+  });
 
   const handleTitleSave = () => {
     if (title.trim()) {
@@ -136,11 +82,11 @@ export default function TierListEditor() {
 
   if (loading) return <Loader />;
 
-  if (error) {
+  if (isError || !editorData) {
     return (
       <div className={styles.page}>
         <div className={styles.emptyState} role="alert">
-          <p>{error}</p>
+          <p>Erro ao carregar tier list.</p>
           <Button variant="primary" onClick={loadEditor}>
             Tentar novamente
           </Button>
@@ -183,8 +129,6 @@ export default function TierListEditor() {
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
-        onTierDragStart={handleTierDragStart}
-        onTierDragOver={handleTierDragOver}
         onTierDragEnd={handleTierDragEnd}
         readOnly={!isOwner}
       />

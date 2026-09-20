@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import FeedbackModal from '@/components/FeedbackModal/FeedbackModal';
 import api from '@/services/api';
+import { TestQueryProvider } from '@/test/TestRouter';
 
 vi.mock('@/services/api', () => ({
   default: {
@@ -30,9 +31,13 @@ vi.mock('@/components/Shared/ConfirmModal/ConfirmModal', () => ({
 }));
 
 describe('FeedbackModal', () => {
+  const renderModal = (onClose: () => void) => render(
+    <TestQueryProvider><FeedbackModal onClose={onClose} /></TestQueryProvider>,
+  );
+
   it('deve renderizar campos do modal', () => {
     const handleClose = vi.fn();
-    render(<FeedbackModal onClose={handleClose} />);
+    renderModal(handleClose);
 
     expect(screen.getByText('Enviar Feedback')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Ex: Sugestão/)).toBeInTheDocument();
@@ -41,7 +46,7 @@ describe('FeedbackModal', () => {
 
   it('deve chamar API e fechar modal ao enviar feedback com sucesso', async () => {
     const handleClose = vi.fn();
-    render(<FeedbackModal onClose={handleClose} />);
+    renderModal(handleClose);
 
     fireEvent.change(screen.getByPlaceholderText(/Ex: Sugestão/), {
       target: { value: 'Melhoria de UI' },

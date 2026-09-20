@@ -1,70 +1,40 @@
-import { useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '@/services/api';
+import { ReactNode, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { User } from '@/types';
 import { AuthContext } from '@/hooks/useAuthContext';
+import { authKeys, currentUserQuery } from '@/features/auth/queries';
+import { logoutUser } from '@/features/auth/mutations';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const navigateRef = useRef(navigate);
-  const [user, setUserState] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    navigateRef.current = navigate;
-  }, [navigate]);
+  const queryClient = useQueryClient();
+  const userQuery = useQuery(currentUserQuery());
+  const user = userQuery.data ?? null;
+  const loading = userQuery.isPending;
 
   const setUser = useCallback((newUser: User | null) => {
-    setUserState(newUser);
-  }, []);
+    queryClient.setQueryData(authKeys.currentUser(), newUser);
+  }, [queryClient]);
 
   const reloadUser = useCallback(async () => {
-    setLoading(true);
     try {
-      const res = await api.get('/users/me');
-      setUserState(res.data);
-      return res.data;
+      await userQuery.refetch();
     } catch {
-      setUserState(null);
-    } finally {
-      setLoading(false);
+      setUser(null);
     }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    api.get('/users/me')
-      .then((res) => {
-        if (active) {
-          setUserState(res.data);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setUserState(null);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [setUser, userQuery]);
 
   const logout = useCallback(async () => {
     try {
-      await api.post('/logout');
+      await logoutUser();
     } catch (err) {
       console.error('Erro ao fazer logout no servidor:', err);
     } finally {
-      setUserState(null);
-      navigate('/login');
+      setUser(null);
+      navigate({ to: '/login' });
     }
-  }, [navigate]);
+  }, [navigate, setUser]);
 
   return (
     <AuthContext.Provider value={{ user, loading, logout, setUser, reloadUser }}>

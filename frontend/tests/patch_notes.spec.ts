@@ -1,5 +1,27 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
+import process from 'node:process';
+
+function runProjectPython(script: string) {
+  const localPython = resolve(
+    '..',
+    '.venv',
+    process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python',
+  );
+  const executable = existsSync(localPython) ? localPython : 'poetry';
+  const args = existsSync(localPython) ? ['-c', script] : ['run', 'python', '-c', script];
+  execFileSync(executable, args, {
+    cwd: '..',
+    env: {
+      ...process.env,
+      ENVIRONMENT: 'testing',
+      DATABASE_URL: 'sqlite:///./visualmemory_test.db',
+      SECRET_KEY: 'test-secret-key-for-e2e-tests-at-least-32-bytes',
+    },
+  });
+}
 
 test.describe('Patch Notes Flow', () => {
   const adminUsername = `admin_pn_${Date.now()}`;
@@ -40,9 +62,8 @@ test.describe('Patch Notes Flow', () => {
     await expect(page.locator('button:has-text("Publicar Novo Patch")')).not.toBeVisible();
 
     // 3. Promover o usuário a Admin diretamente via script no banco de testes
-    execSync(
-      `poetry run python -c "import app.models.user; import app.models.tierlist; import app.models.custom_lists; import app.models.user_game; import app.models.user_game_review; import app.models.game; import app.models.steam_account; import app.models.itch_account; from app.database import SessionLocal; from app.models.user import User; session = SessionLocal(); user = session.query(User).filter(User.username == '${adminUsername}').first(); user.is_admin = True; session.commit(); session.close()"`,
-      { cwd: '..' }
+    runProjectPython(
+      `import app.models.user; import app.models.tierlist; import app.models.custom_lists; import app.models.user_game; import app.models.user_game_review; import app.models.game; import app.models.steam_account; import app.models.itch_account; from app.database import SessionLocal; from app.models.user import User; session = SessionLocal(); user = session.query(User).filter(User.username == '${adminUsername}').first(); user.is_admin = True; session.commit(); session.close()`,
     );
 
     // Recarregar a página para atualizar o estado do usuário na sessão

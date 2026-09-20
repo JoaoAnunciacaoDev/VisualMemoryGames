@@ -6,6 +6,7 @@ import {
 import {
   sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { Plus } from 'lucide-react';
 
 import { Button, Input } from '@/components/Shared';
 import TierRow from '@/components/TierListMaker/TierRow';
@@ -32,8 +33,6 @@ interface Props {
   onDragStart: (event: DragStartEvent) => void;
   onDragOver: (event: DragOverEvent) => void;
   onDragEnd: (event: DragEndEvent) => Promise<void>;
-  onTierDragStart: (event: DragStartEvent) => void;
-  onTierDragOver: (event: DragOverEvent) => void;
   onTierDragEnd: (event: DragEndEvent) => void;
   readOnly?: boolean;
 }
@@ -57,8 +56,6 @@ export default function TierListEditorBoard({
   onDragStart,
   onDragOver,
   onDragEnd,
-  onTierDragStart,
-  onTierDragOver,
   onTierDragEnd,
   readOnly = false,
 }: Props) {
@@ -71,18 +68,14 @@ export default function TierListEditorBoard({
   // Unifica os handlers conforme o tipo de arrasto (tier vs jogo)
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    if (active.data.current?.type === 'tier') {
-      onTierDragStart(event);
-    } else {
+    if (active.data.current?.type !== 'tier') {
       onDragStart(event);
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
     const { active } = event;
-    if (active.data.current?.type === 'tier') {
-      onTierDragOver(event);
-    } else {
+    if (active.data.current?.type !== 'tier') {
       onDragOver(event);
     }
   };
@@ -143,7 +136,7 @@ export default function TierListEditorBoard({
             className={styles.colorPicker}
           />
           <Button variant="primary" className={styles.addTierButton} onClick={onAddTier}>
-            + Adicionar Tier
+            <Plus aria-hidden="true" size={16} /> Adicionar Tier
           </Button>
         </div>
       )}

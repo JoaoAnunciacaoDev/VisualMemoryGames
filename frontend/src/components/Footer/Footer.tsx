@@ -29,10 +29,10 @@ export default function Footer() {
         <div className={styles.socials}>
           <p className={styles.text}>Por João Victor Anunciação da Silva</p>
           <a href="https://github.com/JoaoAnunciacaoDev" target="_blank" rel="noopener noreferrer" className={styles.link} aria-label="GitHub">
-            <FaGithub size={20} />
+            <FaGithub aria-hidden="true" size={20} />
           </a>
           <a href="https://linkedin.com/in/joao-victor-anunciacao" target="_blank" rel="noopener noreferrer" className={styles.link} aria-label="LinkedIn">
-            <FaLinkedin size={20} />
+            <FaLinkedin aria-hidden="true" size={20} />
           </a>
         </div>
       </footer>

@@ -36,7 +36,7 @@
 .forgotPasswordButton {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--primary-accessible);
   font-size: var(--font-size-sm);
   text-align: right;
   cursor: pointer;
@@ -46,7 +46,7 @@
 }
 
 .forgotPasswordButton:hover {
-  color: var(--primary-hover);
+  color: var(--text);
   text-decoration: underline;
 }
 
@@ -79,7 +79,7 @@
 .resendButton {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--primary-accessible);
   font-size: var(--font-size-sm);
   text-align: center;
   margin: var(--gap-sm) auto;
@@ -91,7 +91,7 @@
 }
 
 .resendButton:hover:not(:disabled) {
-  color: var(--primary-hover);
+  color: var(--text);
   text-decoration: underline;
 }
 

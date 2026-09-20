@@ -1,13 +1,13 @@
 # Estágio 1: Compilação do React + TypeScript
-FROM node:20-alpine AS build
+FROM oven/bun:1.3-alpine AS build
 
 WORKDIR /app
 
-# Copia arquivos de dependência do npm
-COPY frontend/package*.json ./
+# Copia arquivos de dependência do Bun
+COPY frontend/package.json frontend/bun.lock ./
 
 # Instala todas as dependências
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 # Copia o restante do código do frontend
 COPY frontend/ ./
@@ -17,7 +17,7 @@ ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 # Compila o projeto para produção
-RUN npm run build
+RUN bun run build
 
 # Estágio 2: Servidor Web Nginx de produção
 FROM nginx:alpine

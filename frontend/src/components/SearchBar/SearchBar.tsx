@@ -1,4 +1,5 @@
 import { useState, SyntheticEvent } from 'react';
+import { Plus } from 'lucide-react';
 import Button from '@/components/Shared/Button/Button';
 import Input from '@/components/Shared/Input/Input';
 import styles from '@/components/SearchBar/SearchBar.module.css';
@@ -30,7 +31,7 @@ export default function SearchBar({ onSearch, isSearching, onManualAdd }: Props)
       </Button>
       {onManualAdd && (
         <Button type="button" variant="primary" onClick={onManualAdd} style={{ whiteSpace: 'nowrap' }}>
-          + Adicionar Manualmente
+          <Plus aria-hidden="true" size={16} /> Adicionar Manualmente
         </Button>
       )}
     </form>

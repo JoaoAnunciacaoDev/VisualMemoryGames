@@ -1,5 +1,5 @@
 import { InputHTMLAttributes, useState } from 'react';
-import { FiEye, FiEyeOff } from 'react-icons/fi';
+import { Eye, EyeOff } from 'lucide-react';
 import styles from './Input.module.css';
 
 export default function Input({ className = '', type, disabled, ...props }: InputHTMLAttributes<HTMLInputElement>) {
@@ -22,7 +22,7 @@ export default function Input({ className = '', type, disabled, ...props }: Inpu
           tabIndex={-1}
           aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
         >
-          {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+          {showPassword ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
         </button>
       </div>
     );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import styles from './RatingStars.module.css';
+import { Star } from 'lucide-react';
 
 interface Props {
   value: number | null;
@@ -53,7 +54,7 @@ export default function RatingStars({
                 }}
                 disabled={disabled}
             >
-                ★
+                <Star aria-hidden="true" fill={filled || half ? 'currentColor' : 'none'} size={32} />
             </button>
             );
         })}

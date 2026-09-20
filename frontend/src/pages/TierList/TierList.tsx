@@ -1,181 +1,60 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-import { ConfirmModal, Button, Loader } from '@/components/Shared';
-
-import { useToast } from '@/hooks/useToast';
-import { useAuth } from '@/hooks/useAuth';
-import { useConfirmAction } from '@/hooks/useConfirmAction';
-
-import { getBestGameCover } from '@/services/media';
-import api from '@/services/api';
-
-import type { TierListSummary, CustomList, LibraryGame } from '@/types';
-
-import styles from '@/pages/TierList/TierList.module.css';
-import TierListCreateModal, { type TierListCreateValues } from '@/pages/TierList/TierListCreateModal';
-import TierListGrid from '@/pages/TierList/TierListGrid';
-
-const STATUS_OPTIONS = ['Zerado', 'Platinado', 'Jogando', 'Na biblioteca', 'Quero Jogar', 'Abandonado', 'Em Espera'];
+import { Plus } from 'lucide-react';
+import { Button, ConfirmModal, Loader } from '@/components/Shared';
+import TierListCreateModal from './TierListCreateModal';
+import TierListGrid from './TierListGrid';
+import styles from './TierList.module.css';
+import {
+  TIER_LIST_STATUS_OPTIONS,
+  useTierListsController,
+} from './useTierListsController';
 
 export default function TierLists() {
-  const navigate = useNavigate();
-  const { loading } = useAuth();
-  const { showToast } = useToast();
+  const controller = useTierListsController();
 
-  const [tierLists, setTierLists] = useState<TierListSummary[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [customLists, setCustomLists] = useState<CustomList[]>([]);
-  const [libraryGames, setLibraryGames] = useState<LibraryGame[]>([]);
-
-  const deleteModal = useConfirmAction<string>();
-
-  const reloadTierLists = useCallback(async () => {
-    try {
-      const response = await api.get('/tierlists/me');
-      setTierLists(response.data);
-    } catch {
-      showToast('Erro ao carregar tier lists.', 'error');
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    let active = true;
-    Promise.all([
-      api.get('/tierlists/me'),
-      api.get('/lists/me'),
-      api.get('/user-games/me'),
-    ])
-      .then(([tierlistsRes, listsRes, libraryRes]) => {
-        if (active) {
-          setTierLists(tierlistsRes.data);
-          setCustomLists(listsRes.data);
-          setLibraryGames(libraryRes.data);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          showToast('Erro ao carregar dados das tier lists.', 'error');
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [showToast]);
-
-  const handleCreate = async ({
-    title,
-    gameSource,
-    selectedStatus,
-    selectedListId,
-    isPublic,
-  }: TierListCreateValues) => {
-    setIsCreating(true);
-    try {
-      const response = await api.post('/tierlists/', { title, is_public: isPublic });
-      const tierlistId = response.data.id;
-
-      let gamesToAdd: { id: string; title: string; coverUrl: string | null }[] = [];
-
-      if (gameSource === 'all') {
-        gamesToAdd = libraryGames.map((g) => ({
-           id: g.game_id, 
-           title: g.title, 
-           coverUrl: getBestGameCover({
-              cover_url: g.cover_url,
-              custom_cover_url: g.custom_cover_url,
-            }) ?? null,
-          }));
-
-      } else if (gameSource === 'status') {
-        gamesToAdd = libraryGames
-          .filter((g) => g.status === selectedStatus)
-          .map((g) => ({ 
-            id: g.game_id, 
-            title: g.title, 
-            coverUrl: getBestGameCover({
-              cover_url: g.cover_url,
-              custom_cover_url: g.custom_cover_url,
-            }) ?? null, 
-          }));
-
-      } else if (gameSource === 'list') {
-        const list = customLists.find((l) => l.id === selectedListId);
-        gamesToAdd = list?.games.map((g) => ({ 
-          id: g.id, 
-          title: g.title, 
-          coverUrl: getBestGameCover({
-              cover_url: g.cover_url,
-              custom_cover_url: g.custom_cover_url,
-            }) ?? null,
-        })) ?? [];
-
-      }
-
-      setShowCreateModal(false);
-      navigate(`/tierlists/${tierlistId}`, { state: { initialPool: gamesToAdd } });
-    } catch {
-      showToast('Erro ao criar tier list.', 'error');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const confirmDeleteList = async () => {
-    if (!deleteModal.target) return;
-    try {
-      await api.delete(`/tierlists/${deleteModal.target}`);
-      await reloadTierLists();
-      showToast('Tier list deletada.', 'info');
-    } catch {
-      showToast('Erro ao deletar tier list.', 'error');
-    } finally {
-      deleteModal.close();
-    }
-  };
-
-  if (loading) {
-    return <Loader message="Carregando tier lists..." />;
-  }
+  if (controller.isLoading) return <Loader message="Carregando tier lists..." />;
 
   return (
     <div className={styles.page}>
       <h2 className={styles.heading}>Minhas Tier Lists</h2>
 
-      <Button variant="primary" onClick={() => setShowCreateModal(true)} className={styles.createButton}>
-        + Nova Tier List
+      <Button
+        variant="primary"
+        onClick={() => controller.setShowCreateModal(true)}
+        className={styles.createButton}
+      >
+        <Plus aria-hidden="true" size={18} /> Nova Tier List
       </Button>
 
       <TierListCreateModal
-        open={showCreateModal}
-        isCreating={isCreating}
-        customLists={customLists}
-        statusOptions={STATUS_OPTIONS}
-        onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreate}
+        open={controller.showCreateModal}
+        isCreating={controller.isCreating}
+        customLists={controller.customLists}
+        statusOptions={TIER_LIST_STATUS_OPTIONS}
+        onClose={() => controller.setShowCreateModal(false)}
+        onCreate={controller.create}
       />
 
-      {tierLists.length === 0 ? (
-        <div className={styles.emptyState}>Você ainda não tem tier lists. Crie uma acima!</div>
+      {controller.tierLists.length === 0 ? (
+        <div className={styles.emptyState}>
+          Você ainda não tem tier lists. Crie uma acima!
+        </div>
       ) : (
         <TierListGrid
-          tierLists={tierLists}
-          onOpen={(id) => navigate(`/tierlists/${id}`)}
-          onDelete={(id) => deleteModal.open(id)}
+          tierLists={controller.tierLists}
+          onOpen={controller.open}
+          onDelete={controller.deleteModal.open}
         />
       )}
 
       <ConfirmModal
-        isOpen={deleteModal.isOpen}
+        isOpen={controller.deleteModal.isOpen}
         title="Deletar Tier List"
         message="Tem certeza que deseja deletar esta Tier List inteira? Esta ação não pode ser desfeita."
         confirmText="Sim, deletar"
         cancelText="Cancelar"
-        isDestructive={true}
-        onConfirm={confirmDeleteList}
-        onCancel={deleteModal.close}
+        isDestructive
+        onConfirm={controller.confirmDelete}
+        onCancel={controller.deleteModal.close}
       />
     </div>
   );

@@ -362,6 +362,9 @@
   padding: var(--gap-md) var(--gap-lg);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   margin-top: var(--gap-xs);
+  margin-right: 0;
+  margin-bottom: 0;
+  margin-left: 0;
   display: flex;
   gap: var(--gap-sm);
   align-items: flex-start;
@@ -403,6 +406,9 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-xs);
 }
 
 .pageBtn:hover:not(:disabled) {
@@ -440,4 +446,3 @@
     font-size: 0.75rem;
   }
 }
-

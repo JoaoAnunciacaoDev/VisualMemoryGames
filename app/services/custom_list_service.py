@@ -28,7 +28,9 @@ def get_or_create_favorites_list(user_id: str, db: Session) -> CustomList:
     return fav_list
 
 
-def get_or_create_auto_list(user_id: str, list_type: str, year: int, db: Session) -> CustomList:
+def get_or_create_auto_list(
+    user_id: str, list_type: str, year: int, db: Session, *, commit: bool = True
+) -> CustomList:
     """Cria ou devolve uma lista automática do tipo e ano especificados."""
     name = f"{'Concluídos' if list_type == 'completed_year' else 'Platinados'} {year}"
     lst = (
@@ -44,13 +46,22 @@ def get_or_create_auto_list(user_id: str, list_type: str, year: int, db: Session
     if not lst:
         lst = CustomList(user_id=user_id, name=name, is_system=True, list_type=list_type)
         db.add(lst)
-        db.commit()
-        db.refresh(lst)
+        if commit:
+            db.commit()
+            db.refresh(lst)
+        else:
+            db.flush()
     return lst
 
 
 def sync_auto_list(
-    user_id: str, user_game: UserGame, field_name: str, list_type: str, db: Session
+    user_id: str,
+    user_game: UserGame,
+    field_name: str,
+    list_type: str,
+    db: Session,
+    *,
+    commit: bool = True,
 ) -> None:
     """Sincroniza a lista automática anual (concluídos/platinados) com base no campo de data."""
     game = user_game.game
@@ -71,7 +82,8 @@ def sync_auto_list(
                 lst.games.remove(game)
                 if len(lst.games) == 0:
                     db.delete(lst)
-        db.commit()
+        if commit:
+            db.commit()
         return
 
     year = (
@@ -80,7 +92,7 @@ def sync_auto_list(
         else datetime.strptime(str(date_value), "%Y-%m-%d").year
     )
 
-    target_list = get_or_create_auto_list(user_id, list_type, year, db)
+    target_list = get_or_create_auto_list(user_id, list_type, year, db, commit=commit)
 
     other_lists = (
         db.query(CustomList)
@@ -101,7 +113,8 @@ def sync_auto_list(
     if game not in target_list.games:
         target_list.games.append(game)
 
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def sync_user_game_on_list_removal(lst: CustomList, user_game: UserGame, db: Session) -> None:

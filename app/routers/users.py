@@ -5,7 +5,7 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
@@ -13,10 +13,10 @@ from app.database import get_db
 from app.limiter import limiter
 from app.models.custom_lists import CustomList
 from app.models.email_verification import EmailVerification
+from app.models.sync_job import SyncJob
 from app.models.tierlist import TierList
 from app.models.user import User
 from app.models.user_game import UserGame
-from app.routers.steam import ACTIVE_SYNC_USERS
 from app.schemas.user import (
     DashboardGame,
     DashboardResponse,
@@ -33,6 +33,7 @@ from app.schemas.user import (
 from app.security import get_current_user
 from app.services.auth_service import get_password_hash, verify_password
 from app.services.email_service import send_feedback_email, send_verification_email
+from app.services.job_service import PENDING, RUNNING, STEAM_METADATA_ENRICH
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -142,12 +143,13 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[UserResponse])
 def read_users(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    offset: int | None = Query(None, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    users = db.query(User).offset(skip).limit(limit).all()
+    users = db.query(User).offset(offset if offset is not None else skip).limit(limit).all()
     return users
 
 
@@ -328,7 +330,16 @@ def get_user_dashboard(user_id: str, db: Session, target_user: User, current_use
     if genre_counts:
         most_played_genre = max(genre_counts.keys(), key=lambda g: genre_counts[g])
 
-    has_pending_genres = str(user_id) in ACTIVE_SYNC_USERS
+    has_pending_genres = (
+        db.query(SyncJob.id)
+        .filter(
+            SyncJob.user_id == str(user_id),
+            SyncJob.job_type == STEAM_METADATA_ENRICH,
+            SyncJob.status.in_((PENDING, RUNNING)),
+        )
+        .first()
+        is not None
+    )
 
     yearly_dict = {}
     for ug in user_games:

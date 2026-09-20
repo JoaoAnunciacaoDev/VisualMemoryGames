@@ -117,7 +117,7 @@ O frontend utiliza React e TypeScript com separação entre rotas, páginas, com
 O projeto utiliza:
 
 - [Mise](https://mise.jdx.dev/) (gerenciador de dependências globais e runtime)
-- Poetry (para dependências Python)
+- uv (para dependências e ambiente Python)
 - Bun 1.3 (runtime e gerenciador de pacotes do frontend)
 
 ---
@@ -162,7 +162,7 @@ O projeto conta com suporte completo para Docker e Docker Compose. Os ficheiros 
 
 2. **Promover uma conta a administrador pelo Docker:**
    ```bash
-   docker compose -f docker/docker-compose.yml exec backend poetry run python -m app.scripts.manage_admin --email seu-email@email.com --action promote
+   docker compose -f docker/docker-compose.yml exec backend python -m app.scripts.manage_admin --email seu-email@email.com --action promote
    ```
 
 ---
@@ -202,12 +202,12 @@ DATABASE_URL=postgresql://user:password@host/dbname
 
 ### Criar uma nova migração
 ```bash
-poetry run alembic revision --autogenerate -m "descricao da mudanca"
+uv run alembic revision --autogenerate -m "descricao da mudanca"
 ```
 
 ### Aplicar as migrações existentes
 ```bash
-poetry run alembic upgrade head
+uv run alembic upgrade head
 ```
 
 ---
@@ -271,7 +271,7 @@ VisualMemory/
 │   └── utils.py           # Utilitários globais de tratamento de dados
 │
 ├── docker/                # Configuração Docker para produção
-│   ├── Dockerfile.back    # Imagem do backend (Python 3.12 + Poetry)
+│   ├── Dockerfile.back    # Imagem do backend (Python 3.12 + uv)
 │   ├── Dockerfile.front   # Imagem do frontend (Node 20 → Nginx)
 │   └── docker-compose.yml # Orquestração dos serviços
 │
@@ -299,7 +299,7 @@ VisualMemory/
 ├── data_prod/             # Volume local persistido do banco de dados SQLite no Docker
 ├── uploads_prod/          # Volume local persistido das imagens de capas no Docker
 ├── mise.toml              # Orquestrador de tarefas do projeto
-├── pyproject.toml         # Gerenciamento de pacotes Python (Poetry)
+├── pyproject.toml         # Gerenciamento de pacotes Python (uv)
 └── README.md              # Documentação oficial do projeto
 ```
 
@@ -324,7 +324,7 @@ VisualMemory/
 - Normalização e validação de payloads com Pydantic v2.
 - Proteção de escopo e privilégios: apenas o proprietário pode alterar os registros da sua biblioteca.
 - Parser robusto de dados (`safe_load_json_list`) para prevenir vulnerabilidades de decodificação na leitura do DB.
-- Imagens Docker endurecidas contra CVEs (OS atualizado e Pip moderno no build).
+- Imagens Docker multi-stage com dependências reproduzíveis instaladas pelo uv.
 
 ---
 

@@ -14,12 +14,15 @@ from app.models import (  # noqa
     activity,
     custom_lists,
     email_verification,
+    external_api_cache,
     follow,
     game,
+    game_provider_id,
     itch_account,
     password_reset,
     patch_note,
     steam_account,
+    sync_job,
     tierlist,
     user,
     user_game,
@@ -54,6 +57,17 @@ def run_migrations_offline():
 
 def run_migrations_online():
     """Modo online: liga ao banco e executa as migrações."""
+    supplied_connection = config.attributes.get("connection")
+    if supplied_connection is not None:
+        context.configure(
+            connection=supplied_connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
+        return
+
     if DATABASE_URL.startswith("sqlite"):
         connectable = create_engine(
             DATABASE_URL,

@@ -5,11 +5,13 @@ from app.models.custom_lists import CustomList
 from app.models.user import User
 from app.models.user_game import UserGame
 from app.services.custom_list_service import cleanup_empty_auto_lists
+from app.services.storage import delete_stored_file
 
 
 def remove_from_library(db_user_game: UserGame, current_user: User, db: Session) -> None:
     """Remove um jogo da biblioteca do utilizador, fazendo a limpeza de listas e do jogo manual."""
     game = db_user_game.game
+    covers_to_delete = [db_user_game.custom_cover_url]
 
     lists = (
         db.query(CustomList)
@@ -26,8 +28,11 @@ def remove_from_library(db_user_game: UserGame, current_user: User, db: Session)
     if game.is_manual:
         if str(game.created_by) != str(current_user.id):
             raise HTTPException(status_code=403, detail="Você não pode remover este jogo.")
+        covers_to_delete.append(game.cover_url)
         db.delete(game)
     else:
         db.delete(db_user_game)
 
     db.commit()
+    for cover_url in covers_to_delete:
+        delete_stored_file(cover_url)

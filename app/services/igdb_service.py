@@ -3,7 +3,8 @@ import os
 import time
 from typing import Dict, List, Optional
 
-import httpx
+from app.services.external_cache import build_cache_key, get_cached, set_cached
+from app.services.http_client import request_sync
 
 logger = logging.getLogger(__name__)
 
@@ -35,17 +36,16 @@ def get_igdb_access_token() -> Optional[str]:
     }
 
     try:
-        with httpx.Client(timeout=5) as client:
-            response = client.post(url, params=params)
-            response.raise_for_status()
-            data = response.json()
+        response = request_sync("POST", url, params=params)
+        response.raise_for_status()
+        data = response.json()
 
-            token = data.get("access_token")
-            expires_in = data.get("expires_in", 3600)
+        token = data.get("access_token")
+        expires_in = data.get("expires_in", 3600)
 
-            _token_cache["access_token"] = token
-            _token_cache["expires_at"] = current_time + expires_in
-            return token
+        _token_cache["access_token"] = token
+        _token_cache["expires_at"] = current_time + expires_in
+        return token
     except Exception as e:
         logger.error(f"Erro ao obter token do IGDB/Twitch: {e}")
         return None
@@ -72,6 +72,10 @@ def _is_nsfw_igdb(item: Dict) -> bool:
 
 def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[Dict]:
     """Busca jogos na API do IGDB pelo nome priorizando popularidade e relevância."""
+    cache_key = build_cache_key(query.strip().lower(), limit, offset)
+    cached = get_cached("igdb.search", cache_key)
+    if cached is not None:
+        return cached
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID:
         return []
@@ -99,10 +103,9 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
 
     items = []
     try:
-        with httpx.Client(timeout=3) as client:
-            response = client.post(url, headers=headers, content=body_popular)
-            if response.status_code == 200:
-                items = response.json()
+        response = request_sync("POST", url, headers=headers, content=body_popular)
+        if response.status_code == 200:
+            items = response.json()
     except Exception as e:
         logger.warning(f"Erro na busca por popularidade IGDB: {e}")
 
@@ -117,16 +120,15 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
             f"limit {needed * 2};"
         )
         try:
-            with httpx.Client(timeout=3) as client:
-                response = client.post(url, headers=headers, content=body_search)
-                if response.status_code == 200:
-                    seen = {i["id"] for i in items}
-                    for item in response.json():
-                        if item["id"] not in seen:
-                            items.append(item)
-                            seen.add(item["id"])
-                        if len(items) >= limit:
-                            break
+            response = request_sync("POST", url, headers=headers, content=body_search)
+            if response.status_code == 200:
+                seen = {i["id"] for i in items}
+                for item in response.json():
+                    if item["id"] not in seen:
+                        items.append(item)
+                        seen.add(item["id"])
+                    if len(items) >= limit:
+                        break
         except Exception as e:
             logger.warning(f"Erro na busca complementar IGDB: {e}")
 
@@ -172,7 +174,14 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
                 }
             )
 
-        return results[:limit]
+        final_results = results[:limit]
+        set_cached(
+            "igdb.search",
+            cache_key,
+            final_results,
+            ttl_seconds=3600 if final_results else 300,
+        )
+        return final_results
     except Exception as e:
         logger.error(f"Erro ao processar dados do IGDB: {e}")
         return []
@@ -180,6 +189,10 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
 
 def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dict]:
     """Busca jogos no IGDB por gêneros."""
+    cache_key = build_cache_key(sorted(genres), page_size)
+    cached = get_cached("igdb.genres", cache_key)
+    if cached is not None:
+        return cached
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID or not genres:
         return []
@@ -200,10 +213,9 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
     )
 
     try:
-        with httpx.Client(timeout=3) as client:
-            response = client.post(url, headers=headers, content=body)
-            response.raise_for_status()
-            items = response.json()
+        response = request_sync("POST", url, headers=headers, content=body)
+        response.raise_for_status()
+        items = response.json()
 
         results = []
         for item in items:
@@ -245,6 +257,7 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
                 }
             )
 
+        set_cached("igdb.genres", cache_key, results, ttl_seconds=6 * 3600 if results else 300)
         return results
     except Exception as e:
         logger.error(f"Erro ao buscar por gêneros no IGDB: {e}")
@@ -253,6 +266,10 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
 
 def get_game_details_igdb(external_id: int) -> Dict:
     """Busca os detalhes expandidos de um jogo (sinopse, nota, vídeos, lojas) no IGDB."""
+    cache_key = build_cache_key(external_id)
+    cached = get_cached("igdb.details", cache_key)
+    if cached is not None:
+        return cached
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID:
         return {}
@@ -270,10 +287,9 @@ def get_game_details_igdb(external_id: int) -> Dict:
     )
 
     try:
-        with httpx.Client(timeout=3) as client:
-            response = client.post(url, headers=headers, content=body)
-            response.raise_for_status()
-            items = response.json()
+        response = request_sync("POST", url, headers=headers, content=body)
+        response.raise_for_status()
+        items = response.json()
 
         if not items:
             return {}
@@ -308,13 +324,15 @@ def get_game_details_igdb(external_id: int) -> Dict:
         if rating:
             rating = round(rating / 20.0, 1)  # Converte de 0-100 para 0-5.0 estilo RAWG
 
-        return {
+        result = {
             "synopsis": details.get("summary"),
             "rating": rating,
             "trailer_url": trailer_url,
             "genres": genres,
             "stores": stores,
         }
+        set_cached("igdb.details", cache_key, result, ttl_seconds=24 * 3600)
+        return result
     except Exception as e:
         logger.error(f"Erro ao buscar detalhes no IGDB: {e}")
         return {}
@@ -322,11 +340,15 @@ def get_game_details_igdb(external_id: int) -> Dict:
 
 def get_weekly_releases_igdb() -> List[Dict]:
     """Busca os lançamentos dos últimos 7 dias no IGDB."""
+    from datetime import datetime, timedelta, timezone
+
+    cache_key = build_cache_key(datetime.now(timezone.utc).date().isoformat())
+    cached = get_cached("igdb.weekly", cache_key)
+    if cached is not None:
+        return cached
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID:
         return []
-
-    from datetime import datetime, timedelta, timezone
 
     now = datetime.now(timezone.utc)
     start_ts = int((now - timedelta(days=7)).timestamp())
@@ -346,10 +368,9 @@ def get_weekly_releases_igdb() -> List[Dict]:
     )
 
     try:
-        with httpx.Client(timeout=3) as client:
-            response = client.post(url, headers=headers, content=body)
-            response.raise_for_status()
-            items = response.json()
+        response = request_sync("POST", url, headers=headers, content=body)
+        response.raise_for_status()
+        items = response.json()
 
         results = []
         for item in items:
@@ -379,7 +400,9 @@ def get_weekly_releases_igdb() -> List[Dict]:
                 }
             )
 
-        return results[:10]
+        final_results = results[:10]
+        set_cached("igdb.weekly", cache_key, final_results, ttl_seconds=6 * 3600)
+        return final_results
     except Exception as e:
         logger.error(f"Erro ao buscar lançamentos semanais no IGDB: {e}")
         return []

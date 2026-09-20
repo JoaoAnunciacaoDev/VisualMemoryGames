@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -8,6 +8,7 @@ from app.database import Base
 
 class Follow(Base):
     __tablename__ = "follows"
+    __table_args__ = (Index("ix_follows_following_id", "following_id"),)
 
     follower_id: Mapped[str] = mapped_column(
         String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True

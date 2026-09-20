@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 import type { User } from '@/types';
 
 export interface SystemStats {
@@ -18,10 +19,10 @@ export const adminDashboardQuery = (search: string) => queryOptions({
   queryKey: adminKeys.dashboard(search),
   queryFn: async () => {
     const [users, stats] = await Promise.all([
-      api.get<User[]>(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+      fetchAllPages<User>(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
       api.get<SystemStats>('/admin/stats'),
     ]);
-    return { users: users.data, stats: stats.data };
+    return { users, stats: stats.data };
   },
 });
 

@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 
 export interface PatchNoteAuthor {
   id: string;
@@ -31,8 +32,7 @@ export const patchNotesQuery = (month: number, year: number) =>
   queryOptions({
     queryKey: patchNoteKeys.list(month, year),
     queryFn: async () => {
-      const response = await api.get<PatchNote[]>('/patch-notes', { params: { month, year } });
-      return response.data;
+      return fetchAllPages<PatchNote>('/patch-notes', { params: { month, year } });
     },
   });
 

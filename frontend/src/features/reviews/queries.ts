@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 import type { UserGameReview } from '@/types';
 
 interface ReviewInput {
@@ -14,9 +15,7 @@ export const reviewKeys = {
 
 export const userGameReviewsQuery = (userGameId: string) => queryOptions({
   queryKey: reviewKeys.forGame(userGameId),
-  queryFn: async () => (
-    await api.get<UserGameReview[]>(`/user-games/${userGameId}/reviews`)
-  ).data,
+  queryFn: () => fetchAllPages<UserGameReview>(`/user-games/${userGameId}/reviews`),
 });
 
 export async function saveGameReview({

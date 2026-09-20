@@ -21,14 +21,17 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Instalar Poetry
-        run: pipx install poetry
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: '0.12.17'
+          enable-cache: true
 
       - name: Configurar Mise
         uses: jdx/mise-action@v2
 
       - name: Instalar dependências do Backend
-        run: poetry install
+        run: uv sync --locked --dev
 
       - name: Instalar dependências do Frontend
         working-directory: ./frontend

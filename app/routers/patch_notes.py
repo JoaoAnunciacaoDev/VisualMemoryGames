@@ -17,6 +17,8 @@ router = APIRouter(prefix="/patch-notes", tags=["Patch Notes"])
 def list_patch_notes(
     month: Optional[int] = Query(None),
     year: Optional[int] = Query(None),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
     """Retorna as notas de atualização ordenadas decrescentemente
@@ -45,7 +47,7 @@ def list_patch_notes(
 
         query = query.filter(extract("month", PatchNote.created_at) == month)
 
-    return query.order_by(PatchNote.created_at.desc()).all()
+    return query.order_by(PatchNote.created_at.desc()).offset(offset).limit(limit).all()
 
 
 @router.get("/unread")

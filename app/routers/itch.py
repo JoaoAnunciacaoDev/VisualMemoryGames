@@ -1,18 +1,23 @@
+import asyncio
 from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.database import get_db
 from app.models.game import Game
+from app.models.game_provider_id import GameProviderId
 from app.models.itch_account import ItchAccount
 from app.models.user import User
 from app.models.user_game import UserGame
 from app.security import get_current_user
 from app.services.custom_list_service import cleanup_empty_auto_lists
 from app.services.itch import ItchService
+from app.services.secret_storage import SecretDecryptionError, decrypt_secret, encrypt_secret
 
 router = APIRouter(prefix="/users/me/itch", tags=["Itch Integration"])
 itch_service = ItchService()
@@ -42,7 +47,13 @@ def get_connected_accounts(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Lista todas as contas Itch.io conectadas do usuário."""
-    return db.query(ItchAccount).filter(ItchAccount.user_id == current_user.id).all()
+    return (
+        db.query(ItchAccount)
+        .filter(ItchAccount.user_id == current_user.id)
+        .order_by(ItchAccount.id)
+        .limit(20)
+        .all()
+    )
 
 
 @router.post("/accounts", response_model=ItchAccountResponse)
@@ -82,7 +93,7 @@ async def connect_itch_account(
         itch_id=itch_id,
         username=username,
         avatar_url=avatar_url,
-        access_token=body.access_token,
+        access_token=encrypt_secret(body.access_token),
         last_sync_at=None,
     )
     db.add(new_account)
@@ -138,49 +149,98 @@ async def disconnect_itch_account(
 
 async def sync_single_account(account: ItchAccount, db: Session) -> dict:
     """Função core para sincronizar jogos de uma conta itch.io específica."""
-    owned_keys = await itch_service.get_owned_keys(account.access_token)
-    my_games = await itch_service.get_my_games(account.access_token)
+    try:
+        access_token, was_plaintext = decrypt_secret(str(account.access_token))
+    except SecretDecryptionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A credencial da conta itch.io precisa ser reconectada.",
+        ) from exc
+    if was_plaintext:
+        account.access_token = encrypt_secret(access_token)
+        db.commit()
+    db.rollback()
+    owned_keys, my_games = await asyncio.gather(
+        itch_service.get_owned_keys(access_token),
+        itch_service.get_my_games(access_token),
+    )
 
-    # Converter my_games para o mesmo formato de owned_keys (que possui a chave "game")
     all_items = owned_keys + [{"game": game} for game in my_games]
+    return await run_in_threadpool(_persist_itch_games, account, all_items, db)
+
+
+def _persist_itch_games(account: ItchAccount, all_items: list, db: Session) -> dict:
+    """Persiste uma biblioteca Itch em lote, com IDs externos separados por provider."""
+    from app.models.activity import Activity
+
+    deduplicated = {}
+    for item in all_items:
+        game_data = item.get("game", {})
+        external_id = str(game_data.get("id"))
+        if external_id and external_id != "None":
+            deduplicated.setdefault(external_id, game_data)
+
+    external_ids = list(deduplicated)
+    provider_links = (
+        db.query(GameProviderId)
+        .filter(
+            GameProviderId.provider == "ITCH",
+            GameProviderId.external_id.in_(external_ids),
+        )
+        .all()
+        if external_ids
+        else []
+    )
+    games_by_external_id = {link.external_id: link.game for link in provider_links}
+
+    title_keys = {
+        data.get("title", "").strip().lower()
+        for external_id, data in deduplicated.items()
+        if external_id not in games_by_external_id and data.get("title")
+    }
+    games_by_title = {}
+    title_list = list(title_keys)
+    for index in range(0, len(title_list), 500):
+        for game in (
+            db.query(Game).filter(func.lower(Game.title).in_(title_list[index : index + 500])).all()
+        ):
+            games_by_title[game.title.strip().lower()] = game
+
+    games_to_create = []
+    links_to_create = []
+    for external_id, game_data in deduplicated.items():
+        if external_id in games_by_external_id:
+            continue
+        title = game_data.get("title") or f"Itch.io Game {external_id}"
+        game = games_by_title.get(title.strip().lower())
+        if not game:
+            game = Game(title=title, cover_url=game_data.get("cover_url"))
+            db.add(game)
+            games_to_create.append(game)
+            games_by_title[title.strip().lower()] = game
+        games_by_external_id[external_id] = game
+        links_to_create.append((external_id, game))
+
+    if games_to_create:
+        db.flush()
+    for external_id, game in links_to_create:
+        db.add(GameProviderId(provider="ITCH", external_id=external_id, game_id=game.id))
+    if links_to_create:
+        db.flush()
+
+    game_ids = [game.id for game in games_by_external_id.values()]
+    user_games = {
+        user_game.game_id: user_game
+        for user_game in db.query(UserGame)
+        .filter(UserGame.user_id == account.user_id, UserGame.game_id.in_(game_ids))
+        .all()
+    }
 
     new_games_count = 0
     updated_games_count = 0
-
-    for item in all_items:
-        game_data = item.get("game", {})
-        game_id_itch = str(game_data.get("id"))
-        if not game_id_itch or game_id_itch == "None":
-            continue
-
-        title = game_data.get("title")
-        cover_url = game_data.get("cover_url")
-
-        # Verifica se o jogo já existe globalmente no banco por um identificador
-        # (Neste momento a tabela Game não tem um campo itch_id, usaremos external_id)
-        game_id_int = int(game_id_itch) if str(game_id_itch).isdigit() else None
-
-        if game_id_int:
-            game_db = db.query(Game).filter(Game.external_id == game_id_int).first()
-        else:
-            game_db = db.query(Game).filter(Game.title == title).first()
-
-        if not game_db:
-            game_db = Game(
-                title=title,
-                cover_url=cover_url,
-                external_id=game_id_int,
-            )
-            db.add(game_db)
-            db.commit()
-            db.refresh(game_db)
-
-        # Verifica se o usuário já possui este jogo na biblioteca (qualquer store)
-        user_game = (
-            db.query(UserGame)
-            .filter(UserGame.user_id == account.user_id, UserGame.game_id == game_db.id)
-            .first()
-        )
+    for external_id, game_data in deduplicated.items():
+        game_db = games_by_external_id[external_id]
+        user_game = user_games.get(game_db.id)
 
         if not user_game:
             user_game = UserGame(
@@ -191,10 +251,8 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
                 store="ITCH",
             )
             db.add(user_game)
+            user_games[game_db.id] = user_game
             new_games_count += 1
-
-            from app.models.activity import Activity
-
             db.add(
                 Activity(
                     user_id=str(account.user_id),
@@ -208,7 +266,11 @@ async def sync_single_account(account: ItchAccount, db: Session) -> dict:
             updated_games_count += 1
 
     account.last_sync_at = datetime.now(timezone.utc)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return {
         "new_games_count": new_games_count,

@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import case, func
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
@@ -19,10 +19,12 @@ def get_system_stats(
     admin: User = Depends(get_current_admin),
 ):
     """Retorna estatísticas rápidas do sistema para o painel de administração."""
-    total_users = db.query(User).count()
-    active_users = db.query(User).filter(User.is_deleted.is_(False)).count()
-    inactive_users = db.query(User).filter(User.is_deleted.is_(True)).count()
-    admin_users = db.query(User).filter(User.is_admin.is_(True)).count()
+    total_users, active_users, inactive_users, admin_users = db.query(
+        func.count(User.id),
+        func.sum(case((User.is_deleted.is_(False), 1), else_=0)),
+        func.sum(case((User.is_deleted.is_(True), 1), else_=0)),
+        func.sum(case((User.is_admin.is_(True), 1), else_=0)),
+    ).one()
 
     return {
         "total_users": total_users,
@@ -34,15 +36,15 @@ def get_system_stats(
 
 @router.get("/users", response_model=List[UserResponse])
 def get_all_users(
-    skip: int = 0,
-    limit: int = 50,
+    skip: int = Query(0, ge=0),
+    offset: Optional[int] = Query(None, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     search: Optional[str] = Query(None, description="Busca por username ou email"),
     db: Session = Depends(get_db),
     admin: User = Depends(get_current_admin),
 ):
     """Lista todos os usuários com suporte a paginação e busca textual."""
-    # Evita N+1 na serialização do games_count usando selectinload
-    query = db.query(User).options(selectinload(User.user_games))
+    query = db.query(User)
 
     if search:
         search_filter = f"%{search.strip().lower()}%"
@@ -52,7 +54,12 @@ def get_all_users(
         )
 
     # Ordenar por data de criação decrescente (mais novos primeiro)
-    users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    users = (
+        query.order_by(User.created_at.desc())
+        .offset(offset if offset is not None else skip)
+        .limit(limit)
+        .all()
+    )
     return users
 
 

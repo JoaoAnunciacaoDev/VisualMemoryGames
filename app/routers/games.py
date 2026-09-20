@@ -2,7 +2,7 @@ import json
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ from app.models.user import User
 from app.schemas.game import GameBase, GameCreate, GameResponse
 from app.security import get_current_user
 from app.services.game_provider import search_games_on_rawg
-from app.services.storage import save_upload_file
+from app.services.storage import delete_stored_file, delete_stored_file_async, save_upload_file
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -35,11 +35,7 @@ def create_game(
     clean_title = game.title.strip()
 
     # 1. Verifica se já existe o jogo por título exato (case-insensitive)
-    existing_game = (
-        db.query(Game)
-        .filter(func.lower(Game.title) == clean_title.lower())
-        .first()
-    )
+    existing_game = db.query(Game).filter(func.lower(Game.title) == clean_title.lower()).first()
     if existing_game:
         if game.external_id and not existing_game.external_id:
             conflict = db.query(Game).filter(Game.external_id == game.external_id).first()
@@ -86,13 +82,14 @@ def create_game(
 
 @router.get("/", response_model=List[GameResponse])
 def read_games(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    offset: Optional[int] = Query(None, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Lista todos os jogos do catálogo (apenas autenticados)."""
-    games = db.query(Game).offset(skip).limit(limit).all()
+    games = db.query(Game).offset(offset if offset is not None else skip).limit(limit).all()
     return games
 
 
@@ -119,36 +116,56 @@ async def create_manual_game(
                 detail=f"Ano de lançamento não pode ser superior a {current_year + 2}",
             )
 
+    parsed_platforms = json.loads(platforms)
+    parsed_genres = json.loads(genres)
     final_cover_url = cover_url
 
+    uploaded_cover_url = None
     if cover_file and cover_file.filename:
-        final_cover_url = await save_upload_file(cover_file)
+        uploaded_cover_url = await save_upload_file(cover_file)
+        final_cover_url = uploaded_cover_url
 
     new_game = Game(
         external_id=None,
         title=title.strip(),
         cover_url=final_cover_url,
         release_year=release_year,
-        platforms=json.loads(platforms),
-        genres=json.loads(genres),
+        platforms=parsed_platforms,
+        genres=parsed_genres,
         is_manual=True,
         created_by=str(current_user.id),
     )
 
-    db.add(new_game)
-    db.commit()
+    try:
+        db.add(new_game)
+        db.commit()
+    except Exception:
+        db.rollback()
+        await delete_stored_file_async(uploaded_cover_url)
+        raise
     db.refresh(new_game)
     return new_game
 
 
 @router.get("/manual/user/{user_id}", response_model=List[GameResponse])
 def get_user_manual_games(
-    user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    user_id: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Retorna os jogos criados manualmente por um usuário. Apenas o próprio dono."""
     if str(user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão para ver estes jogos.")
-    games = db.query(Game).filter(Game.is_manual, Game.created_by == user_id).all()
+    games = (
+        db.query(Game)
+        .filter(Game.is_manual, Game.created_by == user_id)
+        .order_by(Game.id)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return games
 
 
@@ -184,19 +201,31 @@ async def update_manual_game(
                 detail=f"Ano de lançamento não pode ser superior a {current_year + 2}",
             )
 
+    previous_cover_url = game.cover_url
+    parsed_platforms = json.loads(platforms)
+    parsed_genres = json.loads(genres)
     final_cover_url = cover_url
+    uploaded_cover_url = None
     if cover_file and cover_file.filename:
-        final_cover_url = await save_upload_file(cover_file)
+        uploaded_cover_url = await save_upload_file(cover_file)
+        final_cover_url = uploaded_cover_url
 
     game.title = title.strip()
     game.release_year = release_year
-    game.platforms = json.loads(platforms)
-    game.genres = json.loads(genres)
+    game.platforms = parsed_platforms
+    game.genres = parsed_genres
     if final_cover_url:
         game.cover_url = final_cover_url
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        await delete_stored_file_async(uploaded_cover_url)
+        raise
     db.refresh(game)
+    if final_cover_url and final_cover_url != previous_cover_url:
+        await delete_stored_file_async(previous_cover_url)
     return game
 
 
@@ -214,6 +243,8 @@ def delete_manual_game(
             status_code=400, detail="Este jogo não é manual e não pode ser eliminado aqui."
         )
 
+    cover_to_delete = game.cover_url
     db.delete(game)
     db.commit()
+    delete_stored_file(cover_to_delete)
     return None

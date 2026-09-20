@@ -7,7 +7,7 @@ on:
       - 'app/**'
       - 'alembic/**'
       - 'pyproject.toml'
-      - 'poetry.lock'
+      - 'uv.lock'
       - '.github/workflows/backend.yml'
   pull_request:
     branches: [main]
@@ -15,12 +15,32 @@ on:
       - 'app/**'
       - 'alembic/**'
       - 'pyproject.toml'
-      - 'poetry.lock'
+      - 'uv.lock'
       - '.github/workflows/backend.yml'
 
 jobs:
   test-backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: visualmemory
+          POSTGRES_PASSWORD: visualmemory
+          POSTGRES_DB: visualmemory_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U visualmemory -d visualmemory_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      ENVIRONMENT: testing
+      SECRET_KEY: ci-secret-key-with-at-least-32-characters
+      DATABASE_URL: postgresql://visualmemory:visualmemory@localhost:5432/visualmemory_test
+      INTERNAL_CRON_SECRET: ci-internal-secret
 
     steps:
       - name: Checkout do código
@@ -31,17 +51,35 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Instalar Poetry
-        run: pipx install poetry
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: '0.12.17'
+          enable-cache: true
 
       - name: Instalar dependências
-        run: poetry install
+        run: uv sync --locked --dev
 
       - name: Lint
-        working-directory: ./app
-        run: poetry run ruff check
+        run: >-
+          uv run ruff check app alembic/env.py
+          alembic/versions/d3b7f91e2a4c_align_schema_and_add_query_indexes.py
+          alembic/versions/e4c8a12f6b90_add_persistent_sync_jobs.py
+          alembic/versions/f5d9b23a7c01_add_namespaced_game_provider_ids.py
+          alembic/versions/g6e1c34b8d12_add_external_cache_and_genre_index.py
+
+      - name: Validar migrações em PostgreSQL
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+
+      - name: Validar importação da aplicação
+        run: uv run python -c "from app.main import app; assert app.title == 'VisualMemory API'"
 
       - name: Executar testes
         env:
           PYTHONPATH: ${{ github.workspace }}
-        run: poetry run pytest app/tests -v
+        run: uv run pytest app/tests -v
+
+      - name: Validar imagem de produção
+        run: docker build -f docker/Dockerfile.back -t visualmemory-backend:test .

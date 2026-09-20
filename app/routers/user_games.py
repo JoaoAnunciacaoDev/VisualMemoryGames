@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -27,10 +27,13 @@ from app.schemas.user_game_review import (
 from app.security import get_current_user
 from app.services.custom_list_service import get_or_create_favorites_list, sync_auto_list
 from app.services.library_service import remove_from_library
-from app.services.storage import save_upload_file
+from app.services.storage import (
+    MAX_FILE_SIZE,
+    delete_stored_file,
+    delete_stored_file_async,
+    save_upload_file,
+)
 from app.utils import safe_load_json_list
-
-MAX_FILE_SIZE = 5 * 1024 * 1024
 
 router = APIRouter(prefix="/user-games", tags=["User Games"])
 
@@ -76,14 +79,23 @@ def add_game_to_library(
 
 
 @router.get("/me", response_model=List[LibraryGameResponse])
-def get_my_library(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_my_library(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Retorna os jogos da biblioteca do usuário logado."""
-    return get_user_library(str(current_user.id), db, current_user)
+    return get_user_library(str(current_user.id), offset, limit, db, current_user)
 
 
 @router.get("/user/{identifier}", response_model=List[LibraryGameResponse])
 def get_user_library(
-    identifier: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    identifier: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     from sqlalchemy import func
 
@@ -116,6 +128,9 @@ def get_user_library(
         db.query(UserGame, Game)
         .join(Game, Game.id == UserGame.game_id)
         .filter(UserGame.user_id == target_user.id)
+        .order_by(UserGame.id)
+        .offset(offset)
+        .limit(limit)
         .all()
     )
 
@@ -221,6 +236,7 @@ def update_user_game(
     old_status = db_user_game.status
     old_rating = db_user_game.rating
     old_notes = db_user_game.notes
+    old_custom_cover_url = db_user_game.custom_cover_url
 
     for key, value in update_data.items():
         setattr(db_user_game, key, value)
@@ -283,6 +299,12 @@ def update_user_game(
     db.commit()
     db.refresh(db_user_game)
 
+    if (
+        "custom_cover_url" in update_data
+        and update_data["custom_cover_url"] != old_custom_cover_url
+    ):
+        delete_stored_file(old_custom_cover_url)
+
     if "finished_at" in update_data:
         sync_auto_list(
             user_id=str(db_user_game.user_id),
@@ -316,11 +338,18 @@ async def update_custom_cover(
     if cover_file.size and cover_file.size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="A imagem deve ter no máximo 5 MB.")
 
+    previous_cover_url = db_user_game.custom_cover_url
     cover_url = await save_upload_file(cover_file)
 
     setattr(db_user_game, "custom_cover_url", cover_url)
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        await delete_stored_file_async(cover_url)
+        raise
     db.refresh(db_user_game)
+    await delete_stored_file_async(previous_cover_url)
 
     return db_user_game
 
@@ -441,6 +470,8 @@ def log_rated_activity(
 @router.get("/{user_game_id}/reviews", response_model=List[UserGameReviewResponse])
 def get_user_game_reviews(
     user_game_id: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -457,7 +488,7 @@ def get_user_game_reviews(
 
         is_following = (
             db.query(Follow)
-            .filter(Follow.follower_id == current_user.id, Follow.followed_id == target_user.id)
+            .filter(Follow.follower_id == current_user.id, Follow.following_id == target_user.id)
             .first()
             is not None
         )
@@ -474,6 +505,8 @@ def get_user_game_reviews(
         db.query(UserGameReview)
         .filter(UserGameReview.user_game_id == user_game_id)
         .order_by(UserGameReview.created_at.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     return reviews

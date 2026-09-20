@@ -47,14 +47,17 @@ def client(db_session):
     import app.routers.epic as epic_router
     import app.routers.gog as gog_router
     import app.routers.steam as steam_router
+    import app.services.external_cache as external_cache
 
     orig_steam = steam_router.db_session_maker
     orig_gog = gog_router.db_session_maker
     orig_epic = epic_router.db_session_maker
+    orig_cache = external_cache.db_session_maker
 
     steam_router.db_session_maker = TestingSessionLocal
     gog_router.db_session_maker = TestingSessionLocal
     epic_router.db_session_maker = TestingSessionLocal
+    external_cache.db_session_maker = TestingSessionLocal
 
     with TestClient(app) as c:
         yield c
@@ -63,6 +66,7 @@ def client(db_session):
     steam_router.db_session_maker = orig_steam
     gog_router.db_session_maker = orig_gog
     epic_router.db_session_maker = orig_epic
+    external_cache.db_session_maker = orig_cache
 
 
 @pytest.fixture

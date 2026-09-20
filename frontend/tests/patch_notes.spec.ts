@@ -10,7 +10,7 @@ function runProjectPython(script: string) {
     '.venv',
     process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python',
   );
-  const executable = existsSync(localPython) ? localPython : 'poetry';
+  const executable = existsSync(localPython) ? localPython : 'uv';
   const args = existsSync(localPython) ? ['-c', script] : ['run', 'python', '-c', script];
   execFileSync(executable, args, {
     cwd: '..',

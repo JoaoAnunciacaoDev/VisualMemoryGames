@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, Integer, String, text
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,6 +17,13 @@ if TYPE_CHECKING:
 
 class Game(Base):
     __tablename__ = "games"
+    __table_args__ = (
+        Index(
+            "ix_games_genres_gin",
+            text("(genres::jsonb)"),
+            postgresql_using="gin",
+        ).ddl_if(dialect="postgresql"),
+    )
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     external_id: Mapped[Optional[int]] = mapped_column(

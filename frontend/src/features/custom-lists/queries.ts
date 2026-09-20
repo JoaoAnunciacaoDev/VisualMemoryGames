@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 import type { GameInList } from '@/types';
 
 export interface CustomList {
@@ -24,8 +25,8 @@ export const customListKeys = {
 export const customListsQuery = () => queryOptions({
   queryKey: customListKeys.mine(),
   queryFn: async () => {
-    const response = await api.get<CustomList[]>('/lists/me');
-    return [...response.data].sort((a, b) => {
+    const lists = await fetchAllPages<CustomList>('/lists/me');
+    return lists.sort((a, b) => {
       const aPriority = a.list_type ? (priority[a.list_type] ?? 4) : 4;
       const bPriority = b.list_type ? (priority[b.list_type] ?? 4) : 4;
       return aPriority !== bPriority ? aPriority - bPriority : a.name.localeCompare(b.name);

@@ -289,4 +289,3 @@ def test_new_activities_and_my_activities_endpoint(client: TestClient, db_sessio
     )
     assert resp_empty.status_code == 200
     assert len(resp_empty.json()["items"]) == 0
-

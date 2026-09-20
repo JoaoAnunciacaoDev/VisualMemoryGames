@@ -1,4 +1,5 @@
 import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 import type { GameResult } from '@/types';
 
 interface GameRecordSummary {
@@ -29,8 +30,8 @@ export async function ensureGameRecord(game: GameRecordInput): Promise<string> {
   } catch (error) {
     if (!isConflictError(error)) throw error;
     const normalizedTitle = game.title.trim().toLowerCase();
-    const response = await api.get<GameRecordSummary[]>('/games/');
-    const existing = response.data.find((record) => (
+    const records = await fetchAllPages<GameRecordSummary>('/games/');
+    const existing = records.find((record) => (
       record.title.trim().toLowerCase() === normalizedTitle
       || (game.external_id !== null && record.external_id === game.external_id && record.title.trim().toLowerCase() === normalizedTitle)
     ));

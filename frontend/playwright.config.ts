@@ -6,7 +6,7 @@ const localPython = resolve('..', '.venv', process.platform === 'win32' ? 'Scrip
 const backendCommand = process.env.E2E_BACKEND_COMMAND
   ?? (existsSync(localPython)
     ? `"${localPython}" scripts/run_e2e_server.py`
-    : 'poetry run python scripts/run_e2e_server.py');
+    : 'uv run python scripts/run_e2e_server.py');
 
 /**
  * See https://playwright.dev/docs/test-configuration.

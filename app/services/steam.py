@@ -1,9 +1,14 @@
+import logging
 import os
 import re
 from datetime import date, datetime, timezone
 
 import httpx
 from fastapi import HTTPException
+
+from app.services.http_client import get_async_client, request_async
+
+logger = logging.getLogger("visualmemory.steam")
 
 STEAM_API_URL = "http://api.steampowered.com"
 
@@ -22,96 +27,89 @@ class SteamService:
     async def resolve_vanity_url(self, vanity_url: str) -> str | None:
         """Resolve um vanityurl da Steam (nome customizado no link de perfil) para SteamID64."""
         self._check_api_key()
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{STEAM_API_URL}/ISteamUser/ResolveVanityURL/v0001/",
-                    params={"key": self.api_key, "vanityurl": vanity_url},
-                )
-                response.raise_for_status()
-                data = response.json().get("response", {})
-                if data.get("success") == 1:
-                    return data.get("steamid")
-                return None
-            except Exception as e:
-                print(f"Erro ao resolver vanity URL: {e}")
-                return None
+        try:
+            response = await request_async(
+                "GET",
+                f"{STEAM_API_URL}/ISteamUser/ResolveVanityURL/v0001/",
+                params={"key": self.api_key, "vanityurl": vanity_url},
+            )
+            response.raise_for_status()
+            data = response.json().get("response", {})
+            if data.get("success") == 1:
+                return data.get("steamid")
+            return None
+        except Exception as e:
+            logger.warning("Erro ao resolver vanity URL: %s", e)
+            return None
 
     async def get_player_summary(self, steam_id: str) -> dict:
         """Busca o nome e o avatar da conta Steam."""
         self._check_api_key()
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{STEAM_API_URL}/ISteamUser/GetPlayerSummaries/v0002/",
-                    params={"key": self.api_key, "steamids": steam_id},
-                )
-                response.raise_for_status()
-                players = response.json().get("response", {}).get("players", [])
-                if players:
-                    player = players[0]
-                    return {
-                        "steam_id": steam_id,
-                        "persona_name": player.get("personaname"),
-                        "avatar_url": player.get("avatarfull"),
-                    }
-                raise HTTPException(
-                    status_code=404, detail="Nenhum perfil encontrado para este SteamID."
-                )
-            except httpx.HTTPStatusError as e:
-                raise HTTPException(
-                    status_code=e.response.status_code,
-                    detail=f"Erro na API da Steam: {e.response.text}",
-                )
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500, detail=f"Erro interno de integração com a Steam: {str(e)}"
-                )
+        try:
+            response = await request_async(
+                "GET",
+                f"{STEAM_API_URL}/ISteamUser/GetPlayerSummaries/v0002/",
+                params={"key": self.api_key, "steamids": steam_id},
+            )
+            response.raise_for_status()
+            players = response.json().get("response", {}).get("players", [])
+            if players:
+                player = players[0]
+                return {
+                    "steam_id": steam_id,
+                    "persona_name": player.get("personaname"),
+                    "avatar_url": player.get("avatarfull"),
+                }
+            raise HTTPException(
+                status_code=404, detail="Nenhum perfil encontrado para este SteamID."
+            )
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail="A API da Steam não conseguiu processar a solicitação.",
+            )
+        except Exception:
+            raise HTTPException(status_code=500, detail="Erro interno de integração com a Steam.")
 
     async def get_owned_games(self, steam_id: str) -> list[dict]:
         """Busca todos os jogos da conta Steam."""
         self._check_api_key()
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{STEAM_API_URL}/IPlayerService/GetOwnedGames/v0001/",
-                    params={
-                        "key": self.api_key,
-                        "steamid": steam_id,
-                        "include_appinfo": "true",
-                        "include_played_free_games": "true",
-                    },
-                )
-                response.raise_for_status()
-                data = response.json().get("response", {})
-                return data.get("games", [])
-            except httpx.HTTPStatusError as e:
-                raise HTTPException(
-                    status_code=e.response.status_code,
-                    detail=f"Erro na API da Steam ao listar jogos: {e.response.text}",
-                )
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500, detail=f"Erro interno ao buscar jogos da Steam: {str(e)}"
-                )
+        try:
+            response = await request_async(
+                "GET",
+                f"{STEAM_API_URL}/IPlayerService/GetOwnedGames/v0001/",
+                params={
+                    "key": self.api_key,
+                    "steamid": steam_id,
+                    "include_appinfo": "true",
+                    "include_played_free_games": "true",
+                },
+            )
+            response.raise_for_status()
+            data = response.json().get("response", {})
+            return data.get("games", [])
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail="A API da Steam não conseguiu listar os jogos.",
+            )
+        except Exception:
+            raise HTTPException(status_code=500, detail="Erro interno ao buscar jogos da Steam.")
 
     async def get_recently_played_games(self, steam_id: str) -> list[dict]:
         """Busca os jogos jogados recentemente (últimas 2 semanas)."""
         self._check_api_key()
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(
-                    f"{STEAM_API_URL}/IPlayerService/GetRecentlyPlayedGames/v0001/",
-                    params={
-                        "key": self.api_key,
-                        "steamid": steam_id,
-                    },
-                )
-                response.raise_for_status()
-                data = response.json().get("response", {})
-                return data.get("games", [])
-            except Exception:
-                return []
+        try:
+            response = await request_async(
+                "GET",
+                f"{STEAM_API_URL}/IPlayerService/GetRecentlyPlayedGames/v0001/",
+                params={"key": self.api_key, "steamid": steam_id},
+            )
+            response.raise_for_status()
+            data = response.json().get("response", {})
+            return data.get("games", [])
+        except Exception:
+            return []
 
     async def is_game_platinized(
         self, steam_id: str, appid: int, client: httpx.AsyncClient = None
@@ -122,8 +120,10 @@ class SteamService:
         self._check_api_key()
 
         async def fetch(c: httpx.AsyncClient) -> date | None:
-            response = await c.get(
+            response = await request_async(
+                "GET",
                 f"{STEAM_API_URL}/ISteamUserStats/GetPlayerAchievements/v0001/",
+                client=c,
                 params={
                     "key": self.api_key,
                     "steamid": steam_id,
@@ -157,11 +157,10 @@ class SteamService:
             except Exception:
                 return None
         else:
-            async with httpx.AsyncClient() as c:
-                try:
-                    return await fetch(c)
-                except Exception:
-                    return None
+            try:
+                return await fetch(get_async_client())
+            except Exception:
+                return None
 
     async def get_game_details(self, appid: int, client: httpx.AsyncClient = None) -> dict:
         """Busca gêneros e ano de lançamento do jogo direto da loja da Steam."""
@@ -169,7 +168,7 @@ class SteamService:
         params = {"appids": appid, "l": "english"}
 
         async def fetch(c: httpx.AsyncClient) -> dict:
-            response = await c.get(url, params=params, timeout=5.0)
+            response = await request_async("GET", url, client=c, params=params, timeout=5.0)
             if response.status_code != 200:
                 return {}
             data = response.json()
@@ -195,8 +194,7 @@ class SteamService:
             if client is not None:
                 return await fetch(client)
             else:
-                async with httpx.AsyncClient() as c:
-                    return await fetch(c)
+                return await fetch(get_async_client())
         except Exception as e:
-            print(f"Erro ao buscar detalhes da loja Steam para appid {appid}: {e}")
+            logger.warning("Erro ao buscar detalhes da loja Steam para appid %s: %s", appid, e)
             return {}

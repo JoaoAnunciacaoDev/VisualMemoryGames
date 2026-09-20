@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, backref, mapped_column, relationship
 
 from app.database import Base
@@ -8,6 +8,7 @@ from app.database import Base
 
 class Activity(Base):
     __tablename__ = "activities"
+    __table_args__ = (Index("ix_activities_user_created_at", "user_id", "created_at"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(

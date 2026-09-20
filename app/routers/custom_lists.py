@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
@@ -63,9 +63,14 @@ def create_list(
 
 
 @router.get("/me", response_model=List[CustomListResponse])
-def get_my_lists(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_my_lists(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Retorna as listas customizadas do usuário logado."""
-    return get_user_lists(str(current_user.id), db, current_user)
+    return get_user_lists(str(current_user.id), offset, limit, db, current_user)
 
 
 def inject_custom_covers_to_lists(lists: List[CustomList], db: Session, user_id: str) -> None:
@@ -88,7 +93,11 @@ def inject_custom_covers_to_lists(lists: List[CustomList], db: Session, user_id:
 
 @router.get("/user/{user_id}", response_model=List[CustomListResponse])
 def get_user_lists(
-    user_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    user_id: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     if str(user_id) != str(current_user.id):
         raise HTTPException(status_code=403, detail="Sem permissão para ver estas listas.")
@@ -97,6 +106,9 @@ def get_user_lists(
         db.query(CustomList)
         .options(selectinload(CustomList.list_games).joinedload(CustomListGame.game))
         .filter(CustomList.user_id == user_id)
+        .order_by(CustomList.id)
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     inject_custom_covers_to_lists(lists, db, user_id)

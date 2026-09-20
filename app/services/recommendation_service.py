@@ -1,14 +1,16 @@
 import concurrent.futures
 import json
+import os
 import random
 from typing import Dict, List, Optional, Set
 
 from sqlalchemy import String, cast, or_
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.sql.expression import func
 
 from app.models.game import Game
 from app.models.user_game import UserGame
+from app.services.external_cache import build_cache_key, get_cached, set_cached
 from app.services.game_provider import get_games_by_genres_rawg
 
 
@@ -123,10 +125,13 @@ class RecommendationService:
             exclude_external_ids if exclude_external_ids is not None else self.owned_external_ids
         )
 
-        clauses = []
-        for g in genres:
-            clauses.append(cast(Game.genres, String).ilike(f'%"{g}"%'))
-            clauses.append(cast(Game.genres, String).ilike(f"%{g}%"))
+        if self.db.bind is not None and self.db.bind.dialect.name == "postgresql":
+            clauses = [cast(Game.genres, JSONB).contains([genre]) for genre in genres]
+        else:
+            clauses = []
+            for genre in genres:
+                clauses.append(cast(Game.genres, String).ilike(f'%"{genre}"%'))
+                clauses.append(cast(Game.genres, String).ilike(f"%{genre}%"))
 
         query = self.db.query(Game).filter(~Game.id.in_(self.owned_game_ids))
         if excludes:
@@ -135,8 +140,9 @@ class RecommendationService:
         if clauses:
             query = query.filter(or_(*clauses))
 
-        local_recs = query.order_by(func.random()).limit(count).all()
-        return local_recs
+        candidate_limit = max(count, min(500, int(os.getenv("RECOMMENDATION_CANDIDATES", "150"))))
+        candidates = query.order_by(Game.id).limit(candidate_limit).all()
+        return random.sample(candidates, min(count, len(candidates)))
 
     def get_platinum_recommendations(self) -> Optional[Dict]:
         platinum = [ug for ug in self.user_games if ug.platinum_at]
@@ -206,6 +212,15 @@ class RecommendationService:
         }
 
     def get_all_recommendations(self) -> List[Dict]:
+        fingerprint = [
+            (ug.game_id, ug.status, ug.favorite, ug.rating, str(ug.platinum_at))
+            for ug in sorted(self.user_games, key=lambda item: item.game_id)
+        ]
+        cache_key = build_cache_key(self.user_id, fingerprint)
+        cached = get_cached("recommendations", cache_key)
+        if cached is not None:
+            return cached
+
         # 1. Obter todas as categorias ativas
         categories_meta = [
             self.get_platinum_recommendations(),
@@ -216,6 +231,7 @@ class RecommendationService:
         ]
         categories = [c for c in categories_meta if c is not None]
         if not categories:
+            set_cached("recommendations", cache_key, [], ttl_seconds=300)
             return []
 
         # 2. Obter recomendações locais para cada categoria, evitando duplicações
@@ -248,7 +264,7 @@ class RecommendationService:
                     return cat_id, []
 
             with concurrent.futures.ThreadPoolExecutor(
-                max_workers=len(categories_to_fetch)
+                max_workers=min(2, len(categories_to_fetch))
             ) as executor:
                 futures = [
                     executor.submit(_fetch_genres_task, cat_id, genres)
@@ -321,4 +337,5 @@ class RecommendationService:
                     }
                 )
 
+        set_cached("recommendations", cache_key, final_carousels, ttl_seconds=300)
         return final_carousels

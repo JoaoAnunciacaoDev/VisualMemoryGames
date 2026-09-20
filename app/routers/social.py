@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,36 +20,43 @@ router = APIRouter(prefix="/social", tags=["Social"])
 def get_my_feed(
     year: Optional[int] = None,
     month: Optional[int] = None,
-    page: int = 1,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Retorna as atividades dos usuários seguidos e lançamentos da semana."""
-    return social_service.get_feed(current_user, db, year=year, month=month, page=page)
+    return social_service.get_feed(
+        current_user, db, year=year, month=month, page=page, page_size=page_size
+    )
 
 
 @router.get("/activities/me", response_model=PaginatedActivities)
 def get_my_activities(
     year: Optional[int] = None,
     month: Optional[int] = None,
-    page: int = 1,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Retorna a lista de atividades do próprio usuário logado."""
-    return social_service.get_my_activities(current_user, db, year=year, month=month, page=page)
+    return social_service.get_my_activities(
+        current_user, db, year=year, month=month, page=page, page_size=page_size
+    )
 
 
 @router.get("/users/search", response_model=List[UserPublicProfile])
 def search_users(
     q: str,
+    limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Pesquisa por perfis públicos pelo username."""
     if not q or len(q) < 2:
         return []
-    return social_service.search_users(q, current_user, db)
+    return social_service.search_users(q, current_user, db, limit=limit)
 
 
 def resolve_user_id(identifier: str, db: Session) -> str:
@@ -86,28 +93,34 @@ def get_profile(
 @router.get("/users/{user_id}/followers", response_model=List[UserPublicProfile])
 def get_followers(
     user_id: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Busca a lista de seguidores de um usuário."""
     resolved_id = resolve_user_id(user_id, db)
     target_id = str(current_user.id) if resolved_id == "me" else resolved_id
-    print(f"[DEBUG] get_followers user_id={user_id}, target_id={target_id}")
-    followers = social_service.get_followers(target_id, current_user, db)
-    print(f"[DEBUG] get_followers returning {len(followers)} followers")
+    followers = social_service.get_followers(
+        target_id, current_user, db, offset=offset, limit=limit
+    )
     return followers
 
 
 @router.get("/users/{user_id}/following", response_model=List[UserPublicProfile])
 def get_following(
     user_id: str,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Busca a lista de quem um usuário segue."""
     resolved_id = resolve_user_id(user_id, db)
     target_id = str(current_user.id) if resolved_id == "me" else resolved_id
-    following = social_service.get_following(target_id, current_user, db)
+    following = social_service.get_following(
+        target_id, current_user, db, offset=offset, limit=limit
+    )
     return following
 
 

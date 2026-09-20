@@ -1,7 +1,8 @@
 import asyncio
+import logging
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,8 +18,10 @@ from app.security import get_current_user
 from app.services.custom_list_service import cleanup_empty_auto_lists
 from app.services.game_provider import RAWG_API_KEY, search_games_on_rawg
 from app.services.igdb_service import search_games_on_igdb
+from app.services.job_service import EPIC_METADATA_ENRICH, enqueue_job
 
 router = APIRouter(prefix="/users/me/epic", tags=["Epic Games Integration"])
+logger = logging.getLogger("visualmemory.epic")
 db_session_maker = SessionLocal
 
 
@@ -37,39 +40,45 @@ async def enrich_games_metadata_in_background(game_ids: List[str]):
     via IGDB/RAWG em segundo plano.
     """
     if not game_ids:
-        return
+        return {"updated_count": 0}
 
-    for game_id in game_ids:
-        title = None
-        db = db_session_maker()
-        try:
-            game = db.query(Game).filter(Game.id == game_id).first()
-            if game:
-                needs_cover = not game.cover_url
-                needs_genres = not game.genres or game.genres == [] or game.genres == "[]"
-                needs_year = not game.release_year
-                if needs_cover or needs_genres or needs_year:
-                    title = game.title
-        finally:
-            db.close()
+    updated_count = 0
+    failures = 0
 
-        if not title:
-            continue
+    db = db_session_maker()
+    try:
+        games = db.query(Game).filter(Game.id.in_(game_ids)).all()
+        candidates = [
+            (game.id, game.title)
+            for game in games
+            if (
+                not game.cover_url
+                or not game.genres
+                or game.genres == []
+                or game.genres == "[]"
+                or not game.release_year
+            )
+        ]
+    finally:
+        db.close()
 
+    for game_id, title in candidates:
         # Busca metadados fora da sessão do banco
         found_data = None
         try:
             # 1. Tenta IGDB
-            igdb_results = search_games_on_igdb(title, limit=1)
+            igdb_results = await asyncio.to_thread(search_games_on_igdb, title, limit=1)
             if igdb_results:
                 found_data = igdb_results[0]
             elif RAWG_API_KEY:
                 # 2. Tenta RAWG
-                rawg_results = search_games_on_rawg(title, page=1)
+                rawg_results = await asyncio.to_thread(search_games_on_rawg, title, page=1)
                 if rawg_results:
                     found_data = rawg_results[0]
         except Exception as e:
-            print(f"Erro ao buscar metadados para '{title}': {e}")
+            logger.warning("Erro ao buscar metadados para '%s': %s", title, e)
+            failures += 1
+            continue
 
         if found_data:
             db = db_session_maker()
@@ -93,13 +102,18 @@ async def enrich_games_metadata_in_background(game_ids: List[str]):
                         if not existing_ext:
                             game.external_id = found_data["external_id"]
                     db.commit()
+                    updated_count += 1
             except Exception as e:
-                print(f"Erro ao salvar metadados para '{title}': {e}")
+                logger.exception("Erro ao salvar metadados para '%s': %s", title, e)
+                failures += 1
             finally:
                 db.close()
 
         # Intervalo para respeitar rate limits das APIs externas
         await asyncio.sleep(0.5)
+    if failures:
+        raise RuntimeError(f"Falha ao enriquecer {failures} jogo(s) da Epic")
+    return {"updated_count": updated_count}
 
 
 @router.post(
@@ -110,7 +124,6 @@ async def enrich_games_metadata_in_background(game_ids: List[str]):
 )
 def import_epic_games(
     payload: EpicImportRequest,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -220,7 +233,13 @@ def import_epic_games(
     db.commit()
 
     if game_ids_to_enrich:
-        background_tasks.add_task(enrich_games_metadata_in_background, game_ids_to_enrich)
+        enqueue_job(
+            db,
+            user_id=str(current_user.id),
+            job_type=EPIC_METADATA_ENRICH,
+            payload={"game_ids": list(dict.fromkeys(game_ids_to_enrich))},
+            idempotency_key=f"epic-metadata:{current_user.id}",
+        )
 
     return EpicImportResponse(
         imported_count=imported_count,
@@ -235,7 +254,6 @@ def import_epic_games(
     summary="Atualiza metadados (capas e gêneros) de jogos da Epic Games da biblioteca",
 )
 def enrich_epic_games(
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -257,7 +275,13 @@ def enrich_epic_games(
             game_ids_to_enrich.append(g.id)
 
     if game_ids_to_enrich:
-        background_tasks.add_task(enrich_games_metadata_in_background, game_ids_to_enrich)
+        enqueue_job(
+            db,
+            user_id=str(current_user.id),
+            job_type=EPIC_METADATA_ENRICH,
+            payload={"game_ids": list(dict.fromkeys(game_ids_to_enrich))},
+            idempotency_key=f"epic-metadata:{current_user.id}",
+        )
 
     return {
         "message": f"Enriquecimento iniciado para {len(game_ids_to_enrich)} jogos.",
@@ -302,9 +326,7 @@ def remove_epic_games(
         db.query(TierItem).filter(
             TierItem.game_id.in_(game_ids),
             TierItem.category_id.in_(
-                db.query(TierCategory.id)
-                .join(TierList)
-                .filter(TierList.user_id == current_user.id)
+                db.query(TierCategory.id).join(TierList).filter(TierList.user_id == current_user.id)
             ),
         ).delete(synchronize_session=False)
 

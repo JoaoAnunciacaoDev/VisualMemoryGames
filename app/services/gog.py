@@ -1,9 +1,13 @@
+import logging
 import re
 from datetime import datetime, timezone
 from typing import List
 
-import httpx
 from fastapi import HTTPException, status
+
+from app.services.http_client import request_async
+
+logger = logging.getLogger("visualmemory.gog")
 
 GOG_BASE_URL = "https://www.gog.com"
 DEFAULT_USER_AGENT = (
@@ -26,11 +30,11 @@ class GogService:
     async def get_public_profile(self, username: str) -> dict:
         """Valida se o perfil público do GOG existe e busca avatar/dados básicos."""
         headers = {"User-Agent": DEFAULT_USER_AGENT}
-        async with httpx.AsyncClient(
-            headers=headers, follow_redirects=True, timeout=10.0
-        ) as client:
+        try:
             try:
-                response = await client.get(f"{GOG_BASE_URL}/u/{username}")
+                response = await request_async(
+                    "GET", f"{GOG_BASE_URL}/u/{username}", headers=headers
+                )
                 if response.status_code == 404:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -73,7 +77,7 @@ class GogService:
                             else None
                         )
                     except Exception as e:
-                        print(f"Erro ao fazer parse do JSON do perfil GOG: {e}")
+                        logger.warning("Erro ao fazer parse do JSON do perfil GOG: %s", e)
 
                 # 2. Fallbacks via regex no HTML caso o JSON não esteja presente
                 if not avatar_url:
@@ -106,11 +110,15 @@ class GogService:
                 }
             except HTTPException:
                 raise
-            except Exception as e:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Erro de comunicação ao consultar o GOG: {str(e)}",
-                )
+            except Exception:
+                raise
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Erro de comunicação ao consultar o GOG.",
+            )
 
     async def get_public_games(self, username: str) -> List[dict]:
         """Busca os jogos, horas jogadas e conquistas a partir do perfil público do GOG."""
@@ -122,13 +130,11 @@ class GogService:
             "X-Requested-With": "XMLHttpRequest",
         }
 
-        async with httpx.AsyncClient(
-            headers=headers, follow_redirects=True, timeout=15.0
-        ) as client:
+        try:
             # 1. Busca a primeira página para extrair total de páginas
             first_url = f"{GOG_BASE_URL}/u/{username}/games/stats?page=1"
             try:
-                first_res = await client.get(first_url)
+                first_res = await request_async("GET", first_url, headers=headers)
                 if first_res.status_code == 404:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
@@ -149,7 +155,7 @@ class GogService:
             except HTTPException:
                 raise
             except Exception as e:
-                print(f"Erro ao consultar página 1 do GOG: {e}")
+                logger.warning("Erro ao consultar página 1 do GOG: %s", e)
                 return []
 
             all_pages_data = [first_data]
@@ -169,11 +175,11 @@ class GogService:
                     async with sem:
                         try:
                             p_url = f"{GOG_BASE_URL}/u/{username}/games/stats?page={p}"
-                            r = await client.get(p_url)
+                            r = await request_async("GET", p_url, headers=headers)
                             if r.status_code == 200:
                                 return r.json()
                         except Exception as err:
-                            print(f"Erro ao buscar página {p} do GOG: {err}")
+                            logger.warning("Erro ao buscar página %s do GOG: %s", p, err)
                         return None
 
                 tasks = [fetch_page(p) for p in range(2, total_pages + 1)]
@@ -237,9 +243,7 @@ class GogService:
 
                     if is_platinized:
                         last_unlocked_date = (
-                            ach_data.get("last_unlocked")
-                            if isinstance(ach_data, dict)
-                            else None
+                            ach_data.get("last_unlocked") if isinstance(ach_data, dict) else None
                         )
                         last_date_str = (
                             user_stats.get("lastSession")
@@ -268,3 +272,5 @@ class GogService:
                     )
 
             return games_result
+        except HTTPException:
+            raise

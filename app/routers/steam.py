@@ -1,24 +1,30 @@
 import asyncio
+import logging
+import os
 import re
 from datetime import date, datetime, timezone
 from typing import List
 
-import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 
 from app.database import SessionLocal, get_db
+from app.models.activity import Activity
 from app.models.game import Game
 from app.models.steam_account import SteamAccount
 from app.models.user import User
 from app.models.user_game import UserGame
 from app.security import get_current_user
-from app.services.custom_list_service import cleanup_empty_auto_lists
+from app.services.custom_list_service import cleanup_empty_auto_lists, sync_auto_list
+from app.services.http_client import get_async_client
+from app.services.job_service import STEAM_METADATA_ENRICH, enqueue_job
 from app.services.steam import SteamService
 
 router = APIRouter(prefix="/users/me/steam", tags=["Steam Integration"])
+logger = logging.getLogger("visualmemory.steam")
 steam_service = SteamService()
 ACTIVE_SYNC_USERS = set()
 db_session_maker = SessionLocal
@@ -70,7 +76,13 @@ def get_connected_accounts(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     """Lista todas as contas Steam conectadas do usuário."""
-    return db.query(SteamAccount).filter(SteamAccount.user_id == current_user.id).all()
+    return (
+        db.query(SteamAccount)
+        .filter(SteamAccount.user_id == current_user.id)
+        .order_by(SteamAccount.id)
+        .limit(20)
+        .all()
+    )
 
 
 @router.post("/accounts", response_model=SteamAccountResponse)
@@ -161,7 +173,7 @@ async def disconnect_steam_account(
             if steam_games:
                 appids_to_remove = [g["appid"] for g in steam_games if g.get("appid")]
         except Exception as e:
-            print(f"Erro ao obter jogos da Steam para remoção: {e}")
+            logger.warning("Erro ao obter jogos da Steam para remoção: %s", e)
 
         if appids_to_remove:
             game_ids_query = db.query(Game.id).filter(Game.steam_appid.in_(appids_to_remove))
@@ -212,58 +224,70 @@ async def disconnect_steam_account(
 
 async def fetch_game_genres_in_background(appids: List[int], user_id: str):
     """Busca gêneros e ano de lançamento de uma lista de AppIDs da Steam em segundo plano."""
+    updated_count = 0
+    failures = 0
     try:
-        async with httpx.AsyncClient() as client:
-            for appid in appids:
-                # 1. Abre sessão curta para verificar se precisa atualizar
-                db = db_session_maker()
-                try:
-                    game = db.query(Game).filter(Game.steam_appid == appid).first()
-                    if not game or (game.genres and game.genres != [] and game.genres != "[]"):
+        db = db_session_maker()
+        try:
+            candidates = {
+                game.steam_appid: game
+                for game in db.query(Game).filter(Game.steam_appid.in_(appids)).all()
+                if game.steam_appid is not None
+                and (not game.genres or game.genres == [] or game.genres == "[]")
+            }
+        finally:
+            db.close()
+
+        details_by_appid = {}
+        client = get_async_client()
+        for appid in candidates:
+            try:
+                details = await steam_service.get_game_details(appid, client=client)
+                if details:
+                    details_by_appid[appid] = details
+                else:
+                    failures += 1
+            except Exception as e:
+                logger.warning("Erro ao buscar detalhes do appid %s: %s", appid, e)
+                failures += 1
+            await asyncio.sleep(1.5)
+
+        def persist_details() -> int:
+            session = db_session_maker()
+            try:
+                games = {
+                    game.steam_appid: game
+                    for game in session.query(Game)
+                    .filter(Game.steam_appid.in_(details_by_appid))
+                    .all()
+                }
+                persisted_count = 0
+                for appid, details in details_by_appid.items():
+                    game = games.get(appid)
+                    if not game:
                         continue
-                finally:
-                    db.close()
+                    game.genres = details.get("genres") or []
+                    if details.get("release_year"):
+                        game.release_year = details["release_year"]
+                    persisted_count += 1
+                session.commit()
+                return persisted_count
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
 
-                # 2. Faz a requisição assíncrona de rede (fora de transação de banco)
-                details = None
-                try:
-                    details = await steam_service.get_game_details(appid, client=client)
-                except Exception as e:
-                    print(f"Erro ao buscar detalhes do appid {appid}: {e}")
-
-                # 3. Abre nova sessão curta para atualizar e salvar
-                db = db_session_maker()
-                try:
-                    game = db.query(Game).filter(Game.steam_appid == appid).first()
-                    if game:
-                        genres_val = []
-                        release_yr = None
-                        if details:
-                            if details.get("genres"):
-                                genres_val = details["genres"]
-                            if details.get("release_year"):
-                                release_yr = details["release_year"]
-
-                        game.genres = genres_val
-                        if release_yr:
-                            game.release_year = release_yr
-                        db.commit()
-                except Exception as e:
-                    print(f"Erro no background task ao salvar detalhes para appid {appid}: {e}")
-                finally:
-                    db.close()
-
-                # Sleep de 1.5 segundos para evitar 429 da Steam Store
-                await asyncio.sleep(1.5)
-    except Exception as e:
-        print(f"Erro geral no background task: {e}")
+        updated_count = await run_in_threadpool(persist_details)
     finally:
         ACTIVE_SYNC_USERS.discard(str(user_id))
+    if failures:
+        raise RuntimeError(f"Falha ao enriquecer {failures} jogo(s) da Steam")
+    return {"updated_count": updated_count}
 
 
 @router.post("/sync", response_model=SyncResultResponse)
 async def sync_steam_games(
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -284,9 +308,12 @@ async def sync_steam_games(
 
     if all_missing_genres_appids:
         unique_appids = list(set(all_missing_genres_appids))
-        ACTIVE_SYNC_USERS.add(str(current_user.id))
-        background_tasks.add_task(
-            fetch_game_genres_in_background, unique_appids, str(current_user.id)
+        enqueue_job(
+            db,
+            user_id=str(current_user.id),
+            job_type=STEAM_METADATA_ENRICH,
+            payload={"appids": unique_appids},
+            idempotency_key=f"steam-metadata:{current_user.id}",
         )
 
     return SyncResultResponse(new_games_count=total_new, updated_games_count=total_updated)
@@ -295,7 +322,6 @@ async def sync_steam_games(
 @router.post("/accounts/{account_id}/sync", response_model=SyncResultResponse)
 async def sync_single_steam_account_endpoint(
     account_id: str,
-    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -314,9 +340,12 @@ async def sync_single_steam_account_endpoint(
 
     if missing_ids:
         unique_appids = list(set(missing_ids))
-        ACTIVE_SYNC_USERS.add(str(current_user.id))
-        background_tasks.add_task(
-            fetch_game_genres_in_background, unique_appids, str(current_user.id)
+        enqueue_job(
+            db,
+            user_id=str(current_user.id),
+            job_type=STEAM_METADATA_ENRICH,
+            payload={"appids": unique_appids},
+            idempotency_key=f"steam-metadata:{current_user.id}",
         )
 
     return SyncResultResponse(new_games_count=new_cnt, updated_games_count=upd_cnt)
@@ -324,16 +353,15 @@ async def sync_single_steam_account_endpoint(
 
 async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, int, List[int]]:
     """Auxiliar para sincronizar uma conta Steam individual e salvar no banco."""
-    new_games_count = 0
-    updated_games_count = 0
-    missing_genres_appids = []
-
+    account_id = str(account.id)
+    steam_id = str(account.steam_id)
+    db.rollback()
     try:
-        steam_games = await steam_service.get_owned_games(account.steam_id)
+        steam_games = await steam_service.get_owned_games(steam_id)
         # Busca os jogos jogados recentemente (últimas 2 semanas)
-        recent_games = await steam_service.get_recently_played_games(account.steam_id)
+        recent_games = await steam_service.get_recently_played_games(steam_id)
     except Exception as e:
-        print(f"Erro ao sincronizar conta Steam {account.steam_id}: {e}")
+        logger.warning("Erro ao sincronizar conta Steam: %s", e)
         return 0, 0, []
 
     if not steam_games:
@@ -346,181 +374,205 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
     games_to_check = [g for g in steam_games if g.get("playtime_forever", 0) > 0]
     platinized_game_dates = {}
 
-    sem_plat = asyncio.Semaphore(10)
+    concurrency = max(1, min(5, int(os.getenv("STEAM_SYNC_CONCURRENCY", "4"))))
+    sem_plat = asyncio.Semaphore(concurrency)
 
-    async with httpx.AsyncClient() as client:
-        # Define tarefas para conquistas
-        async def check_platinum(appid: int):
-            async with sem_plat:
-                plat_date = await steam_service.is_game_platinized(
-                    account.steam_id, appid, client=client
+    client = get_async_client()
+
+    async def check_platinum(appid: int):
+        async with sem_plat:
+            plat_date = await steam_service.is_game_platinized(steam_id, appid, client=client)
+            if plat_date is True:
+                platinized_game_dates[appid] = datetime.now(timezone.utc).date()
+            elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
+                platinized_game_dates[appid] = plat_date
+
+    plat_tasks = [check_platinum(g["appid"]) for g in games_to_check]
+    await asyncio.gather(*plat_tasks)
+
+    def persist_sync() -> tuple[int, int, List[int]]:
+        session = db_session_maker()
+        try:
+            persisted_account = (
+                session.query(SteamAccount).filter(SteamAccount.id == account_id).first()
+            )
+            if not persisted_account:
+                return 0, 0, []
+
+            appids = {sg.get("appid") for sg in steam_games if sg.get("appid") is not None}
+            games_by_appid = {
+                game.steam_appid: game
+                for game in session.query(Game).filter(Game.steam_appid.in_(appids)).all()
+            }
+            missing_items = [sg for sg in steam_games if sg.get("appid") not in games_by_appid]
+            title_keys = {
+                sg.get("name", "").strip().lower() for sg in missing_items if sg.get("name")
+            }
+            games_by_title = {}
+            title_list = list(title_keys)
+            for index in range(0, len(title_list), 500):
+                chunk = title_list[index : index + 500]
+                for game in session.query(Game).filter(func.lower(Game.title).in_(chunk)).all():
+                    games_by_title[game.title.strip().lower()] = game
+
+            new_games = []
+            for sg in missing_items:
+                appid = sg.get("appid")
+                name = sg.get("name")
+                game = games_by_title.get(name.strip().lower()) if name else None
+                if game:
+                    game.steam_appid = appid
+                else:
+                    game = Game(
+                        title=name or f"Steam App {appid}",
+                        steam_appid=appid,
+                        cover_url=(
+                            "https://shared.fastly.steamstatic.com/store_item_assets/"
+                            f"steam/apps/{appid}/header.jpg"
+                        ),
+                        platforms=["PC"],
+                        genres=[],
+                        release_year=None,
+                        is_manual=False,
+                    )
+                    session.add(game)
+                    new_games.append(game)
+                games_by_appid[appid] = game
+            if new_games:
+                session.flush()
+
+            game_ids = [game.id for game in games_by_appid.values()]
+            user_games_map = {
+                ug.game_id: ug
+                for ug in session.query(UserGame)
+                .filter(
+                    UserGame.user_id == persisted_account.user_id,
+                    UserGame.game_id.in_(game_ids),
                 )
-                if plat_date is True:
-                    platinized_game_dates[appid] = datetime.now(timezone.utc).date()
-                elif isinstance(plat_date, date) and not isinstance(plat_date, bool):
-                    platinized_game_dates[appid] = plat_date
+                .all()
+            }
 
-        plat_tasks = [check_platinum(g["appid"]) for g in games_to_check]
-        await asyncio.gather(*plat_tasks)
+            new_games_count = 0
+            updated_games_count = 0
+            missing_genres_appids = []
 
-    for sg in steam_games:
-        appid = sg.get("appid")
-        name = sg.get("name")
-        playtime_forever = sg.get("playtime_forever", 0)
-        hours = round(playtime_forever / 60, 1)
-
-        # 1. Verifica se o jogo existe pelo steam_appid
-        game = db.query(Game).filter(Game.steam_appid == appid).first()
-        if not game:
-            if name:
-                game = db.query(Game).filter(func.lower(Game.title) == name.lower().strip()).first()
-
-            if game:
-                game.steam_appid = appid
-                # Se o jogo associado não possui gêneros, adiciona para buscar em background
+            for sg in steam_games:
+                appid = sg.get("appid")
+                game = games_by_appid.get(appid)
+                if not game:
+                    continue
+                hours = round(sg.get("playtime_forever", 0) / 60, 1)
                 if not game.genres or game.genres == [] or game.genres == "[]":
                     missing_genres_appids.append(appid)
-                db.flush()
-            else:
-                cover = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg"
-                game = Game(
-                    title=name or f"Steam App {appid}",
-                    steam_appid=appid,
-                    cover_url=cover,
-                    platforms=["PC"],
-                    genres=[],
-                    release_year=None,
-                    is_manual=False,
-                )
-                db.add(game)
-                db.flush()
-                # Adiciona para buscar em background
-                missing_genres_appids.append(appid)
-        else:
-            if not game.genres or game.genres == [] or game.genres == "[]":
-                missing_genres_appids.append(appid)
+                user_game = user_games_map.get(game.id)
+                is_platinized = appid in platinized_game_dates
+                is_recent = appid in recent_appids
 
-        # 2. Verifica se o usuário já tem o jogo na biblioteca
-        user_game = (
-            db.query(UserGame)
-            .filter(UserGame.user_id == account.user_id, UserGame.game_id == game.id)
-            .first()
-        )
-
-        is_platinized = appid in platinized_game_dates
-        is_recent = appid in recent_appids
-
-        from app.models.activity import Activity
-
-        if not user_game:
-            # Classifica o status inicial:
-            # - Se platinou: "Platinado"
-            # - Se jogou recentemente: "Jogando"
-            # - Senão: "Na biblioteca"
-            status_init = "Na biblioteca"
-            platinum_date = None
-            if is_platinized:
-                status_init = "Platinado"
-                platinum_date = platinized_game_dates[appid]
-            elif is_recent:
-                status_init = "Jogando"
-
-            user_game = UserGame(
-                user_id=account.user_id,
-                game_id=game.id,
-                game=game,
-                rating=None,
-                status=status_init,
-                hours_played=hours,
-                store="STEAM",
-                acquired_at=None,
-                platinum_at=platinum_date,
-                favorite=False,
-            )
-            db.add(user_game)
-            new_games_count += 1
-
-            # Log ADED activity
-            db.add(
-                Activity(
-                    user_id=str(account.user_id),
-                    game_id=str(game.id),
-                    action_type="ADDED",
-                )
-            )
-            # If platinized at creation, also log PLATINUM and sync to auto-list
-            if status_init == "Platinado":
-                db.add(
-                    Activity(
-                        user_id=str(account.user_id),
-                        game_id=str(game.id),
-                        action_type="PLATINUM",
+                if not user_game:
+                    status_init = "Na biblioteca"
+                    platinum_date = None
+                    if is_platinized:
+                        status_init = "Platinado"
+                        platinum_date = platinized_game_dates[appid]
+                    elif is_recent:
+                        status_init = "Jogando"
+                    user_game = UserGame(
+                        user_id=persisted_account.user_id,
+                        game_id=game.id,
+                        game=game,
+                        rating=None,
+                        status=status_init,
+                        hours_played=hours,
+                        store="STEAM",
+                        acquired_at=None,
+                        platinum_at=platinum_date,
+                        favorite=False,
                     )
-                )
-                from app.services.custom_list_service import sync_auto_list
+                    session.add(user_game)
+                    user_games_map[game.id] = user_game
+                    new_games_count += 1
+                    session.add(
+                        Activity(
+                            user_id=str(persisted_account.user_id),
+                            game_id=str(game.id),
+                            action_type="ADDED",
+                        )
+                    )
+                    if status_init == "Platinado":
+                        session.add(
+                            Activity(
+                                user_id=str(persisted_account.user_id),
+                                game_id=str(game.id),
+                                action_type="PLATINUM",
+                            )
+                        )
+                        sync_auto_list(
+                            user_id=str(persisted_account.user_id),
+                            user_game=user_game,
+                            field_name="platinum_at",
+                            list_type="platinized_year",
+                            db=session,
+                            commit=False,
+                        )
+                    continue
 
-                sync_auto_list(
-                    user_id=str(account.user_id),
-                    user_game=user_game,
-                    field_name="platinum_at",
-                    list_type="platinized_year",
-                    db=db,
-                )
-        else:
-            old_status = user_game.status
-            old_platinum = user_game.platinum_at
-
-            has_changes = False
-            # Se platinou na Steam e o status local não reflete isso ou a data está em branco
-            if is_platinized:
-                if user_game.status != "Platinado":
-                    user_game.status = "Platinado"
+                old_status = user_game.status
+                old_platinum = user_game.platinum_at
+                has_changes = False
+                if is_platinized:
+                    if user_game.status != "Platinado":
+                        user_game.status = "Platinado"
+                        user_game.store = "STEAM"
+                        has_changes = True
+                    if not user_game.platinum_at:
+                        user_game.platinum_at = platinized_game_dates[appid]
+                        has_changes = True
+                if user_game.hours_played is None or hours > user_game.hours_played:
+                    user_game.hours_played = hours
                     user_game.store = "STEAM"
                     has_changes = True
-                if not user_game.platinum_at:
-                    user_game.platinum_at = platinized_game_dates[appid]
+                if not user_game.store:
+                    user_game.store = "STEAM"
                     has_changes = True
-
-            if user_game.hours_played is None or hours > user_game.hours_played:
-                user_game.hours_played = hours
-                user_game.store = "STEAM"
-                has_changes = True
-
-            if not user_game.store:
-                user_game.store = "STEAM"
-                has_changes = True
-
-            if has_changes:
+                if not has_changes:
+                    continue
                 updated_games_count += 1
                 if old_status != user_game.status:
-                    db.add(
+                    session.add(
                         Activity(
-                            user_id=str(account.user_id),
+                            user_id=str(persisted_account.user_id),
                             game_id=str(game.id),
                             action_type="UPDATED_STATUS",
                             context=user_game.status,
                         )
                     )
                 if old_status != "Platinado" and user_game.status == "Platinado":
-                    db.add(
+                    session.add(
                         Activity(
-                            user_id=str(account.user_id),
+                            user_id=str(persisted_account.user_id),
                             game_id=str(game.id),
                             action_type="PLATINUM",
                         )
                     )
                 if old_platinum != user_game.platinum_at and user_game.platinum_at is not None:
-                    from app.services.custom_list_service import sync_auto_list
-
                     sync_auto_list(
-                        user_id=str(account.user_id),
+                        user_id=str(persisted_account.user_id),
                         user_game=user_game,
                         field_name="platinum_at",
                         list_type="platinized_year",
-                        db=db,
+                        db=session,
+                        commit=False,
                     )
 
-    account.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    db.commit()
+            persisted_account.last_sync_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            session.commit()
+            return new_games_count, updated_games_count, list(dict.fromkeys(missing_genres_appids))
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
-    return new_games_count, updated_games_count, missing_genres_appids
+    result = await run_in_threadpool(persist_sync)
+    db.expire(account)
+    return result

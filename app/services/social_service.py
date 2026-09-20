@@ -1,6 +1,7 @@
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
+from sqlalchemy import exists, func, select
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.models.activity import Activity
 from app.models.follow import Follow
@@ -17,142 +18,130 @@ from app.services.game_provider import get_weekly_releases_rawg
 from app.utils import safe_load_json_list
 
 
-def search_users(query: str, current_user: User, db: Session) -> List[UserPublicProfile]:
-    """Busca usuários públicos pelo nome."""
-    users = (
-        db.query(User)
-        .filter(User.is_public, User.id != current_user.id, User.username.ilike(f"%{query}%"))
-        .limit(20)
-        .all()
+def _profile_query(db: Session, current_user: User):
+    followers = aliased(Follow)
+    following = aliased(Follow)
+    current_follow = aliased(Follow)
+    followers_count = (
+        select(func.count())
+        .select_from(followers)
+        .where(followers.following_id == User.id)
+        .correlate(User)
+        .scalar_subquery()
+    )
+    following_count = (
+        select(func.count())
+        .select_from(following)
+        .where(following.follower_id == User.id)
+        .correlate(User)
+        .scalar_subquery()
+    )
+    is_following = exists().where(
+        current_follow.follower_id == current_user.id,
+        current_follow.following_id == User.id,
+    )
+    return db.query(
+        User,
+        followers_count.label("followers_count"),
+        following_count.label("following_count"),
+        is_following.label("is_following"),
     )
 
-    results = []
-    for u in users:
-        followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
-        following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
 
-        is_following = (
-            db.query(Follow)
-            .filter(Follow.follower_id == current_user.id, Follow.following_id == u.id)
-            .first()
-            is not None
-        )
-
-        results.append(
-            UserPublicProfile(
-                id=u.id,
-                username=u.username,
-                is_public=u.is_public,
-                followers_count=followers_count,
-                following_count=following_count,
-                is_following=is_following,
-            )
-        )
-
-    return results
-
-
-def get_user_profile(user_id: str, current_user: User, db: Session) -> UserPublicProfile:
-    """Busca o perfil de um usuário, permitindo se for público, se eu sigo, ou se eu sou admin."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        return None
-
-    # Verifica permissão
-    is_following = (
-        db.query(Follow)
-        .filter(Follow.follower_id == current_user.id, Follow.following_id == user.id)
-        .first()
-        is not None
-    )
-
-    if (
-        not user.is_public
-        and not current_user.is_admin
-        and not is_following
-        and user.id != current_user.id
-    ):
-        return None  # Acesso negado
-
-    followers_count = db.query(Follow).filter(Follow.following_id == user.id).count()
-    following_count = db.query(Follow).filter(Follow.follower_id == user.id).count()
-
+def _serialize_profile(row) -> UserPublicProfile:
+    user, followers_count, following_count, is_following = row
     return UserPublicProfile(
         id=user.id,
         username=user.username,
         is_public=user.is_public,
         followers_count=followers_count,
         following_count=following_count,
-        is_following=is_following,
+        is_following=bool(is_following),
     )
 
 
-def get_followers(user_id: str, current_user: User, db: Session) -> List[UserPublicProfile]:
+def _can_view_profile(user: User, is_following: bool, current_user: User) -> bool:
+    return bool(
+        user.is_public
+        or current_user.is_admin
+        or is_following
+        or str(user.id) == str(current_user.id)
+    )
+
+
+def search_users(
+    query: str, current_user: User, db: Session, limit: int = 20
+) -> List[UserPublicProfile]:
+    """Busca usuários públicos pelo nome."""
+    rows = (
+        _profile_query(db, current_user)
+        .filter(User.is_public, User.id != current_user.id, User.username.ilike(f"%{query}%"))
+        .order_by(User.username, User.id)
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_profile(row) for row in rows]
+
+
+def get_user_profile(user_id: str, current_user: User, db: Session) -> UserPublicProfile:
+    """Busca o perfil de um usuário, permitindo se for público, se eu sigo, ou se eu sou admin."""
+    row = _profile_query(db, current_user).filter(User.id == user_id).first()
+    if not row:
+        return None
+    user, _, _, is_following = row
+    if not _can_view_profile(user, bool(is_following), current_user):
+        return None  # Acesso negado
+    return _serialize_profile(row)
+
+
+def get_followers(
+    user_id: str,
+    current_user: User,
+    db: Session,
+    *,
+    offset: int = 0,
+    limit: int = 50,
+) -> List[UserPublicProfile]:
     # Verificar acesso ao perfil primeiro
     profile = get_user_profile(user_id, current_user, db)
     if not profile:
         return []
 
-    followers = db.query(Follow).filter(Follow.following_id == user_id).all()
-    results = []
-    for f in followers:
-        u = db.query(User).filter(User.id == f.follower_id).first()
-        if not u:
-            continue
-        followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
-        following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
-        is_following = (
-            db.query(Follow)
-            .filter(Follow.follower_id == current_user.id, Follow.following_id == u.id)
-            .first()
-            is not None
-        )
-
-        results.append(
-            UserPublicProfile(
-                id=u.id,
-                username=u.username,
-                is_public=u.is_public,
-                followers_count=followers_count,
-                following_count=following_count,
-                is_following=is_following,
-            )
-        )
-    return results
+    rows = (
+        _profile_query(db, current_user)
+        .join(Follow, Follow.follower_id == User.id)
+        .filter(Follow.following_id == user_id)
+        .order_by(Follow.created_at.desc(), User.id)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_profile(row) for row in rows]
 
 
-def get_following(user_id: str, current_user: User, db: Session) -> List[UserPublicProfile]:
+def get_following(
+    user_id: str,
+    current_user: User,
+    db: Session,
+    *,
+    offset: int = 0,
+    limit: int = 50,
+) -> List[UserPublicProfile]:
     # Verificar acesso ao perfil primeiro
     profile = get_user_profile(user_id, current_user, db)
     if not profile:
         return []
 
-    following = db.query(Follow).filter(Follow.follower_id == user_id).all()
-    results = []
-    for f in following:
-        u = db.query(User).filter(User.id == f.following_id).first()
-        if not u:
-            continue
-        followers_count = db.query(Follow).filter(Follow.following_id == u.id).count()
-        following_count = db.query(Follow).filter(Follow.follower_id == u.id).count()
-        is_following = (
-            db.query(Follow)
-            .filter(Follow.follower_id == current_user.id, Follow.following_id == u.id)
-            .first()
-            is not None
-        )
-
-        results.append(
-            UserPublicProfile(
-                id=u.id,
-                username=u.username,
-                is_public=u.is_public,
-                followers_count=followers_count,
-                following_count=following_count,
-                is_following=is_following,
-            )
-        )
-    return results
+    rows = (
+        _profile_query(db, current_user)
+        .join(Follow, Follow.following_id == User.id)
+        .filter(Follow.follower_id == user_id)
+        .order_by(Follow.created_at.desc(), User.id)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    return [_serialize_profile(row) for row in rows]
 
 
 def follow_user(user_id: str, current_user: User, db: Session) -> bool:
@@ -231,6 +220,14 @@ def format_activities(
         )
         user_games_map = {(ug.user_id, ug.game_id): ug for ug in ugs}
 
+    target_ids = {str(act.target_user_id) for act in raw_activities if act.target_user_id}
+    target_profiles = {}
+    if target_ids:
+        for row in _profile_query(db, current_user).filter(User.id.in_(target_ids)).all():
+            target_user, _, _, target_is_following = row
+            if _can_view_profile(target_user, bool(target_is_following), current_user):
+                target_profiles[str(target_user.id)] = _serialize_profile(row)
+
     activities_res = []
     for act in raw_activities:
         game_res = None
@@ -249,7 +246,7 @@ def format_activities(
 
         target_user_res = None
         if act.target_user_id and act.target_user:
-            target_user_res = get_user_profile(str(act.target_user_id), current_user, db)
+            target_user_res = target_profiles.get(str(act.target_user_id))
 
         tierlist_id = str(act.tierlist_id) if act.tierlist_id else None
         tierlist_title = act.tierlist.title if (act.tierlist_id and act.tierlist) else None
@@ -313,7 +310,12 @@ def get_my_activities(
     total = base_query.count()
 
     raw_activities = (
-        base_query
+        base_query.options(
+            joinedload(Activity.user),
+            joinedload(Activity.game),
+            joinedload(Activity.target_user),
+            joinedload(Activity.tierlist),
+        )
         .order_by(Activity.created_at.desc())
         .offset(max(0, page - 1) * page_size)
         .limit(page_size)
@@ -343,7 +345,10 @@ def get_feed(
 
     # 1. Obter IDs que eu sigo
     following_ids = [
-        f.following_id for f in db.query(Follow).filter(Follow.follower_id == current_user.id).all()
+        value
+        for (value,) in db.query(Follow.following_id)
+        .filter(Follow.follower_id == current_user.id)
+        .all()
     ]
 
     # 2. Buscar atividades recentes paginadas
@@ -370,7 +375,12 @@ def get_feed(
         total = base_query.count()
 
         raw_activities = (
-            base_query
+            base_query.options(
+                joinedload(Activity.user),
+                joinedload(Activity.game),
+                joinedload(Activity.target_user),
+                joinedload(Activity.tierlist),
+            )
             .order_by(Activity.created_at.desc())
             .offset(max(0, page - 1) * page_size)
             .limit(page_size)
@@ -393,4 +403,3 @@ def get_feed(
     rawg_releases = [RawgRelease(**g) for g in rawg_games]
 
     return FeedResponse(activities=paginated_activities, rawg_releases=rawg_releases)
-

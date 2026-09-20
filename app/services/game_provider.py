@@ -2,10 +2,11 @@ import logging
 import os
 from typing import Dict, List, Optional
 
-import httpx
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.services.external_cache import build_cache_key, get_cached, set_cached
+from app.services.http_client import request_sync
 from app.services.igdb_service import (
     get_game_details_igdb,
     get_games_by_genres_igdb,
@@ -93,6 +94,29 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
 
     # 3. Tentar RAWG com timeout curto (3s) se RAWG_API_KEY estiver configurado
     if RAWG_API_KEY:
+        rawg_cache_key = build_cache_key(query.strip().lower(), page)
+        cached = get_cached("rawg.search", rawg_cache_key)
+        if cached is not None:
+            if cached:
+                seen_titles = {item["title"].lower().strip() for item in local_results}
+                seen_ids = {
+                    item["external_id"]
+                    for item in local_results
+                    if item.get("external_id") is not None
+                }
+                combined = list(local_results)
+                for item in cached:
+                    item_id = item.get("external_id")
+                    item_title = item["title"].lower().strip()
+                    if item_title not in seen_titles and item_id not in seen_ids:
+                        combined.append(item)
+                return combined
+            if local_results:
+                return local_results
+            raise HTTPException(
+                status_code=503,
+                detail="Serviço de busca externa indisponível e nenhum jogo local encontrado.",
+            )
         url = f"{BASE_URL}/games"
         params = {
             "key": RAWG_API_KEY,
@@ -103,10 +127,9 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
         }
 
         try:
-            with httpx.Client(timeout=3) as client:
-                response = client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()
+            response = request_sync("GET", url, params=params)
+            response.raise_for_status()
+            data = response.json()
 
             results = []
             for item in data.get("results", []):
@@ -122,6 +145,12 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
                     }
                 )
 
+            set_cached(
+                "rawg.search",
+                rawg_cache_key,
+                results,
+                ttl_seconds=3600 if results else 300,
+            )
             if results:
                 seen_titles = {r["title"].lower().strip() for r in local_results}
                 seen_ids = {
@@ -156,6 +185,10 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
 
 def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     """Busca jogos pelos gêneros (IGDB -> RAWG)."""
+    cache_key = build_cache_key(genres, page_size)
+    cached = get_cached("games.genres", cache_key)
+    if cached is not None:
+        return cached
 
     # 1. Tentar IGDB
     genre_list = [g.strip() for g in genres.split(",") if g.strip()]
@@ -178,10 +211,9 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
         }
 
         try:
-            with httpx.Client(timeout=3) as client:
-                response = client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()
+            response = request_sync("GET", url, params=params)
+            response.raise_for_status()
+            data = response.json()
 
             results = []
             for item in data.get("results", []):
@@ -200,6 +232,7 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
                 )
                 if len(results) == page_size:
                     break
+            set_cached("games.genres", cache_key, results, ttl_seconds=6 * 3600 if results else 300)
             return results
         except Exception as e:
             logger.warning(f"Erro ao buscar gêneros no RAWG: {e}")
@@ -209,6 +242,10 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
 
 def get_game_details_rawg(external_id: int) -> Dict:
     """Busca detalhes expandidos de um jogo (IGDB -> RAWG)."""
+    cache_key = build_cache_key(external_id)
+    cached = get_cached("games.details", cache_key)
+    if cached is not None:
+        return cached
 
     # 1. Tentar IGDB
     igdb_details = get_game_details_igdb(external_id)
@@ -222,54 +259,57 @@ def get_game_details_rawg(external_id: int) -> Dict:
         params = {"key": RAWG_API_KEY}
 
         try:
-            with httpx.Client(timeout=3) as client:
-                res_details = client.get(url_details, params=params)
-                res_details.raise_for_status()
-                details = res_details.json()
+            res_details = request_sync("GET", url_details, params=params)
+            res_details.raise_for_status()
+            details = res_details.json()
 
-                trailer_url = None
-                try:
-                    res_movies = client.get(url_movies, params=params)
-                    if res_movies.status_code == 200:
-                        movies = res_movies.json().get("results", [])
-                        if movies and len(movies) > 0:
-                            trailer_url = movies[0].get("data", {}).get("max") or movies[0].get(
-                                "data", {}
-                            ).get("480")
-                except Exception:
-                    pass
+            trailer_url = None
+            try:
+                res_movies = request_sync("GET", url_movies, params=params)
+                if res_movies.status_code == 200:
+                    movies = res_movies.json().get("results", [])
+                    if movies:
+                        trailer_url = movies[0].get("data", {}).get("max") or movies[0].get(
+                            "data", {}
+                        ).get("480")
+            except Exception:
+                pass
 
-                stores = []
-                try:
-                    res_stores = client.get(f"{BASE_URL}/games/{external_id}/stores", params=params)
-                    if res_stores.status_code == 200:
-                        store_results = res_stores.json().get("results", [])
-                        store_names = {}
-                        for s in details.get("stores") or []:
-                            st = s.get("store", {})
-                            if "id" in st:
-                                store_names[st["id"]] = st.get("name")
-                        for st_data in store_results:
-                            st_id = st_data.get("store_id")
-                            url = st_data.get("url")
-                            if st_id and url:
-                                stores.append(
-                                    {
-                                        "id": st_id,
-                                        "name": store_names.get(st_id, "Loja"),
-                                        "url": url,
-                                    }
-                                )
-                except Exception:
-                    pass
+            stores = []
+            try:
+                res_stores = request_sync(
+                    "GET", f"{BASE_URL}/games/{external_id}/stores", params=params
+                )
+                if res_stores.status_code == 200:
+                    store_results = res_stores.json().get("results", [])
+                    store_names = {}
+                    for store in details.get("stores") or []:
+                        store_data = store.get("store", {})
+                        if "id" in store_data:
+                            store_names[store_data["id"]] = store_data.get("name")
+                    for store_data in store_results:
+                        store_id = store_data.get("store_id")
+                        store_url = store_data.get("url")
+                        if store_id and store_url:
+                            stores.append(
+                                {
+                                    "id": store_id,
+                                    "name": store_names.get(store_id, "Loja"),
+                                    "url": store_url,
+                                }
+                            )
+            except Exception:
+                pass
 
-                return {
-                    "synopsis": details.get("description_raw"),
-                    "rating": details.get("rating"),
-                    "trailer_url": trailer_url,
-                    "genres": [g["name"] for g in (details.get("genres") or [])],
-                    "stores": stores,
-                }
+            result = {
+                "synopsis": details.get("description_raw"),
+                "rating": details.get("rating"),
+                "trailer_url": trailer_url,
+                "genres": [g["name"] for g in (details.get("genres") or [])],
+                "stores": stores,
+            }
+            set_cached("games.details", cache_key, result, ttl_seconds=24 * 3600)
+            return result
         except Exception as e:
             logger.warning(f"Erro ao buscar detalhes no RAWG: {e}")
 
@@ -278,6 +318,12 @@ def get_game_details_rawg(external_id: int) -> Dict:
 
 def get_weekly_releases_rawg(db: Optional[Session] = None) -> List[Dict]:
     """Busca os lançamentos da semana (IGDB -> RAWG -> Banco Local)."""
+    from datetime import datetime, timezone
+
+    cache_key = build_cache_key(datetime.now(timezone.utc).date().isoformat())
+    cached = get_cached("games.weekly", cache_key)
+    if cached is not None:
+        return cached
 
     # 1. Tentar IGDB
     igdb_releases = get_weekly_releases_igdb()
@@ -301,10 +347,9 @@ def get_weekly_releases_rawg(db: Optional[Session] = None) -> List[Dict]:
         }
 
         try:
-            with httpx.Client(timeout=3) as client:
-                response = client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()
+            response = request_sync("GET", url, params=params)
+            response.raise_for_status()
+            data = response.json()
 
             raw_items = []
             for item in data.get("results", []):
@@ -339,7 +384,9 @@ def get_weekly_releases_rawg(db: Optional[Session] = None) -> List[Dict]:
                 )
 
             results.sort(key=lambda x: x["release_date"])
-            return results[:10]
+            final_results = results[:10]
+            set_cached("games.weekly", cache_key, final_results, ttl_seconds=6 * 3600)
+            return final_results
         except Exception as e:
             logger.warning(f"Erro ao buscar lançamentos no RAWG: {e}")
 

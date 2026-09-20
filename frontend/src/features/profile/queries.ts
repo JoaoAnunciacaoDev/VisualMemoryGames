@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query';
 import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 import type { LibraryGame } from '@/types';
 
 export interface DashboardGame {
@@ -60,12 +61,12 @@ export const profileDashboardQuery = (userId?: string) => queryOptions({
 
 export const profileGamesQuery = (userId?: string) => queryOptions({
   queryKey: profileKeys.games(userId),
-  queryFn: async () => (await api.get<LibraryGame[]>(userId ? `/user-games/user/${userId}` : '/user-games/me')).data,
+  queryFn: () => fetchAllPages<LibraryGame>(userId ? `/user-games/user/${userId}` : '/user-games/me'),
 });
 
 export const followListQuery = (userId: string, type: 'followers' | 'following') => queryOptions({
   queryKey: profileKeys.follows(userId, type),
-  queryFn: async () => (await api.get<UserPublicProfile[]>(`/social/users/${userId}/${type}`)).data,
+  queryFn: () => fetchAllPages<UserPublicProfile>(`/social/users/${userId}/${type}`),
 });
 
 export const toggleProfileFollow = async ({ username, following }: { username: string; following: boolean }) => {

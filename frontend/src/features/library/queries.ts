@@ -1,5 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
-import api from '@/services/api';
+import { fetchAllPages } from '@/services/pagination';
 import type { LibraryGame } from '@/types';
 
 export const libraryKeys = {
@@ -9,5 +9,5 @@ export const libraryKeys = {
 
 export const myLibraryQuery = () => queryOptions({
   queryKey: libraryKeys.mine(),
-  queryFn: async () => (await api.get<LibraryGame[]>('/user-games/me')).data,
+  queryFn: () => fetchAllPages<LibraryGame>('/user-games/me'),
 });

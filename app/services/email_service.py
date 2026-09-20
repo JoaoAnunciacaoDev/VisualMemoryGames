@@ -4,8 +4,9 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-import requests
 import resend
+
+from app.services.http_client import request_sync
 
 logger = logging.getLogger("visualmemory.email")
 
@@ -30,21 +31,13 @@ def _send_email(
         "RENDER"
     ):
         logger.info(f"[MOCK EMAIL] Simulação de Envio de E-mail ({email_type})")
-        print("\n==================================================")
-        print(f"[MOCK EMAIL] Simulação de Envio de E-mail ({email_type})")
-        print(f"Para: {to_email}")
-        print(f"Assunto: {subject}")
-        if debug_code:
-            print(f"Código: {debug_code}")
-        else:
-            print(f"Conteúdo:\n{text_content}")
-        print("==================================================\n")
         return
 
     # 1. Tentar por Brevo HTTP API (Funciona no Render e não exige domínio)
     if brevo_api_key:
         try:
-            response = requests.post(
+            response = request_sync(
+                "POST",
                 "https://api.brevo.com/v3/smtp/email",
                 headers={
                     "api-key": brevo_api_key,
@@ -62,17 +55,11 @@ def _send_email(
             )
             if response.status_code in (200, 201, 202):
                 logger.info(f"[BREVO SUCCESS] E-mail de {email_type} enviado para {to_email}")
-                print(f"[BREVO SUCCESS] E-mail de {email_type} enviado para {to_email}")
                 return
             else:
-                logger.error(
-                    f"[BREVO ERROR] Falha no envio. Status: {response.status_code}, "
-                    f"Detalhes: {response.text}"
-                )
-                print(f"[BREVO ERROR] Status: {response.status_code}, Detalhes: {response.text}")
+                logger.error("[BREVO ERROR] Falha no envio. Status: %s", response.status_code)
         except Exception as e:
             logger.error(f"Erro ao enviar via Brevo API para {to_email}: {e}")
-            print(f"[BREVO ERROR] Falha na conexão com a API Brevo: {e}")
 
     # 2. Tentar por Resend
     if resend.api_key:
@@ -89,11 +76,9 @@ def _send_email(
                 f"[RESEND SUCCESS] E-mail de {email_type} enviado para {to_email}. "
                 f"ID: {response.get('id')}"
             )
-            print(f"[RESEND SUCCESS] E-mail de {email_type} enviado para {to_email}")
             return
         except Exception as e:
             logger.error(f"Erro ao enviar via Resend para {to_email}: {e}")
-            print(f"[RESEND ERROR] Erro ao enviar: {e}")
 
     # 3. Tentar por SMTP clássico
     smtp_host = os.getenv("SMTP_HOST")
@@ -125,19 +110,15 @@ def _send_email(
                     server.sendmail(smtp_user, to_email, message.as_string())
 
             logger.info(f"[SMTP SUCCESS] E-mail de {email_type} enviado para {to_email}")
-            print(f"[SMTP SUCCESS] E-mail de {email_type} enviado para {to_email}")
             return
         except Exception as e:
             logger.error(f"Erro ao enviar via SMTP para {to_email}: {e}")
-            print(f"[SMTP ERROR] Erro ao enviar via SMTP: {e}")
 
     # 4. Fallback (Modo Simulado / Mock)
     if debug_code:
-        logger.info(f"[MOCK EMAIL] Código de {email_type} para {to_email}: {debug_code}")
-        print("\n==================================================")
-        print(f"[MOCK EMAIL] Enviado código de {email_type} para {to_email}")
-        print(f"CÓDIGO: {debug_code}")
-        print("==================================================\n")
+        logger.warning(
+            "Nenhum provedor de e-mail configurado; e-mail de %s não foi enviado.", email_type
+        )
 
 
 def send_verification_email(email: str, code: str):

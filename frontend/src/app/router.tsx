@@ -35,11 +35,14 @@ interface RouterContext {
 }
 
 const requireAuth = async ({ context }: { context: RouterContext }) => {
+  let user;
   try {
-    return await context.queryClient.ensureQueryData(currentUserQuery());
+    user = await context.queryClient.ensureQueryData(currentUserQuery());
   } catch {
     throw redirect({ to: '/login' });
   }
+  if (!user) throw redirect({ to: '/login' });
+  return user;
 };
 
 const requireAdmin = async ({ context }: { context: RouterContext }) => {
@@ -49,14 +52,15 @@ const requireAdmin = async ({ context }: { context: RouterContext }) => {
 };
 
 const redirectIfAuthenticated = async ({ context }: { context: RouterContext }) => {
-  let authenticated = false;
+  let authenticatedUser = null;
   try {
-    await context.queryClient.ensureQueryData(currentUserQuery());
-    authenticated = true;
+    authenticatedUser = await context.queryClient.ensureQueryData(currentUserQuery());
   } catch {
     // Guests may access the login route.
   }
-  if (authenticated) throw redirect({ to: '/library', search: validateLibrarySearch({}) });
+  if (authenticatedUser) {
+    throw redirect({ to: '/library', search: validateLibrarySearch({}) });
+  }
 };
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({

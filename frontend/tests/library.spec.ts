@@ -40,7 +40,7 @@ test.describe('Library Management', () => {
     await page.click('role=tab[name="Pesquisar / Adicionar"]');
 
     // Click the Add manual game button
-    await page.click('button:has-text("+ Adicionar Manualmente")');
+    await page.getByRole('button', { name: 'Adicionar Manualmente' }).click();
 
     // Fill the manual game form
     await page.fill('input[placeholder="Nome do jogo"]', gameTitle);

@@ -55,6 +55,20 @@ describe('Social Page', () => {
     expect(await screen.findByText('Carregando feed...')).toBeInTheDocument();
   });
 
+  it('does not treat the scroll result as an effect cleanup', async () => {
+    vi.mocked(window.scrollTo).mockReturnValue('non-standard scroll result' as never);
+    mockApi.get.mockImplementation(() => new Promise(() => {}));
+
+    const view = render(
+      <TestRouter initialEntries={['/social']}>
+        <Social />
+      </TestRouter>
+    );
+
+    expect(await screen.findByText('Carregando feed...')).toBeInTheDocument();
+    expect(() => view.unmount()).not.toThrow();
+  });
+
   it('renders feed activities and rawg releases', async () => {
     mockApi.get.mockResolvedValueOnce({ data: mockFeed });
 

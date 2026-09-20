@@ -24,11 +24,16 @@ export function useLibraryPageController() {
   const routeSearch = validateLibrarySearch(useSearch({ strict: false }) as Record<string, unknown>);
   const { games, loadLibrary, removeGame, loading: libraryLoading, error: libraryError } = useLibrary();
   const updateSearch = useCallback((updates: Partial<typeof routeSearch>, replace = true) => {
-    void navigate({ to: '/library', replace, search: (previous) => ({ ...validateLibrarySearch(previous), ...updates }) });
+    void navigate({
+      to: '/library',
+      replace,
+      resetScroll: false,
+      search: (previous) => ({ ...validateLibrarySearch(previous), ...updates }),
+    });
   }, [navigate]);
   const updateFilters = useCallback((updater: (filters: LibraryFilterState) => LibraryFilterState) => {
     void navigate({
-      to: '/library', replace: true,
+      to: '/library', replace: true, resetScroll: false,
       search: (previous) => { const current = validateLibrarySearch(previous); return { ...current, ...updater(current) }; },
     });
   }, [navigate]);
@@ -66,8 +71,6 @@ export function useLibraryPageController() {
       await gameSearch.addGameToLibrary(game);
       await loadLibrary();
       showToast('Jogo adicionado à biblioteca!', 'success');
-      updateSearch({ tab: 'library', search: game.title }, false);
-      setCollapsedGroups((current) => { const next = new Set(current); next.delete('Na biblioteca'); return next; });
     } catch { showToast('Erro ao adicionar jogo.', 'error'); }
   };
   const confirmRemove = async () => {

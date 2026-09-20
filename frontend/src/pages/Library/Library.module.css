@@ -34,6 +34,7 @@
 /* ===== Cabeçalho ===== */
 .heading {
   font-size: var(--font-size-xxl);
+  font-weight: 700;
   margin-bottom: var(--gap-lg);
   color: var(--text);
 }
@@ -437,6 +438,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--gap-lg);
+}
+
+.grid > * {
+  height: 100%;
 }
 
 @media (max-width: 600px) {

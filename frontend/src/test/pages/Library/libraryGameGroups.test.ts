@@ -32,4 +32,15 @@ describe('groupLibraryGames', () => {
 
     expect(groups.map(({ label }) => label)).toEqual(['GOG', 'Sem Loja', 'Steam']);
   });
+
+  it('exibe o nome amigável da loja nos cabeçalhos dos grupos', () => {
+    const groups = groupLibraryGames(
+      [game('a', 'Zerado', 'PS_STORE'), game('b', 'Jogando', 'Store.PS_STORE')],
+      'store',
+    );
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ label: 'PlayStation Store' });
+    expect(groups[0].games).toHaveLength(2);
+  });
 });

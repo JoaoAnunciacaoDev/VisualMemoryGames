@@ -40,6 +40,9 @@
 }
 
 .listName {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-xs);
   font-weight: 600;
   font-size: var(--font-size-sm);
   color: var(--text);
@@ -202,6 +205,12 @@
     align-self: stretch;
     justify-content: center;
   }
+}
+
+.favoriteListIcon {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.35));
+  flex-shrink: 0;
 }
 
 .dragHandle {

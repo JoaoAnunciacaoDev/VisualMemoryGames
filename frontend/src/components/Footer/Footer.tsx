@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BriefcaseBusiness, Code2 } from 'lucide-react';
+import { FaGithub, FaLinkedin } from 'react-icons/fa';
 import { useAuth } from '@/hooks/useAuth';
 import FeedbackModal from '@/components/FeedbackModal/FeedbackModal';
 import styles from '@/components/Footer/Footer.module.css';
@@ -29,10 +29,10 @@ export default function Footer() {
         <div className={styles.socials}>
           <p className={styles.text}>Por João Victor Anunciação da Silva</p>
           <a href="https://github.com/JoaoAnunciacaoDev" target="_blank" rel="noopener noreferrer" className={styles.link} aria-label="GitHub">
-            <Code2 aria-hidden="true" size={20} />
+            <FaGithub aria-hidden="true" size={20} />
           </a>
           <a href="https://linkedin.com/in/joao-victor-anunciacao" target="_blank" rel="noopener noreferrer" className={styles.link} aria-label="LinkedIn">
-            <BriefcaseBusiness aria-hidden="true" size={20} />
+            <FaLinkedin aria-hidden="true" size={20} />
           </a>
         </div>
       </footer>

@@ -30,12 +30,21 @@ const positiveIntegerSchema = (fallback: number) =>
 
 const stringSchema = z.unknown().optional().transform((value) => typeof value === 'string' ? value : '');
 
+export const SOCIAL_SEARCH_DEFAULTS = {
+  tab: 'feed' as const,
+  month: now.getMonth() + 1,
+  year: now.getFullYear(),
+  feedPage: 1,
+  myPage: 1,
+  q: '',
+};
+
 const socialSearchSchema = z.object({
-  tab: z.unknown().optional().transform((value) => oneOf(value, ['feed', 'my-activities', 'search'] as const, 'feed')),
-  month: positiveIntegerSchema(now.getMonth() + 1).transform((value) => Math.min(12, value)),
-  year: positiveIntegerSchema(now.getFullYear()),
-  feedPage: positiveIntegerSchema(1),
-  myPage: positiveIntegerSchema(1),
+  tab: z.unknown().optional().transform((value) => oneOf(value, ['feed', 'my-activities', 'search'] as const, SOCIAL_SEARCH_DEFAULTS.tab)),
+  month: positiveIntegerSchema(SOCIAL_SEARCH_DEFAULTS.month).transform((value) => Math.min(12, value)),
+  year: positiveIntegerSchema(SOCIAL_SEARCH_DEFAULTS.year),
+  feedPage: positiveIntegerSchema(SOCIAL_SEARCH_DEFAULTS.feedPage),
+  myPage: positiveIntegerSchema(SOCIAL_SEARCH_DEFAULTS.myPage),
   q: stringSchema,
 });
 
@@ -45,6 +54,8 @@ export type SocialTab = SocialSearch['tab'];
 export const validateSocialSearch = (search: Record<string, unknown>): SocialSearch =>
   socialSearchSchema.parse(search);
 
+export const ADMIN_SEARCH_DEFAULTS = { q: '' };
+
 const adminSearchSchema = z.object({ q: stringSchema });
 
 export type AdminSearch = z.infer<typeof adminSearchSchema>;
@@ -52,9 +63,14 @@ export type AdminSearch = z.infer<typeof adminSearchSchema>;
 export const validateAdminSearch = (search: Record<string, unknown>): AdminSearch =>
   adminSearchSchema.parse(search);
 
+export const PATCH_NOTES_SEARCH_DEFAULTS = {
+  month: now.getMonth() + 1,
+  year: now.getFullYear(),
+};
+
 const patchNotesSearchSchema = z.object({
-  month: positiveIntegerSchema(now.getMonth() + 1).transform((value) => Math.min(12, value)),
-  year: positiveIntegerSchema(now.getFullYear()),
+  month: positiveIntegerSchema(PATCH_NOTES_SEARCH_DEFAULTS.month).transform((value) => Math.min(12, value)),
+  year: positiveIntegerSchema(PATCH_NOTES_SEARCH_DEFAULTS.year),
 });
 
 export type PatchNotesSearch = z.infer<typeof patchNotesSearchSchema>;
@@ -71,16 +87,32 @@ const yearFields: YearField[] = ['acquired_at', 'started_at', 'finished_at', 'pl
 const hoursOperators: Exclude<HoursOperator, ''>[] = ['gt', 'lt', 'between'];
 const groupModes: GroupMode[] = ['status', 'store', 'none'];
 
+export const LIBRARY_SEARCH_DEFAULTS: LibrarySearch = {
+  tab: 'library',
+  search: '',
+  statusFilter: 'Todos',
+  storeFilter: 'Todas',
+  originFilter: 'all',
+  sortBy: null,
+  sortOrder: 'desc',
+  yearField: '',
+  yearValue: '',
+  hoursOperator: '',
+  hoursValue: '',
+  hoursValueMax: '',
+  groupMode: 'status',
+};
+
 const librarySearchSchema = z.object({
-  tab: z.unknown().optional().transform((value): LibraryTab => oneOf(value, libraryTabs, 'library')),
+  tab: z.unknown().optional().transform((value): LibraryTab => oneOf(value, libraryTabs, LIBRARY_SEARCH_DEFAULTS.tab)),
   search: stringSchema,
-  statusFilter: z.unknown().optional().transform((value) => typeof value === 'string' ? value : 'Todos'),
-  storeFilter: z.unknown().optional().transform((value) => typeof value === 'string' ? value : 'Todas'),
-  originFilter: z.unknown().optional().transform((value): OriginFilter => oneOf(value, origins, 'all')),
+  statusFilter: z.unknown().optional().transform((value) => typeof value === 'string' ? value : LIBRARY_SEARCH_DEFAULTS.statusFilter),
+  storeFilter: z.unknown().optional().transform((value) => typeof value === 'string' ? value : LIBRARY_SEARCH_DEFAULTS.storeFilter),
+  originFilter: z.unknown().optional().transform((value): OriginFilter => oneOf(value, origins, LIBRARY_SEARCH_DEFAULTS.originFilter)),
   sortBy: z.unknown().optional().transform((value): SortBy => (
     value === null || value === '' || value === undefined ? null : oneOf(value, sortFields, 'title')
   )),
-  sortOrder: z.unknown().optional().transform((value): 'asc' | 'desc' => value === 'asc' ? 'asc' : 'desc'),
+  sortOrder: z.unknown().optional().transform((value): 'asc' | 'desc' => value === 'asc' ? 'asc' : LIBRARY_SEARCH_DEFAULTS.sortOrder),
   yearField: z.unknown().optional().transform((value): YearField | '' => (
     value === '' || value === undefined ? '' : oneOf(value, yearFields, 'acquired_at')
   )),
@@ -90,7 +122,7 @@ const librarySearchSchema = z.object({
   )),
   hoursValue: z.unknown().optional().transform(optionalNumber),
   hoursValueMax: z.unknown().optional().transform(optionalNumber),
-  groupMode: z.unknown().optional().transform((value): GroupMode => oneOf(value, groupModes, 'status')),
+  groupMode: z.unknown().optional().transform((value): GroupMode => oneOf(value, groupModes, LIBRARY_SEARCH_DEFAULTS.groupMode)),
 });
 
 export const validateLibrarySearch = (search: Record<string, unknown>): LibrarySearch =>

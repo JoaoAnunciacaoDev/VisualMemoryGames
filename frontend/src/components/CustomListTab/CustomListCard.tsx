@@ -8,7 +8,16 @@ import SortableCustomListGame from './SortableCustomListGame';
 import styles from './CustomListTab.module.css';
 
 function SystemListIcon({ type }: { type?: string | null }) {
-  if (type === 'favorites') return <Star aria-hidden="true" size={16} />;
+  if (type === 'favorites') {
+    return (
+      <Star
+        aria-hidden="true"
+        className={styles.favoriteListIcon}
+        fill="currentColor"
+        size={16}
+      />
+    );
+  }
   if (type === 'completed_year') return <Flag aria-hidden="true" size={16} />;
   if (type === 'platinized_year') return <Trophy aria-hidden="true" size={16} />;
   return null;

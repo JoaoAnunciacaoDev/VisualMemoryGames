@@ -128,21 +128,37 @@
 }
 
 .metaLeft {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
   flex: 1;
   text-align: left;
   white-space: nowrap;
 }
 
 .metaCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   flex: 1;
   text-align: center;
   white-space: nowrap;
 }
 
 .metaRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
   flex: 1;
   text-align: right;
   white-space: nowrap;
+}
+
+.meta svg {
+  flex-shrink: 0;
 }
 
 .libraryCard::before {

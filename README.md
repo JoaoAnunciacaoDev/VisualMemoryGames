@@ -13,7 +13,13 @@
   <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
   <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E" />
+  <img src="https://img.shields.io/badge/Bun-000000?style=for-the-badge&logo=bun&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+  <br>
+  <img src="https://img.shields.io/badge/TanStack_Router-CA4245?style=for-the-badge&logo=reactrouter&logoColor=white" />
+  <img src="https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white" />
   <img src="https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white" />
+  <img src="https://img.shields.io/badge/Playwright-2EAD33?style=for-the-badge&logo=playwright&logoColor=white" />
   <br>
   <img src="https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white" />
   <img src="https://img.shields.io/badge/Alembic-6C757D?style=for-the-badge" />
@@ -26,6 +32,20 @@
 # 🎯 Sobre o Projeto
 
 O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura desacoplada. Consiste numa API RESTful de alto desempenho interligada a uma interface fluida, permitindo aos utilizadores pesquisar títulos reais, gerir as suas coleções, integrar contas públicas da Steam, GOG, Epic Games e Itch.io para importar jogos automaticamente e organizar jogos em *tier lists*.
+
+---
+
+# 🧱 Arquitetura do Frontend
+
+O frontend utiliza React e TypeScript com separação entre rotas, páginas, componentes, hooks e acesso a dados:
+
+- **TanStack Router:** roteamento tipado baseado em arquivos, carregamento sob demanda por rota, proteção de páginas e filtros sincronizados com URLs compactas.
+- **TanStack Query:** cache, deduplicação de requisições, invalidação previsível e sincronização do estado retornado pela API.
+- **TanStack Form + Zod:** formulários tipados e validação explícita nas fronteiras da aplicação.
+- **Tailwind CSS 4 + CSS Modules:** utilitários compartilhados sem descartar os estilos específicos e a identidade visual existente.
+- **Lucide React + React Icons:** ícones de interface consistentes e marcas oficiais para as lojas conhecidas.
+- **Bun + Vite:** instalação, desenvolvimento e builds rápidos, com divisão do bundle por rota.
+- **Vitest + Testing Library + Playwright:** testes unitários, de integração, acessibilidade, regressão visual e fluxos ponta a ponta.
 
 ---
 
@@ -54,9 +74,10 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
 - 🎲 **Integração com o Itch.io:**
   - Vínculo de perfil público e sincronização de jogos da biblioteca indie do Itch.io.
 - 🎨 **Visual Moderno de Capas:**
-  - Badge dinâmico com o ícone e nome da loja (ex: `🎮 Steam`, `PlayStation Store`, `Xbox Store`) sobreposto nos cards da biblioteca.
-  - Indicador de estrela dourada (`⭐`) no topo direito para os jogos favoritados.
-  - Emojis descritivos integrados nos GameCards da biblioteca (📝 Nota, ✅ Ano de Conclusão, 🏆 Ano de Platina) para maior legibilidade visual.
+  - Badge dinâmico com o ícone oficial e o nome amigável da loja sobreposto nos cards da biblioteca.
+  - Indicador de estrela dourada no topo direito para jogos favoritados.
+  - Ícones Lucide para nota, ano de conclusão e ano de platina, com alinhamento e dimensões consistentes.
+  - Cards padronizados, layout responsivo e header compacto em dispositivos móveis.
 - 🔍 **Pesquisa e Cadastro Inteligente (Cache-First + IGDB / RAWG):**
   - Arquitetura **Cache-First**: Consultas por jogos pesquisam primeiramente no banco local para retornos instantâneos em milissegundos sem dependência de outras apis.
   - Integração com a **API do IGDB (Twitch API)** para busca de metadados completos de jogos (capas em HD, gêneros, ano de lançamento, plataformas, sinopses e trailers).
@@ -77,6 +98,10 @@ O **VisualMemory** é uma aplicação moderna desenvolvida com uma arquitetura d
 - ⚙️ **Configurações Flexíveis:**
   - Controle de preferências gerais, incluindo opção para habilitar ou desabilitar o fechamento de modais ao clicar do lado de fora (overlay).
 - 🏆 **Tier Lists:** Criação de Tier Lists com sistema intuitivo de Drag & Drop.
+- 🧭 **Navegação e Filtros:**
+  - Estado dos filtros persistido na URL sem incluir valores padrão desnecessários.
+  - Mudanças de filtro preservam a posição de rolagem.
+  - Adicionar jogos pela pesquisa mantém o usuário no contexto atual.
 - 💬 **Modal de Feedback:**
   - Botão de feedback integrado de forma reativa no rodapé (Footer).
   - Modal dinâmico com título e descrição para envio de feedback.
@@ -156,6 +181,14 @@ mise run api.front
 ```
 Disponível em: `http://localhost:5173`
 
+Também é possível executar diretamente com Bun:
+
+```bash
+cd frontend
+bun install --frozen-lockfile
+bun run dev
+```
+
 ---
 
 # 🗄️ Base de Dados
@@ -201,6 +234,14 @@ mise run back.test
 mise run front.test
 ```
 
+## Verificar tipos e build do frontend
+
+```bash
+cd frontend
+bun run typecheck
+bun run build
+```
+
 ## Executar Testes End-to-End (Playwright)
 ```bash
 mise run e2e.test        # Roda os testes no terminal
@@ -237,11 +278,14 @@ VisualMemory/
 ├── frontend/              # Código-fonte do Frontend (Vite + React + TS)
 │   ├── public/            # Recursos e mídias estáticas
 │   ├── src/
+│   │   ├── app/           # Router, cliente do TanStack Query, buscas tipadas e guards
 │   │   ├── assets/        # Recursos de imagem/estilo
 │   │   ├── components/    # Componentes modulares (Modal, LibraryCard, SettingsModal)
+│   │   ├── features/      # Queries e regras organizadas por domínio
 │   │   ├── hooks/         # Hooks customizados do React (useLibrary, useAuth)
 │   │   ├── pages/         # Páginas do aplicativo (Library, Profile, Login, Admin)
 │   │   ├── providers/     # Context Providers (Auth, Toast)
+│   │   ├── routes/        # Rotas tipadas e carregadas sob demanda
 │   │   ├── services/      # Integração e cliente HTTP Axios
 │   │   ├── styles/        # CSS global e de layout
 │   │   ├── test/          # Testes unitários de componentes e hooks (Vitest)
@@ -258,6 +302,18 @@ VisualMemory/
 ├── pyproject.toml         # Gerenciamento de pacotes Python (Poetry)
 └── README.md              # Documentação oficial do projeto
 ```
+
+---
+
+# 🗺️ Melhorias Futuras
+
+- Medir Lighthouse e Core Web Vitals em cenários reais para estabelecer uma linha de base e acompanhar regressões de desempenho.
+- Otimizar capas com formatos modernos, tamanhos responsivos, carregamento tardio e placeholders para reduzir transferência e mudanças de layout.
+- Virtualizar bibliotecas, resultados de pesquisa e feeds muito extensos para limitar o número de elementos renderizados simultaneamente.
+- Analisar o bundle periodicamente e reduzir dependências ou chunks que apresentem custo desproporcional.
+- Ampliar os testes E2E dos fluxos de autenticação, filtros, importações, tier lists e responsividade móvel.
+- Adicionar URLs amigáveis às tier lists com um *slug* legível, preservando o ID como identificador estável.
+- Avaliar suporte offline/PWA para consultas recentes da biblioteca, sem comprometer a sincronização com o servidor.
 
 ---
 

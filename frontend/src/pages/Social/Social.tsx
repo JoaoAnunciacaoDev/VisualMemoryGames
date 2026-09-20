@@ -27,7 +27,9 @@ export default function Social() {
     onError: () => queryClient.invalidateQueries({ queryKey: socialKeys.search(search.q) }),
   });
 
-  useEffect(() => window.scrollTo({ top: 0 }), [search.tab]);
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [search.tab]);
 
   const changePage = (page: number) => {
     void updateSearch(search.tab === 'feed' ? { feedPage: page } : { myPage: page });

@@ -1,4 +1,5 @@
 import type { LibraryGame } from '@/types';
+import { getStoreLabel } from '@/types/enums';
 import type { GroupMode } from './Library.types';
 
 const STATUS_ORDER = [
@@ -33,7 +34,7 @@ export function groupLibraryGames(
     games,
     mode === 'status'
       ? (game) => game.status || 'Outro'
-      : (game) => game.store?.trim() || 'Sem Loja',
+      : (game) => getStoreLabel(game.store) || 'Sem Loja',
   );
   const labels =
     mode === 'status'

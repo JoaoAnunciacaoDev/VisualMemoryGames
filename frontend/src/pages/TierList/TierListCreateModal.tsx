@@ -1,5 +1,6 @@
 import { useForm } from '@tanstack/react-form';
 import { Modal, Button, Input } from '@/components/Shared';
+import styles from '@/pages/TierList/TierList.module.css';
 import type { CustomList } from '@/types';
 import { tierListCreateSchema, type TierListCreateValues } from '@/features/tierlists/types';
 
@@ -44,24 +45,21 @@ export default function TierListCreateModal({
     form.reset();
   };
 
-  const selectClassName = 'w-full rounded-[var(--radius-sm)] border border-[var(--input-border)] bg-[var(--surface)] px-3.5 py-2.5 text-[length:var(--font-size-sm)] text-[var(--text)] outline-none transition focus:border-[var(--primary)] focus:shadow-[0_0_0_2px_rgba(222,29,106,0.2)]';
-  const labelClassName = 'flex flex-col gap-[var(--gap-sm)] text-[length:var(--font-size-sm)] font-semibold text-[var(--muted)]';
-
   return (
     <Modal open={open} onClose={handleClose} maxWidth="460px" showCloseButton>
       <form
-        className="flex flex-col gap-[var(--gap-md)] p-[var(--gap-lg)]"
+        className={styles.modalContent}
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
           void form.handleSubmit();
         }}
       >
-        <h3 className="m-0 text-[length:var(--font-size-lg)] text-[var(--text)]">Nova Tier List</h3>
+        <h3 className={styles.modalTitle}>Nova Tier List</h3>
 
         <form.Field name="title">
           {(field) => (
-            <label className={labelClassName}>
+            <label className={styles.label}>
               Nome
               <Input
                 type="text"
@@ -77,13 +75,13 @@ export default function TierListCreateModal({
 
         <form.Field name="gameSource">
           {(field) => (
-            <label className={labelClassName}>
+            <label className={styles.label}>
               Fonte dos jogos
               <select
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value as TierListCreateValues['gameSource'])}
-                className={selectClassName}
+                className={styles.select}
               >
                 <option value="empty">Vazia (adicionar manualmente)</option>
                 <option value="all">Toda a biblioteca</option>
@@ -100,13 +98,13 @@ export default function TierListCreateModal({
               {gameSource === 'status' && (
                 <form.Field name="selectedStatus">
                   {(field) => (
-                    <label className={labelClassName}>
+                    <label className={styles.label}>
                       Status
                       <select
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(event) => field.handleChange(event.target.value)}
-                        className={selectClassName}
+                        className={styles.select}
                       >
                         {statusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
                       </select>
@@ -118,13 +116,13 @@ export default function TierListCreateModal({
               {gameSource === 'list' && (
                 <form.Field name="selectedListId">
                   {(field) => (
-                    <label className={labelClassName}>
+                    <label className={styles.label}>
                       Lista
                       <select
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(event) => field.handleChange(event.target.value)}
-                        className={selectClassName}
+                        className={styles.select}
                       >
                         <option value="">Selecione uma lista...</option>
                         {customLists.map((list) => (
@@ -141,13 +139,13 @@ export default function TierListCreateModal({
 
         <form.Field name="isPublic">
           {(field) => (
-            <label className="flex cursor-pointer select-none items-center gap-[var(--gap-sm)] text-[length:var(--font-size-sm)] text-[var(--text)]">
+            <label className={styles.checkboxLabel}>
               <input
                 type="checkbox"
                 checked={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.checked)}
-                className="size-[18px] cursor-pointer accent-[var(--primary)]"
+                className={styles.checkbox}
               />
               <span>Tornar esta Tier List pública</span>
             </label>
@@ -158,7 +156,7 @@ export default function TierListCreateModal({
           {(values) => {
             const canCreate = !isCreating && tierListCreateSchema.safeParse(values).success;
             return (
-              <div className="mt-[var(--gap-sm)] flex justify-end gap-[var(--gap-sm)] max-[600px]:flex-col [&>button]:max-[600px]:w-full">
+              <div className={styles.modalActions}>
                 <Button type="button" variant="ghost" onClick={handleClose}>Cancelar</Button>
                 <Button type="submit" variant="primary" disabled={!canCreate}>
                   {isCreating ? 'Criando...' : 'Criar'}

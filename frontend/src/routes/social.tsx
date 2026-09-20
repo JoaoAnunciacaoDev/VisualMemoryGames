@@ -1,10 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router';
 import { requireAuth } from '@/app/routeGuards';
-import { validateSocialSearch } from '@/app/search';
+import { SOCIAL_SEARCH_DEFAULTS, validateSocialSearch } from '@/app/search';
 import Social from '@/pages/Social/Social';
 
 export const Route = createFileRoute('/social')({
   beforeLoad: requireAuth,
   validateSearch: validateSocialSearch,
+  search: {
+    middlewares: [stripSearchParams(SOCIAL_SEARCH_DEFAULTS)],
+  },
   component: Social,
 });

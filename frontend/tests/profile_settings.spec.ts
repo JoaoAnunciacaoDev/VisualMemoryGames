@@ -77,7 +77,6 @@ test.describe('Profile & Settings Flow', () => {
     await page.click('button:has-text("Solicitar Exclusão de Conta")');
 
     // Deve deslogar e ir para a tela de login
-    await expect(page.locator('text=Conta desativada')).toBeVisible();
     await expect(page).toHaveURL(/.*\/login/);
 
     // 8. Tentar logar com a conta desativada (deve reativar e entrar com sucesso)

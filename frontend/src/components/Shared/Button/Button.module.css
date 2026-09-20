@@ -9,7 +9,11 @@
   font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    color var(--transition-fast),
+    opacity var(--transition-fast);
 }
 
 .button:focus-visible {
@@ -34,12 +38,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-button-hover);
-}
-
-.primary:active:not(:disabled) {
-  transform: translateY(0);
 }
 
 .secondary {

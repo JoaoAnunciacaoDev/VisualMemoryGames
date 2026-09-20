@@ -19,18 +19,22 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@tanstack/react-form": "^1.33.5",
     "@tanstack/react-query": "^5.103.1",
     "@tanstack/react-router": "^1.170.38",
     "axios": "^1.18.1",
     "lucide-react": "^1.47.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-error-boundary": "^6.1.2"
+    "react-error-boundary": "^6.1.2",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-plugin": "^1.168.40",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

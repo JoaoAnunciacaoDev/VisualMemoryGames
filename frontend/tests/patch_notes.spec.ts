@@ -12,7 +12,15 @@ function runProjectPython(script: string) {
   );
   const executable = existsSync(localPython) ? localPython : 'poetry';
   const args = existsSync(localPython) ? ['-c', script] : ['run', 'python', '-c', script];
-  execFileSync(executable, args, { cwd: '..', env: process.env });
+  execFileSync(executable, args, {
+    cwd: '..',
+    env: {
+      ...process.env,
+      ENVIRONMENT: 'testing',
+      DATABASE_URL: 'sqlite:///./visualmemory_test.db',
+      SECRET_KEY: 'test-secret-key-for-e2e-tests-at-least-32-bytes',
+    },
+  });
 }
 
 test.describe('Patch Notes Flow', () => {

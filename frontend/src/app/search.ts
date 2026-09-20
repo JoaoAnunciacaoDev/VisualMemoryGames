@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type {
   GroupMode,
   HoursOperator,
@@ -24,43 +25,42 @@ const optionalNumber = (value: unknown): number | '' => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : '';
 };
 
-export type SocialTab = 'feed' | 'my-activities' | 'search';
+const positiveIntegerSchema = (fallback: number) =>
+  z.unknown().optional().transform((value) => positiveInteger(value, fallback));
 
-export interface SocialSearch {
-  tab: SocialTab;
-  month: number;
-  year: number;
-  feedPage: number;
-  myPage: number;
-  q: string;
-}
+const stringSchema = z.unknown().optional().transform((value) => typeof value === 'string' ? value : '');
 
-export const validateSocialSearch = (search: Record<string, unknown>): SocialSearch => ({
-  tab: search.tab === 'my-activities' || search.tab === 'search' ? search.tab : 'feed',
-  month: Math.min(12, positiveInteger(search.month, now.getMonth() + 1)),
-  year: positiveInteger(search.year, now.getFullYear()),
-  feedPage: positiveInteger(search.feedPage, 1),
-  myPage: positiveInteger(search.myPage, 1),
-  q: typeof search.q === 'string' ? search.q : '',
+const socialSearchSchema = z.object({
+  tab: z.unknown().optional().transform((value) => oneOf(value, ['feed', 'my-activities', 'search'] as const, 'feed')),
+  month: positiveIntegerSchema(now.getMonth() + 1).transform((value) => Math.min(12, value)),
+  year: positiveIntegerSchema(now.getFullYear()),
+  feedPage: positiveIntegerSchema(1),
+  myPage: positiveIntegerSchema(1),
+  q: stringSchema,
 });
 
-export interface AdminSearch {
-  q: string;
-}
+export type SocialSearch = z.infer<typeof socialSearchSchema>;
+export type SocialTab = SocialSearch['tab'];
 
-export const validateAdminSearch = (search: Record<string, unknown>): AdminSearch => ({
-  q: typeof search.q === 'string' ? search.q : '',
+export const validateSocialSearch = (search: Record<string, unknown>): SocialSearch =>
+  socialSearchSchema.parse(search);
+
+const adminSearchSchema = z.object({ q: stringSchema });
+
+export type AdminSearch = z.infer<typeof adminSearchSchema>;
+
+export const validateAdminSearch = (search: Record<string, unknown>): AdminSearch =>
+  adminSearchSchema.parse(search);
+
+const patchNotesSearchSchema = z.object({
+  month: positiveIntegerSchema(now.getMonth() + 1).transform((value) => Math.min(12, value)),
+  year: positiveIntegerSchema(now.getFullYear()),
 });
 
-export interface PatchNotesSearch {
-  month: number;
-  year: number;
-}
+export type PatchNotesSearch = z.infer<typeof patchNotesSearchSchema>;
 
-export const validatePatchNotesSearch = (search: Record<string, unknown>): PatchNotesSearch => ({
-  month: Math.min(12, positiveInteger(search.month, now.getMonth() + 1)),
-  year: positiveInteger(search.year, now.getFullYear()),
-});
+export const validatePatchNotesSearch = (search: Record<string, unknown>): PatchNotesSearch =>
+  patchNotesSearchSchema.parse(search);
 
 const libraryTabs: LibraryTab[] = ['library', 'lists', 'search'];
 const origins: OriginFilter[] = ['all', 'imported', 'manual'];
@@ -71,24 +71,27 @@ const yearFields: YearField[] = ['acquired_at', 'started_at', 'finished_at', 'pl
 const hoursOperators: Exclude<HoursOperator, ''>[] = ['gt', 'lt', 'between'];
 const groupModes: GroupMode[] = ['status', 'store', 'none'];
 
-export const validateLibrarySearch = (search: Record<string, unknown>): LibrarySearch => ({
-  tab: oneOf(search.tab, libraryTabs, 'library'),
-  search: typeof search.search === 'string' ? search.search : '',
-  statusFilter: typeof search.statusFilter === 'string' ? search.statusFilter : 'Todos',
-  storeFilter: typeof search.storeFilter === 'string' ? search.storeFilter : 'Todas',
-  originFilter: oneOf(search.originFilter, origins, 'all'),
-  sortBy: search.sortBy === null || search.sortBy === '' || search.sortBy === undefined
-    ? null
-    : oneOf(search.sortBy, sortFields, 'title'),
-  sortOrder: search.sortOrder === 'asc' ? 'asc' : 'desc',
-  yearField: search.yearField === '' || search.yearField === undefined
-    ? ''
-    : oneOf(search.yearField, yearFields, 'acquired_at'),
-  yearValue: optionalNumber(search.yearValue),
-  hoursOperator: search.hoursOperator === '' || search.hoursOperator === undefined
-    ? ''
-    : oneOf(search.hoursOperator, hoursOperators, 'gt'),
-  hoursValue: optionalNumber(search.hoursValue),
-  hoursValueMax: optionalNumber(search.hoursValueMax),
-  groupMode: oneOf(search.groupMode, groupModes, 'status'),
+const librarySearchSchema = z.object({
+  tab: z.unknown().optional().transform((value): LibraryTab => oneOf(value, libraryTabs, 'library')),
+  search: stringSchema,
+  statusFilter: z.unknown().optional().transform((value) => typeof value === 'string' ? value : 'Todos'),
+  storeFilter: z.unknown().optional().transform((value) => typeof value === 'string' ? value : 'Todas'),
+  originFilter: z.unknown().optional().transform((value): OriginFilter => oneOf(value, origins, 'all')),
+  sortBy: z.unknown().optional().transform((value): SortBy => (
+    value === null || value === '' || value === undefined ? null : oneOf(value, sortFields, 'title')
+  )),
+  sortOrder: z.unknown().optional().transform((value): 'asc' | 'desc' => value === 'asc' ? 'asc' : 'desc'),
+  yearField: z.unknown().optional().transform((value): YearField | '' => (
+    value === '' || value === undefined ? '' : oneOf(value, yearFields, 'acquired_at')
+  )),
+  yearValue: z.unknown().optional().transform(optionalNumber),
+  hoursOperator: z.unknown().optional().transform((value): HoursOperator => (
+    value === '' || value === undefined ? '' : oneOf(value, hoursOperators, 'gt')
+  )),
+  hoursValue: z.unknown().optional().transform(optionalNumber),
+  hoursValueMax: z.unknown().optional().transform(optionalNumber),
+  groupMode: z.unknown().optional().transform((value): GroupMode => oneOf(value, groupModes, 'status')),
 });
+
+export const validateLibrarySearch = (search: Record<string, unknown>): LibrarySearch =>
+  librarySearchSchema.parse(search);

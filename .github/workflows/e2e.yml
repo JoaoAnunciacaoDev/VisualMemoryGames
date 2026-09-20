@@ -32,13 +32,13 @@ jobs:
 
       - name: Instalar dependências do Frontend
         working-directory: ./frontend
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Instalar navegadores do Playwright
         working-directory: ./frontend
         env:
           PLAYWRIGHT_BROWSERS_PATH: "0"
-        run: npx playwright install chromium --with-deps
+        run: bunx playwright install --with-deps chromium firefox webkit
 
       - name: Executar testes E2E
         run: mise run e2e.test

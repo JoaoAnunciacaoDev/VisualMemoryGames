@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, String, func, select
+from sqlalchemy import Boolean, DateTime, Integer, String, func, select
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
@@ -31,6 +31,7 @@ class User(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_active_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_read_patches_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     user_games: Mapped[List["UserGame"]] = relationship(
         "UserGame", back_populates="user", cascade="all, delete-orphan"

@@ -125,7 +125,7 @@ async function syncInitialPool(
 
   for (const game of newGames) {
     try {
-      const response = await api.post(`/tierlists/category/${poolCategoryId}/items`, {
+      const response = await api.post<{ id: string }>(`/tierlists/category/${poolCategoryId}/items`, {
         game_id: game.id,
       });
 

@@ -54,12 +54,27 @@ class UserCreate(UserRegisterInitiate):
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=30)
     email: Optional[EmailStr] = None
+    email_code: Optional[str] = Field(None, min_length=6, max_length=6)
 
     @model_validator(mode="after")
     def check_at_least_one_field(self):
         if self.username is None and self.email is None:
             raise ValueError("Pelo menos um campo (username ou email) deve ser fornecido")
         return self
+
+
+class UserEmailChangeInitiate(BaseModel):
+    email: EmailStr
+
+
+class UserPublicListResponse(BaseModel):
+    id: str
+    username: str
+    is_public: bool = False
+    created_at: Optional[datetime] = None
+    games_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserResponse(UserBase):

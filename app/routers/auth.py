@@ -1,7 +1,8 @@
 import os
-import random
+import secrets
 from datetime import datetime, timedelta, timezone
 
+import jwt
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -20,7 +21,13 @@ from app.limiter import limiter
 from app.models.password_reset import PasswordReset
 from app.models.user import User
 from app.schemas.password_reset import PasswordResetConfirm, PasswordResetInitiate
-from app.security import ACCESS_TOKEN_EXPIRE_DAYS, create_access_token
+from app.security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    ALGORITHM,
+    REMEMBER_ME_EXPIRE_DAYS,
+    SECRET_KEY,
+    create_access_token,
+)
 from app.services.auth_service import get_password_hash, verify_password
 from app.services.email_service import send_password_reset_email
 
@@ -35,43 +42,6 @@ def cleanup_deleted_users(db: Session):
         db.delete(u)
     if expired_users:
         db.commit()
-
-
-@router.post("/token")
-@limiter.limit("5/minute")
-def token_login(
-    request: Request,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
-):
-    """Rota padrão OAuth2 para gerar o Token JWT em Swagger UI / clientes API."""
-    from sqlalchemy import func
-
-    user = (
-        db.query(User)
-        .filter(
-            (func.lower(User.username) == func.lower(form_data.username))
-            | (func.lower(User.email) == func.lower(form_data.username))
-        )
-        .first()
-    )
-
-    if not user or not verify_password(form_data.password, str(user.password_hash)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuário ou senha incorretos",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if user.is_deleted:
-        user.is_deleted = False
-        user.deleted_at = None
-        db.commit()
-        db.refresh(user)
-
-    expires_delta = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
-    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=expires_delta)
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 def is_secure_request(request: Request) -> bool:
@@ -116,17 +86,20 @@ def login(
     if user.is_deleted:
         user.is_deleted = False
         user.deleted_at = None
+        user.token_version += 1
         db.commit()
         db.refresh(user)
 
     if remember_me:
-        expires_delta = timedelta(days=30)
-        max_age = 30 * 24 * 60 * 60
+        expires_delta = timedelta(days=REMEMBER_ME_EXPIRE_DAYS)
+        max_age = REMEMBER_ME_EXPIRE_DAYS * 24 * 60 * 60
     else:
-        expires_delta = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
+        expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         max_age = None
 
-    access_token = create_access_token(data={"sub": str(user.id)}, expires_delta=expires_delta)
+    access_token = create_access_token(
+        data={"sub": str(user.id), "ver": user.token_version}, expires_delta=expires_delta
+    )
 
     is_secure = is_secure_request(request)
     expires_date = datetime.now(timezone.utc) + expires_delta if remember_me else None
@@ -163,7 +136,7 @@ def initiate_password_reset(
     if os.getenv("ENVIRONMENT") == "testing":
         code = "654321"
     else:
-        code = f"{random.randint(100000, 999999)}"
+        code = f"{secrets.randbelow(900000) + 100000}"
 
     # Expiração de 10 minutos
     expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
@@ -221,6 +194,7 @@ def confirm_password_reset(
     # 3. Atualizar a senha
     hashed_password = get_password_hash(confirm_data.new_password)
     user.password_hash = hashed_password
+    user.token_version += 1
 
     # 4. Limpar o código usado
     db.delete(pwd_reset)
@@ -231,8 +205,19 @@ def confirm_password_reset(
 
 
 @router.post("/logout")
-def logout(request: Request, response: Response):
-    """Exclui o cookie de autenticação do usuário."""
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
+    """Revoga todas as sessões do usuário e exclui o cookie de autenticação."""
+    token = request.cookies.get("token")
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+            user = db.query(User).filter(User.id == user_id).first() if user_id else None
+            if user and payload.get("ver") == user.token_version:
+                user.token_version += 1
+                db.commit()
+        except jwt.PyJWTError:
+            pass
     is_secure = is_secure_request(request)
     response.delete_cookie(
         key="token",

@@ -23,13 +23,11 @@ def test_login_user(client):
     assert response.json()["success"] is True
     assert "token" in response.cookies
 
-    # Testar também a rota /token (OAuth2)
+    # A aplicação expõe somente o fluxo por cookie HttpOnly.
     response_token = client.post(
         "/token", data={"username": "joaogamer", "password": "SenhaSegura_123!"}
     )
-    assert response_token.status_code == 200
-    assert "access_token" in response_token.json()
-    assert response_token.json()["token_type"] == "bearer"
+    assert response_token.status_code == 404
 
 
 def test_login_wrong_password(client):
@@ -109,14 +107,14 @@ def test_login_remember_me(client):
         },
     )
 
-    # 1. Test remember_me = True (should set Max-Age to 30 days)
+    # 1. Test remember_me = True (deve manter a sessão por 7 dias)
     response_true = client.post(
         "/login",
         data={"username": "remember", "password": "SenhaSegura_123!", "remember_me": "true"},
     )
     assert response_true.status_code == 200
     set_cookie_true = response_true.headers.get("set-cookie", "")
-    assert "Max-Age=2592000" in set_cookie_true or "max-age=2592000" in set_cookie_true
+    assert "Max-Age=604800" in set_cookie_true or "max-age=604800" in set_cookie_true
 
     # 2. Test remember_me = False (should set transient session cookie, no Max-Age)
     response_false = client.post(

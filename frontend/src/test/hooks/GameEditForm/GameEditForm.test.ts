@@ -165,7 +165,7 @@ describe('useGameEditForm', () => {
   });
 
   it('handleSave deve actualizar o jogo e devolver o payload', async () => {
-    vi.mocked(api.put).mockResolvedValue({});
+    vi.mocked(api.put).mockResolvedValue({ data: undefined });
 
     const { result } = renderGameEditForm(mockGame);
 
@@ -183,7 +183,7 @@ describe('useGameEditForm', () => {
   });
 
   it('handleSave deve actualizar jogo manual antes do user-game', async () => {
-    vi.mocked(api.put).mockResolvedValue({});
+    vi.mocked(api.put).mockResolvedValue({ data: undefined });
 
     const { result } = renderGameEditForm(mockManualGame);
 
@@ -198,7 +198,7 @@ describe('useGameEditForm', () => {
   it('handleSave deve fazer upload de capa personalizada se houver coverFile', async () => {
     vi.mocked(api.put)
       .mockResolvedValueOnce({ data: { custom_cover_url: '/uploads/covers/new-cover.jpg' } })
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ data: undefined });
 
     const { result } = renderGameEditForm(mockGame);
     const file = new File([''], 'test.png', { type: 'image/png' });

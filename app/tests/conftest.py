@@ -11,6 +11,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+from app.models.user import User
+from app.security import create_access_token
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -70,7 +72,7 @@ def client(db_session):
 
 
 @pytest.fixture
-def auth_headers(client):
+def auth_headers(client, db_session):
     """Cria um usuário padrão e retorna os headers com o Token JWT."""
     client.post(
         "/users/register/initiate",
@@ -90,13 +92,13 @@ def auth_headers(client):
         },
     )
 
-    login = client.post("/token", data={"username": "tester", "password": "SenhaSegura_123!"})
-    token = login.json()["access_token"]
+    user = db_session.query(User).filter(User.username == "tester").one()
+    token = create_access_token({"sub": user.id, "ver": user.token_version})
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
-def second_user_headers(client):
+def second_user_headers(client, db_session):
     """Cria um segundo usuário para testar regras de segurança/permissão."""
     client.post(
         "/users/register/initiate",
@@ -116,8 +118,8 @@ def second_user_headers(client):
         },
     )
 
-    login = client.post("/token", data={"username": "invasor", "password": "SenhaSegura_123!"})
-    token = login.json()["access_token"]
+    user = db_session.query(User).filter(User.username == "invasor").one()
+    token = create_access_token({"sub": user.id, "ver": user.token_version})
     return {"Authorization": f"Bearer {token}"}
 
 

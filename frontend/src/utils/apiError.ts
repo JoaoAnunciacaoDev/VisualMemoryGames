@@ -1,11 +1,11 @@
-import axios from 'axios';
+import { isApiError } from '@/services/api';
 
 interface ValidationDetail {
   msg?: string;
 }
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
-  if (!axios.isAxiosError(error)) {
+  if (!isApiError(error)) {
     return error instanceof Error ? error.message : fallback;
   }
 

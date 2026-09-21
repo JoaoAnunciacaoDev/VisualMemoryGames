@@ -75,12 +75,15 @@ def validate_runtime_configuration() -> None:
     elif not http_email_configured and not smtp_configured:
         errors.append("configure Brevo, Resend ou todas as variáveis SMTP para envio de e-mail")
 
-    access_token_expire_days = os.getenv("ACCESS_TOKEN_EXPIRE_DAYS", "3").strip()
-    try:
-        if int(access_token_expire_days) <= 0:
-            raise ValueError
-    except ValueError:
-        errors.append("ACCESS_TOKEN_EXPIRE_DAYS deve ser um inteiro positivo")
+    for variable, default in (
+        ("ACCESS_TOKEN_EXPIRE_MINUTES", "60"),
+        ("REMEMBER_ME_EXPIRE_DAYS", "7"),
+    ):
+        try:
+            if int(os.getenv(variable, default).strip()) <= 0:
+                raise ValueError
+        except ValueError:
+            errors.append(f"{variable} deve ser um inteiro positivo")
 
     if errors:
         details = "; ".join(errors)

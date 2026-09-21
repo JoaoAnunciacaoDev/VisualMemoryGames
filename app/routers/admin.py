@@ -82,6 +82,7 @@ def toggle_user_active(
 
     user.is_deleted = not user.is_deleted
     user.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None) if user.is_deleted else None
+    user.token_version += 1
 
     db.commit()
     db.refresh(user)

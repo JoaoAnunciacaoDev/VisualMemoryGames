@@ -13,13 +13,13 @@ def test_change_password(client, auth_headers, db_session):
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["message"] == "Senha alterada com sucesso."
 
-    # Tentar alterar com a senha atual incorreta
+    # O token usado para trocar a senha é revogado imediatamente.
     response = client.put(
         "/users/me/password",
         json={"current_password": "WrongPassword", "new_password": "AnotherPassword123!"},
         headers=auth_headers,
     )
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 def test_deactivate_and_reactivate_account(client, auth_headers, db_session):

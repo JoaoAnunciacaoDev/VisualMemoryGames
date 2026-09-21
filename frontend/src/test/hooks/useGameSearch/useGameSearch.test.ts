@@ -142,7 +142,7 @@ describe('useGameSearch', () => {
     const mockGameId = 'game-id-123';
     vi.mocked(api.post)
       .mockResolvedValueOnce({ data: { id: mockGameId } })
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ data: undefined });
 
     const { result } = renderGameSearch();
 
@@ -169,7 +169,7 @@ describe('useGameSearch', () => {
     vi.mocked(api.get)
       .mockResolvedValueOnce({ data: [{ external_id: mockGame.external_id, id: mockGameId, title: mockGame.title }] });
     vi.mocked(api.post)
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ data: undefined });
 
     const { result } = renderGameSearch();
 

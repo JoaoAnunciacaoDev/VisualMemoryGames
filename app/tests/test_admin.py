@@ -1,6 +1,7 @@
 import pytest
 
 from app.models.user import User
+from app.security import create_access_token
 
 
 @pytest.fixture
@@ -30,9 +31,7 @@ def admin_headers(client, db_session):
     user.is_admin = True
     db_session.commit()
 
-    # Login
-    login = client.post("/token", data={"username": "adminuser", "password": "SenhaSegura_123!"})
-    token = login.json()["access_token"]
+    token = create_access_token({"sub": user.id, "ver": user.token_version})
     return {"Authorization": f"Bearer {token}"}
 
 

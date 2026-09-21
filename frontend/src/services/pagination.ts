@@ -1,12 +1,11 @@
-import type { AxiosRequestConfig } from 'axios';
-import api from '@/services/api';
+import api, { type ApiRequestConfig } from '@/services/api';
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGES = 100;
 
 export async function fetchAllPages<T>(
   url: string,
-  config?: AxiosRequestConfig,
+  config?: ApiRequestConfig,
 ): Promise<T[]> {
   const firstResponse = config
     ? await api.get<T[]>(url, config)

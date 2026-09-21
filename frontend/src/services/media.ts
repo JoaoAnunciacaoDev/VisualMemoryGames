@@ -1,4 +1,4 @@
-import api from '@/services/api';
+import { API_BASE_URL } from '@/services/api';
 
 interface GameWithCovers {
   cover_url?: string | null;
@@ -14,5 +14,5 @@ export const getBestGameCover = (game: GameWithCovers): string | undefined => {
 export function resolveImageUrl(url: string | null): string | undefined {
   if (!url) return undefined;
   if (url.startsWith('http')) return url;
-  return `${api.defaults.baseURL}${url}`;
+  return `${API_BASE_URL}${url}`;
 }

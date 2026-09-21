@@ -11,7 +11,8 @@ PRODUCTION_VARIABLES = (
     "STORAGE_SECRET_KEY",
     "STORAGE_BUCKET",
     "STORAGE_PUBLIC_BASE_URL",
-    "ACCESS_TOKEN_EXPIRE_DAYS",
+    "ACCESS_TOKEN_EXPIRE_MINUTES",
+    "REMEMBER_ME_EXPIRE_DAYS",
     "BREVO_API_KEY",
     "RESEND_API_KEY",
     "SMTP_HOST",
@@ -48,7 +49,7 @@ def test_production_rejects_insecure_configuration_without_echoing_secrets(monke
     monkeypatch.setenv("SECRET_KEY", "short-secret")
     monkeypatch.setenv("DATABASE_URL", "sqlite:///production.db")
     monkeypatch.setenv("STORAGE_PROVIDER", "local")
-    monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_DAYS", "0")
+    monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "0")
 
     with pytest.raises(RuntimeError) as exc_info:
         validate_runtime_configuration()
@@ -57,7 +58,7 @@ def test_production_rejects_insecure_configuration_without_echoing_secrets(monke
     assert "SECRET_KEY" in message
     assert "DATABASE_URL" in message
     assert "STORAGE_PROVIDER" in message
-    assert "ACCESS_TOKEN_EXPIRE_DAYS" in message
+    assert "ACCESS_TOKEN_EXPIRE_MINUTES" in message
     assert "short-secret" not in message
     assert "production.db" not in message
 
@@ -72,7 +73,8 @@ def test_valid_production_configuration(monkeypatch):
     monkeypatch.setenv("STORAGE_ACCESS_KEY", "access-key")
     monkeypatch.setenv("STORAGE_SECRET_KEY", "storage-secret")
     monkeypatch.setenv("STORAGE_BUCKET", "covers")
-    monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_DAYS", "3")
+    monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+    monkeypatch.setenv("REMEMBER_ME_EXPIRE_DAYS", "7")
     monkeypatch.setenv("BREVO_API_KEY", "valid-brevo-key")
 
     validate_runtime_configuration()

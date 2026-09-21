@@ -27,7 +27,7 @@ describe('addGameToLibrary', () => {
     const mockGameId = 'game-id-123';
     vi.mocked(api.post)
       .mockResolvedValueOnce({ data: { id: mockGameId } })
-      .mockResolvedValueOnce({});
+      .mockResolvedValueOnce({ data: undefined });
 
     await addGameToLibrary(mockGame);
 

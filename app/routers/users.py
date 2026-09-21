@@ -1,6 +1,6 @@
 import json
 import os
-import random
+import secrets
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -23,7 +23,9 @@ from app.schemas.user import (
     FeedbackCreate,
     UserCreate,
     UserDeleteRequest,
+    UserEmailChangeInitiate,
     UserPasswordChange,
+    UserPublicListResponse,
     UserRegisterInitiate,
     UserResponse,
     UserUpdate,
@@ -67,7 +69,7 @@ def initiate_registration(
     if os.getenv("ENVIRONMENT") == "testing":
         code = "123456"
     else:
-        code = f"{random.randint(100000, 999999)}"
+        code = f"{secrets.randbelow(900000) + 100000}"
 
     # Definir expiração para 10 minutos a partir de agora em UTC
     expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
@@ -141,7 +143,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("/", response_model=List[UserPublicListResponse])
 def read_users(
     skip: int = Query(0, ge=0),
     offset: int | None = Query(None, ge=0),
@@ -149,7 +151,13 @@ def read_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    users = db.query(User).offset(offset if offset is not None else skip).limit(limit).all()
+    users = (
+        db.query(User)
+        .filter(User.is_public.is_(True), User.is_deleted.is_(False))
+        .offset(offset if offset is not None else skip)
+        .limit(limit)
+        .all()
+    )
     return users
 
 
@@ -189,14 +197,62 @@ def update_me(
         current_user.username = update_data["username"]
 
     if "email" in update_data:
+        new_email = str(update_data["email"])
+        code = update_data.get("email_code")
+        verification = (
+            db.query(EmailVerification).filter(EmailVerification.email == new_email).first()
+        )
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        if (
+            not code
+            or not verification
+            or not secrets.compare_digest(verification.code, code)
+            or verification.expires_at < now
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Confirme o novo e-mail com um código válido antes de alterá-lo.",
+            )
         existing = db.query(User).filter(User.email == update_data["email"]).first()
         if existing and str(existing.id) != str(current_user.id):
             raise HTTPException(status_code=400, detail="Email já está em uso.")
-        current_user.email = update_data["email"]
+        current_user.email = new_email
+        db.delete(verification)
 
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/email/initiate", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+def initiate_email_change(
+    request: Request,
+    email_change: UserEmailChangeInitiate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    new_email = str(email_change.email)
+    existing = db.query(User).filter(func.lower(User.email) == new_email.lower()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email já está em uso.")
+
+    code = (
+        "123456"
+        if os.getenv("ENVIRONMENT") == "testing"
+        else f"{secrets.randbelow(900000) + 100000}"
+    )
+    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=10)
+    verification = db.query(EmailVerification).filter(EmailVerification.email == new_email).first()
+    if verification:
+        verification.code = code
+        verification.expires_at = expires_at
+    else:
+        db.add(EmailVerification(email=new_email, code=code, expires_at=expires_at))
+    db.commit()
+    background_tasks.add_task(send_verification_email, new_email, code)
+    return {"message": "Código de confirmação enviado para o novo e-mail."}
 
 
 @router.patch("/me/visibility", response_model=UserResponse)
@@ -224,6 +280,7 @@ def change_password(
         )
 
     current_user.password_hash = get_password_hash(pwd_change.new_password)
+    current_user.token_version += 1
     db.commit()
     return {"message": "Senha alterada com sucesso."}
 
@@ -240,6 +297,7 @@ def deactivate_account(
 
     current_user.is_deleted = True
     current_user.deleted_at = datetime.now(timezone.utc)
+    current_user.token_version += 1
     db.commit()
     return {
         "message": "Conta desativada com sucesso. "

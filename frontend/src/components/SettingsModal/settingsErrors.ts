@@ -3,7 +3,7 @@ interface PydanticErrorDetail {
   loc?: Array<string | number>;
 }
 
-interface AxiosErrorDetail {
+interface ApiErrorDetail {
   response?: { data?: { detail?: string | PydanticErrorDetail[] } };
 }
 
@@ -11,7 +11,7 @@ export function parseSettingsError(
   error: unknown,
   fallback = 'Ocorreu um erro no servidor.',
 ): string {
-  const detail = (error as AxiosErrorDetail).response?.data?.detail;
+  const detail = (error as ApiErrorDetail).response?.data?.detail;
   if (!detail) return fallback;
   if (typeof detail === 'string') return detail;
 

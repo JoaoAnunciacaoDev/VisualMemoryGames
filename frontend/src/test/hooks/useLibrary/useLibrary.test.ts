@@ -63,7 +63,7 @@ describe('useLibrary', () => {
 
   it('updateGame deve atualizar um jogo e recarregar a biblioteca', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
-    vi.mocked(api.put).mockResolvedValue({});
+    vi.mocked(api.put).mockResolvedValue({ data: undefined });
 
     const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 
@@ -81,7 +81,7 @@ describe('useLibrary', () => {
 
   it('removeGame deve remover um jogo e recarregar a biblioteca', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: mockGames });
-    vi.mocked(api.delete).mockResolvedValue({});
+    vi.mocked(api.delete).mockResolvedValue({ data: undefined });
 
     const { result } = renderHook(() => useLibrary(), { wrapper: TestQueryProvider });
 

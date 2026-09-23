@@ -3,13 +3,14 @@ import os
 from typing import Dict, List, Optional
 
 from fastapi import HTTPException
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.services.external_cache import build_cache_key, get_cached, set_cached
+from app.services.game_identity import provider_ids_for_games
 from app.services.http_client import request_sync
 from app.services.igdb_service import (
     get_game_details_igdb,
-    get_games_by_genres_igdb,
     get_weekly_releases_igdb,
     search_games_on_igdb,
 )
@@ -18,6 +19,14 @@ logger = logging.getLogger(__name__)
 
 RAWG_API_KEY = os.getenv("RAWG_API_KEY")
 BASE_URL = "https://api.rawg.io/api"
+
+
+def _provider_identity(item: Dict) -> tuple[str, int] | None:
+    source = str(item.get("source") or "").casefold()
+    external_id = item.get("external_id")
+    if source not in {"igdb", "rawg"} or external_id is None:
+        return None
+    return source, int(external_id)
 
 
 def _is_nsfw(item: Dict) -> bool:
@@ -40,14 +49,31 @@ def search_games_in_local_db(query: str, db: Session, limit: int = 15) -> List[D
     from app.models.game import Game
     from app.services.recommendation_service import parse_json_list
 
-    search_pattern = f"%{query}%"
-    games = db.query(Game).filter(Game.title.ilike(search_pattern)).limit(limit).all()
+    normalized_query = query.strip().casefold()
+    search_pattern = f"%{query.strip()}%"
+    games = (
+        db.query(Game)
+        .filter(Game.title.ilike(search_pattern))
+        .order_by(
+            case(
+                (func.lower(Game.title) == normalized_query, 0),
+                (func.lower(Game.title).like(f"{normalized_query}%"), 1),
+                else_=2,
+            ),
+            Game.title,
+        )
+        .limit(limit)
+        .all()
+    )
+    provider_ids = provider_ids_for_games(db, (game.id for game in games))
 
     results = []
     for g in games:
+        provider_identity = provider_ids.get(g.id)
         results.append(
             {
-                "external_id": g.external_id,
+                "external_id": provider_identity[1] if provider_identity else g.external_id,
+                "source": provider_identity[0] if provider_identity else "catalog",
                 "title": g.title,
                 "cover_url": g.cover_url,
                 "release_year": g.release_year,
@@ -73,22 +99,36 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
         except Exception as e:
             logger.warning(f"Erro ao buscar no DB local: {e}")
 
+    normalized_query = query.strip().casefold()
+    has_complete_exact_match = any(
+        item["title"].strip().casefold() == normalized_query
+        and bool(item.get("cover_url"))
+        and bool(item.get("genres"))
+        for item in local_results
+    )
+    if has_complete_exact_match or len(local_results) >= limit:
+        return local_results
+
     # 2. Tentar IGDB (Twitch API)
     igdb_results = search_games_on_igdb(query, limit=limit, offset=offset)
     if igdb_results:
         seen_titles = {r["title"].lower().strip() for r in local_results}
-        seen_ids = {r["external_id"] for r in local_results if r.get("external_id") is not None}
+        seen_ids = {
+            identity
+            for item in local_results
+            if (identity := _provider_identity(item)) is not None
+        }
         combined = list(local_results)
         for r in igdb_results:
-            r_id = r.get("external_id")
+            identity = _provider_identity(r)
             r_title = r["title"].lower().strip()
             if r_title in seen_titles:
                 continue
-            if r_id is not None and r_id in seen_ids:
+            if identity is not None and identity in seen_ids:
                 continue
             seen_titles.add(r_title)
-            if r_id is not None:
-                seen_ids.add(r_id)
+            if identity is not None:
+                seen_ids.add(identity)
             combined.append(r)
         return combined
 
@@ -97,19 +137,24 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
         rawg_cache_key = build_cache_key(query.strip().lower(), page)
         cached = get_cached("rawg.search", rawg_cache_key)
         if cached is not None:
+            cached = [{**item, "source": "rawg"} for item in cached]
             if cached:
                 seen_titles = {item["title"].lower().strip() for item in local_results}
                 seen_ids = {
-                    item["external_id"]
+                    identity
                     for item in local_results
-                    if item.get("external_id") is not None
+                    if (identity := _provider_identity(item)) is not None
                 }
                 combined = list(local_results)
                 for item in cached:
-                    item_id = item.get("external_id")
+                    identity = _provider_identity(item)
                     item_title = item["title"].lower().strip()
-                    if item_title not in seen_titles and item_id not in seen_ids:
-                        combined.append(item)
+                    if item_title in seen_titles or (identity is not None and identity in seen_ids):
+                        continue
+                    seen_titles.add(item_title)
+                    if identity is not None:
+                        seen_ids.add(identity)
+                    combined.append(item)
                 return combined
             if local_results:
                 return local_results
@@ -142,6 +187,7 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
                         "release_year": int(released[:4]) if released else None,
                         "platforms": [p["platform"]["name"] for p in (item.get("platforms") or [])],
                         "genres": [g["name"] for g in (item.get("genres") or [])],
+                        "source": "rawg",
                     }
                 )
 
@@ -154,19 +200,21 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
             if results:
                 seen_titles = {r["title"].lower().strip() for r in local_results}
                 seen_ids = {
-                    r["external_id"] for r in local_results if r.get("external_id") is not None
+                    identity
+                    for item in local_results
+                    if (identity := _provider_identity(item)) is not None
                 }
                 combined = list(local_results)
                 for r in results:
-                    r_id = r.get("external_id")
+                    identity = _provider_identity(r)
                     r_title = r["title"].lower().strip()
                     if r_title in seen_titles:
                         continue
-                    if r_id is not None and r_id in seen_ids:
+                    if identity is not None and identity in seen_ids:
                         continue
                     seen_titles.add(r_title)
-                    if r_id is not None:
-                        seen_ids.add(r_id)
+                    if identity is not None:
+                        seen_ids.add(identity)
                     combined.append(r)
                 return combined
         except Exception as e:
@@ -184,19 +232,17 @@ def search_games_on_rawg(query: str, db: Optional[Session] = None, page: int = 1
 
 
 def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
-    """Busca jogos pelos gêneros (IGDB -> RAWG)."""
+    """Busca jogos por gêneros somente na RAWG.
+
+    A orquestração IGDB-first pertence ao serviço consumidor. Manter esta
+    função específica evita que um resultado parcial do IGDB seja confundido
+    com uma resposta da RAWG e permite usar a RAWG apenas como fallback.
+    """
     cache_key = build_cache_key(genres, page_size)
-    cached = get_cached("games.genres", cache_key)
+    cached = get_cached("rawg.genres", cache_key)
     if cached is not None:
-        return cached
+        return [{**item, "source": "rawg"} for item in cached]
 
-    # 1. Tentar IGDB
-    genre_list = [g.strip() for g in genres.split(",") if g.strip()]
-    igdb_results = get_games_by_genres_igdb(genre_list, page_size=page_size)
-    if igdb_results:
-        return igdb_results
-
-    # 2. Tentar RAWG (timeout 3s)
     if RAWG_API_KEY:
         url = f"{BASE_URL}/games"
         import random
@@ -228,11 +274,12 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
                         "release_year": int(released[:4]) if released else None,
                         "platforms": [p["platform"]["name"] for p in (item.get("platforms") or [])],
                         "genres": [g["name"] for g in (item.get("genres") or [])],
+                        "source": "rawg",
                     }
                 )
                 if len(results) == page_size:
                     break
-            set_cached("games.genres", cache_key, results, ttl_seconds=6 * 3600 if results else 300)
+            set_cached("rawg.genres", cache_key, results, ttl_seconds=6 * 3600 if results else 300)
             return results
         except Exception as e:
             logger.warning(f"Erro ao buscar gêneros no RAWG: {e}")
@@ -240,17 +287,19 @@ def get_games_by_genres_rawg(genres: str, page_size: int = 15) -> List[Dict]:
     return []
 
 
-def get_game_details_rawg(external_id: int) -> Dict:
+def get_game_details_rawg(external_id: int, source: Optional[str] = None) -> Dict:
     """Busca detalhes expandidos de um jogo (IGDB -> RAWG)."""
-    cache_key = build_cache_key(external_id)
+    normalized_source = source.casefold() if source else None
+    cache_key = build_cache_key(normalized_source or "auto", external_id)
     cached = get_cached("games.details", cache_key)
     if cached is not None:
         return cached
 
-    # 1. Tentar IGDB
-    igdb_details = get_game_details_igdb(external_id)
-    if igdb_details:
-        return igdb_details
+    # 1. IGDB é a fonte primária, exceto quando o item é explicitamente RAWG.
+    if normalized_source != "rawg":
+        igdb_details = get_game_details_igdb(external_id)
+        if igdb_details:
+            return igdb_details
 
     # 2. Tentar RAWG
     if RAWG_API_KEY:

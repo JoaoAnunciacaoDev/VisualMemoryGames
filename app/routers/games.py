@@ -11,10 +11,35 @@ from app.models.game import Game
 from app.models.user import User
 from app.schemas.game import GameBase, GameCreate, GameResponse
 from app.security import get_current_user
+from app.services.game_identity import (
+    attach_provider_id,
+    find_game_by_provider_id,
+    normalize_game_provider,
+)
 from app.services.game_provider import search_games_on_rawg
 from app.services.storage import delete_stored_file, delete_stored_file_async, save_upload_file
 
 router = APIRouter(prefix="/games", tags=["Games"])
+
+
+def _game_response(
+    game: Game, source: str | None = None, external_id: int | None = None
+) -> GameResponse:
+    response = GameResponse.model_validate(game)
+    if source:
+        return response.model_copy(update={"source": source, "external_id": external_id})
+    return response
+
+
+def _enrich_game(existing_game: Game, game: GameCreate) -> None:
+    if game.cover_url and not existing_game.cover_url:
+        existing_game.cover_url = game.cover_url
+    if game.release_year and not existing_game.release_year:
+        existing_game.release_year = game.release_year
+    if game.platforms and not existing_game.platforms:
+        existing_game.platforms = game.platforms
+    if game.genres and not existing_game.genres:
+        existing_game.genres = game.genres
 
 
 @router.get("/search", response_model=List[GameBase])
@@ -33,6 +58,16 @@ def create_game(
     game: GameCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     clean_title = game.title.strip()
+    provider = normalize_game_provider(game.source)
+
+    # IDs externos só são únicos dentro do provedor. O vínculo com namespace é
+    # autoritativo e evita tratar um ID IGDB como se fosse o mesmo ID da RAWG.
+    provider_game = find_game_by_provider_id(db, provider, game.external_id)
+    if provider_game:
+        _enrich_game(provider_game, game)
+        db.commit()
+        db.refresh(provider_game)
+        return _game_response(provider_game, provider, game.external_id)
 
     # 1. Verifica se já existe o jogo por título exato (case-insensitive)
     existing_game = db.query(Game).filter(func.lower(Game.title) == clean_title.lower()).first()
@@ -41,17 +76,14 @@ def create_game(
             conflict = db.query(Game).filter(Game.external_id == game.external_id).first()
             if not conflict:
                 existing_game.external_id = game.external_id
-        if game.cover_url and not existing_game.cover_url:
-            existing_game.cover_url = game.cover_url
-        if game.release_year and not existing_game.release_year:
-            existing_game.release_year = game.release_year
-        if game.platforms and not existing_game.platforms:
-            existing_game.platforms = game.platforms
-        if game.genres and not existing_game.genres:
-            existing_game.genres = game.genres
+        _enrich_game(existing_game, game)
+        owner = attach_provider_id(db, existing_game, provider, game.external_id)
+        if owner.id != existing_game.id:
+            _enrich_game(owner, game)
+            existing_game = owner
         db.commit()
         db.refresh(existing_game)
-        return existing_game
+        return _game_response(existing_game, provider, game.external_id)
 
     # 2. Se não encontrou pelo título, verifica por external_id MAS garante que o título seja igual
     target_external_id = game.external_id
@@ -75,9 +107,17 @@ def create_game(
     )
 
     db.add(new_game)
+    db.flush()
+    owner = attach_provider_id(db, new_game, provider, game.external_id)
+    if owner.id != new_game.id:
+        db.rollback()
+        _enrich_game(owner, game)
+        db.commit()
+        db.refresh(owner)
+        return _game_response(owner, provider, game.external_id)
     db.commit()
     db.refresh(new_game)
-    return new_game
+    return _game_response(new_game, provider, game.external_id)
 
 
 @router.get("/", response_model=List[GameResponse])

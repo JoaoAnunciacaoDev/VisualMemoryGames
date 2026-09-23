@@ -5,6 +5,7 @@ import type { LibraryGame } from '@/types';
 
 const LIBRARY_PAGE_SIZE = 100;
 const MAX_LIBRARY_ITEMS = 10_000;
+export const LIBRARY_STALE_TIME = 30 * 60 * 1000;
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -31,6 +32,6 @@ export const myLibraryPagesQuery = (userId: string) => infiniteQueryOptions({
       ? nextOffset
       : undefined;
   },
-  staleTime: 2 * 60 * 1000,
-  gcTime: 30 * 60 * 1000,
+  staleTime: LIBRARY_STALE_TIME,
+  gcTime: 6 * 60 * 60 * 1000,
 });

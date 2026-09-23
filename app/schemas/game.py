@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -47,6 +47,7 @@ def _normalize_store(v):
 
 class GameBase(BaseModel):
     external_id: Optional[int] = None
+    source: Literal["igdb", "rawg", "catalog"] | None = None
     title: str
     cover_url: Optional[str] = None
     release_year: int | None

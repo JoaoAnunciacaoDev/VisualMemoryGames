@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -23,8 +23,10 @@ def get_recommendations(
 
 @router.get("/game-details/{external_id}", response_model=Dict)
 def get_game_recommendation_details(
-    external_id: int, current_user: User = Depends(get_current_user)
+    external_id: int,
+    source: str | None = Query(default=None, pattern="^(igdb|rawg|catalog)$"),
+    current_user: User = Depends(get_current_user),
 ):
     """Busca detalhes estendidos (sinopse, nota, trailer)
     diretamente da RAWG para um jogo recomendado."""
-    return get_game_details_rawg(external_id)
+    return get_game_details_rawg(external_id, source=source)

@@ -28,6 +28,13 @@ export default function RecommendationCard({
   onToggle,
   onClose,
 }: Props) {
+  const providerUrl = game.source === 'igdb'
+    ? `https://www.igdb.com/search?q=${encodeURIComponent(game.title)}`
+    : game.source === 'rawg'
+      ? `https://rawg.io/games/${game.external_id}`
+      : null;
+  const providerLabel = game.source === 'igdb' ? 'Ver no IGDB' : 'Ver no RAWG';
+
   return (
     <article
       ref={cardRef}
@@ -97,12 +104,11 @@ export default function RecommendationCard({
                   {details?.synopsis || 'Sem descrição disponível.'}
                 </div>
                 <div className={styles.links}>
-                  <Button
-                    variant="primary"
-                    onClick={() => openExternalLink(`https://rawg.io/games/${game.external_id}`)}
-                  >
-                    Ver no RAWG
-                  </Button>
+                  {providerUrl && (
+                    <Button variant="primary" onClick={() => openExternalLink(providerUrl)}>
+                      {providerLabel}
+                    </Button>
+                  )}
                   {details?.trailer_url && (
                     <Button variant="ghost" onClick={() => openExternalLink(details.trailer_url!)}>
                       Trailer Completo

@@ -1,4 +1,9 @@
+from unittest.mock import patch
+
 import pytest
+
+from app.models.game import Game
+from app.models.game_provider_id import GameProviderId
 
 MOCK_GAME = {
     "external_id": 9999,
@@ -250,3 +255,66 @@ def test_create_game_with_conflicting_external_id(client, auth_headers):
 
     # Garante que são jogos distintos e que Silent Hill não virou Resident Evil 7
     assert id1 != id2
+
+
+def test_provider_ids_are_namespaced_and_reused(client, db_session, auth_headers):
+    payload = {
+        "external_id": 480,
+        "cover_url": "https://example.com/cover.jpg",
+        "release_year": 2024,
+        "platforms": ["PC"],
+        "genres": ["Horror"],
+    }
+    igdb = client.post(
+        "/games/",
+        json={**payload, "source": "igdb", "title": "IGDB Game"},
+        headers=auth_headers,
+    )
+    rawg = client.post(
+        "/games/",
+        json={**payload, "source": "rawg", "title": "RAWG Game"},
+        headers=auth_headers,
+    )
+    repeated_igdb = client.post(
+        "/games/",
+        json={**payload, "source": "igdb", "title": "IGDB Game"},
+        headers=auth_headers,
+    )
+
+    assert igdb.status_code == rawg.status_code == repeated_igdb.status_code == 201
+    assert igdb.json()["id"] != rawg.json()["id"]
+    assert repeated_igdb.json()["id"] == igdb.json()["id"]
+    assert igdb.json()["source"] == "igdb"
+    assert rawg.json()["source"] == "rawg"
+    links = db_session.query(GameProviderId).filter(GameProviderId.external_id == "480").all()
+    assert {(link.provider, link.game_id) for link in links} == {
+        ("igdb", igdb.json()["id"]),
+        ("rawg", rawg.json()["id"]),
+    }
+    with patch("app.services.game_provider.search_games_on_igdb") as search_igdb:
+        search = client.get("/games/search", params={"q": "IGDB Game"})
+    assert search.status_code == 200
+    assert search.json()[0]["external_id"] == 480
+    assert search.json()[0]["source"] == "igdb"
+    search_igdb.assert_not_called()
+
+
+def test_complete_exact_local_search_skips_external_api(client, db_session):
+    game = Game(
+        external_id=90210,
+        title="Already Cached",
+        cover_url="https://example.com/cached.jpg",
+        release_year=2025,
+        platforms=["PC"],
+        genres=["Adventure"],
+    )
+    db_session.add(game)
+    db_session.commit()
+
+    with patch("app.services.game_provider.search_games_on_igdb") as search_igdb:
+        response = client.get("/games/search", params={"q": "Already Cached"})
+
+    assert response.status_code == 200
+    assert response.json()[0]["title"] == "Already Cached"
+    assert response.json()[0]["source"] == "catalog"
+    search_igdb.assert_not_called()

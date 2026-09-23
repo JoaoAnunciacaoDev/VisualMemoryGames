@@ -10,6 +10,7 @@ interface GameRecordSummary {
 
 export interface GameRecordInput {
   external_id: number | null;
+  source?: 'igdb' | 'rawg' | 'catalog' | null;
   title: string;
   cover_url: string | null;
   release_year: number | null;

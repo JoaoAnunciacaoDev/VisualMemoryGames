@@ -57,6 +57,7 @@ export const profileKeys = {
 export const profileDashboardQuery = (userId?: string) => queryOptions({
   queryKey: profileKeys.dashboard(userId),
   queryFn: async () => (await api.get<DashboardData>(userId ? `/users/${userId}/dashboard` : '/users/me/dashboard')).data,
+  staleTime: 5 * 60 * 1000,
 });
 
 export const profileGamesQuery = (userId?: string) => queryOptions({

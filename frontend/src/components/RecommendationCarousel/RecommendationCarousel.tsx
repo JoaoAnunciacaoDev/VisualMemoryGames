@@ -13,10 +13,13 @@ interface Props {
 }
 
 export default function RecommendationCarousel({ title, games }: Props) {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const expandedGame = games.find((game) => game.id === expandedId);
-  const detailsQuery = useQuery(recommendationDetailsQuery(expandedGame?.external_id ?? null));
+  const detailsQuery = useQuery(recommendationDetailsQuery(
+    expandedGame?.external_id ?? null,
+    expandedGame?.source,
+  ));
 
   useEffect(() => {
     if (expandedId) {

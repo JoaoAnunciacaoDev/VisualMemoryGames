@@ -7,6 +7,12 @@
   gap: var(--gap-md);
   color: var(--text-secondary);
   width: 100%;
+  text-align: center;
+}
+
+.loadingContainer p {
+  width: 100%;
+  margin: 0;
 }
 
 .loader {

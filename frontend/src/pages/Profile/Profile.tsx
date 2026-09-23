@@ -6,6 +6,7 @@ import { Loader } from '@/components/Shared';
 import { profileDashboardQuery, profileGamesQuery, profileKeys, toggleProfileFollow } from '@/features/profile/queries';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { useLibrary } from '@/hooks/useLibrary';
 import FollowListModal from './FollowListModal';
 import { PeriodGameBoard, SimpleGameBoard } from './ProfileGameBoards';
 import ProfileGenresModal from './ProfileGenresModal';
@@ -24,6 +25,11 @@ export default function Profile() {
   const dashboardQuery = useQuery(profileDashboardQuery(userId));
   const data = dashboardQuery.data ?? null;
 
+  const isOwnProfile = !userId || !!currentUser && (
+    userId.toLowerCase() === currentUser.id.toLowerCase()
+    || userId.toLowerCase() === currentUser.username.toLowerCase()
+  );
+
   const currentYear = new Date().getFullYear();
   const [boardPeriod, setBoardPeriod] = useState({ year: currentYear, month: 'all' });
   const [platinumPeriod, setPlatinumPeriod] = useState({ year: currentYear, month: 'all' });
@@ -32,16 +38,17 @@ export default function Profile() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [followModal, setFollowModal] = useState<FollowListType | null>(null);
 
-  const gamesQuery = useQuery({ ...profileGamesQuery(userId), enabled: showGenresModal });
+  // The owner's profile consumes the exact same paginated cache as the library.
+  // Public profiles keep their separate endpoint and cache because permissions differ.
+  const ownLibrary = useLibrary(currentUser?.id ?? '', showGenresModal && isOwnProfile);
+  const publicGamesQuery = useQuery({
+    ...profileGamesQuery(userId),
+    enabled: showGenresModal && !isOwnProfile,
+  });
   const followMutation = useMutation({
     mutationFn: toggleProfileFollow,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: profileKeys.dashboard(userId) }),
   });
-
-  const isOwnProfile = !userId || !!currentUser && (
-    userId.toLowerCase() === currentUser.id.toLowerCase()
-    || userId.toLowerCase() === currentUser.username.toLowerCase()
-  );
 
   const toggleBoard = (board: keyof typeof collapsed) => {
     setCollapsed((current) => ({ ...current, [board]: !current[board] }));
@@ -112,7 +119,8 @@ export default function Profile() {
       {showGenresModal && (
         <ProfileGenresModal
           gameCount={data.games_count} distribution={data.genre_distribution} selectedGenre={selectedGenre}
-          games={gamesQuery.data ?? []} loadingGames={gamesQuery.isPending}
+          games={isOwnProfile ? ownLibrary.games : (publicGamesQuery.data ?? [])}
+          loadingGames={isOwnProfile ? ownLibrary.loading : publicGamesQuery.isPending}
           onSelectGenre={setSelectedGenre} onClose={closeGenresModal}
         />
       )}

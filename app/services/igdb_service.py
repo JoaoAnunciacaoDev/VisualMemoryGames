@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import time
 from typing import Dict, List, Optional
@@ -16,6 +17,53 @@ _token_cache: Dict[str, str | float] = {
     "access_token": "",
     "expires_at": 0.0,
 }
+
+# IDs estáveis do endpoint /genres da IGDB. Alguns catálogos usam categorias
+# mais amplas (por exemplo, RAWG usa "Action"), então elas são traduzidas para
+# os gêneros IGDB mais próximos em vez de fazer um filtro textual inválido.
+_IGDB_GENRE_IDS: Dict[str, tuple[int, ...]] = {
+    "point-and-click": (2,),
+    "fighting": (4,),
+    "shooter": (5,),
+    "music": (7,),
+    "platform": (8,),
+    "platformer": (8,),
+    "puzzle": (9,),
+    "racing": (10,),
+    "real time strategy (rts)": (11,),
+    "rts": (11,),
+    "role-playing (rpg)": (12,),
+    "role-playing games (rpg)": (12,),
+    "rpg": (12,),
+    "simulator": (13,),
+    "simulation": (13,),
+    "sport": (14,),
+    "sports": (14,),
+    "strategy": (15,),
+    "turn-based strategy (tbs)": (16,),
+    "tactical": (24,),
+    "hack and slash/beat 'em up": (25,),
+    "quiz/trivia": (26,),
+    "pinball": (30,),
+    "adventure": (31,),
+    "indie": (32,),
+    "arcade": (33,),
+    "visual novel": (34,),
+    "card & board game": (35,),
+    "moba": (36,),
+    "action": (5, 25, 31, 33),
+    "roguelike": (12, 32),
+    "massively multiplayer": (12, 36),
+}
+
+
+def _resolve_igdb_genre_ids(genres: List[str]) -> List[int]:
+    resolved = {
+        genre_id
+        for genre in genres
+        for genre_id in _IGDB_GENRE_IDS.get(genre.strip().casefold(), ())
+    }
+    return sorted(resolved)
 
 
 def get_igdb_access_token() -> Optional[str]:
@@ -75,7 +123,7 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
     cache_key = build_cache_key(query.strip().lower(), limit, offset)
     cached = get_cached("igdb.search", cache_key)
     if cached is not None:
-        return cached
+        return [{**item, "source": "igdb"} for item in cached]
     token = get_igdb_access_token()
     if not token or not TWITCH_CLIENT_ID:
         return []
@@ -171,6 +219,7 @@ def search_games_on_igdb(query: str, limit: int = 15, offset: int = 0) -> List[D
                     "release_year": release_year,
                     "platforms": platforms,
                     "genres": genres,
+                    "source": "igdb",
                 }
             )
 
@@ -192,9 +241,10 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
     cache_key = build_cache_key(sorted(genres), page_size)
     cached = get_cached("igdb.genres", cache_key)
     if cached is not None:
-        return cached
+        return [{**item, "source": "igdb"} for item in cached]
+    genre_ids = _resolve_igdb_genre_ids(genres)
     token = get_igdb_access_token()
-    if not token or not TWITCH_CLIENT_ID or not genres:
+    if not token or not TWITCH_CLIENT_ID or not genre_ids:
         return []
 
     url = "https://api.igdb.com/v4/games"
@@ -203,13 +253,17 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
         "Authorization": f"Bearer {token}",
     }
 
-    # Prepara filtro de gêneros
-    genre_conditions = ", ".join([f'genres.name = "{g}"' for g in genres])
+    genre_filter = ",".join(str(genre_id) for genre_id in genre_ids)
+    candidate_limit = min(100, max(page_size * 3, page_size))
     body = (
-        f"fields name, cover.url, first_release_date, platforms.name, genres.name, rating, themes; "
-        f"where ({genre_conditions}) & rating != null; "
-        f"sort rating desc; "
-        f"limit {page_size};"
+        "fields name, cover.url, first_release_date, platforms.name, genres.name, "
+        "rating, rating_count, total_rating, total_rating_count, themes; "
+        f"where genres = ({genre_filter}) & total_rating != null & "
+        "total_rating_count >= 5 & cover != null & themes != (42) & "
+        "(game_type = 0 | game_type = 8 | game_type = 9 | game_type = 10 | "
+        "game_type = 11 | game_type = null); "
+        "sort total_rating_count desc; "
+        f"limit {candidate_limit};"
     )
 
     try:
@@ -217,8 +271,24 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
         response.raise_for_status()
         items = response.json()
 
+        ranked_items = sorted(
+            items,
+            key=lambda item: (
+                (
+                    (float(item.get("total_rating") or item.get("rating") or 0) * count)
+                    + (70.0 * 50.0)
+                )
+                / (count + 50.0)
+                + min(5.0, math.log10(count + 1)),
+                count,
+            )
+            if (count := float(item.get("total_rating_count") or item.get("rating_count") or 0))
+            else (0.0, 0.0),
+            reverse=True,
+        )
+
         results = []
-        for item in items:
+        for item in ranked_items:
             if _is_nsfw_igdb(item):
                 continue
             release_date = item.get("first_release_date")
@@ -254,11 +324,18 @@ def get_games_by_genres_igdb(genres: List[str], page_size: int = 15) -> List[Dic
                     "release_year": release_year,
                     "platforms": platforms,
                     "genres": item_genres,
+                    "source": "igdb",
                 }
             )
 
-        set_cached("igdb.genres", cache_key, results, ttl_seconds=6 * 3600 if results else 300)
-        return results
+        final_results = results[:page_size]
+        set_cached(
+            "igdb.genres",
+            cache_key,
+            final_results,
+            ttl_seconds=6 * 3600 if final_results else 300,
+        )
+        return final_results
     except Exception as e:
         logger.error(f"Erro ao buscar por gêneros no IGDB: {e}")
         return []

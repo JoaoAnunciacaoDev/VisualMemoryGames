@@ -25,7 +25,10 @@ export function useGameSearch() {
   const searchResults = useMemo(() => {
     const uniqueResults = new Map<string, GameResult>();
     for (const game of searchQuery.data?.pages.flatMap((page) => page.items) ?? []) {
-      uniqueResults.set(`${game.external_id ?? 'no-id'}:${game.title.trim().toLowerCase()}`, game);
+      uniqueResults.set(
+        `${game.source ?? 'catalog'}:${game.external_id ?? 'no-id'}:${game.title.trim().toLowerCase()}`,
+        game,
+      );
     }
     return [...uniqueResults.values()];
   }, [searchQuery.data]);

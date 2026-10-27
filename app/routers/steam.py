@@ -527,6 +527,11 @@ async def sync_single_account(account: SteamAccount, db: Session) -> tuple[int, 
                     if not user_game.platinum_at:
                         user_game.platinum_at = platinized_game_dates[appid]
                         has_changes = True
+                elif is_recent:
+                    if user_game.status not in ("Platinado", "Zerado") and user_game.status != "Jogando":
+                        user_game.status = "Jogando"
+                        user_game.store = "STEAM"
+                        has_changes = True
                 if user_game.hours_played is None or hours > user_game.hours_played:
                     user_game.hours_played = hours
                     user_game.store = "STEAM"

@@ -395,3 +395,63 @@ def test_store_normalization():
 
     response = LibraryGameResponse(**data)
     assert response.store == Store.STEAM
+
+
+@patch("app.routers.steam.steam_service.is_game_platinized")
+@patch("app.routers.steam.steam_service.get_recently_played_games")
+@patch("app.routers.steam.steam_service.get_owned_games")
+@patch("app.routers.steam.steam_service.get_player_summary")
+def test_sync_existing_game_updates_status_to_playing(
+    mock_summary, mock_games, mock_recent, mock_plat, client, auth_headers, db_session
+):
+    mock_summary.return_value = {
+        "steam_id": "765611980843858",
+        "persona_name": "Gamer123",
+        "avatar_url": "http://avatar.url",
+    }
+    mock_recent.return_value = [{"appid": 1875580}]
+    mock_plat.return_value = None
+    mock_games.return_value = [
+        {
+            "appid": 1875580,
+            "name": "Mina the Hollower",
+            "playtime_forever": 300,
+        }
+    ]
+
+    me = client.get("/users/me", headers=auth_headers)
+    user_id = me.json()["id"]
+
+    game = Game(
+        title="Mina the Hollower",
+        steam_appid=1875580,
+        cover_url="http://cover.url",
+        platforms=["PC"],
+        genres=[],
+    )
+    db_session.add(game)
+    db_session.flush()
+
+    user_game = UserGame(
+        user_id=user_id,
+        game_id=game.id,
+        status="Na biblioteca",
+        hours_played=0.0,
+        store="STEAM",
+    )
+    db_session.add(user_game)
+    db_session.commit()
+
+    with patch("app.routers.steam.sync_single_account", return_value=(0, 0)):
+        client.post(
+            "/users/me/steam/accounts",
+            json={"profile_url": "765611980843858"},
+            headers=auth_headers,
+        )
+
+    sync_resp = client.post("/users/me/steam/sync", headers=auth_headers)
+    assert sync_resp.status_code == 200
+
+    db_session.refresh(user_game)
+    assert user_game.status == "Jogando"
+    assert user_game.hours_played == 5.0
